@@ -1,11 +1,14 @@
 #include <grrlib.h>
-#include "gtc/matrix_transform.hpp"
-#include "gtc/type_ptr.hpp"
+
+#include "typedefs.h"
+
 #include <ogc/gx.h>
 
 #include "camera.h"
 
-Camera::Camera(const glm::vec3& position) : position_(position), forward_(0, 0, 0) {
+using namespace poyo;
+
+Camera::Camera(cFVec3& position) : position_(position), forward_(0, 0, 0) {
 
     worldUp_ = glm::vec3(0, 1, 0);
     right_ = glm::vec3(1, 0, 0);

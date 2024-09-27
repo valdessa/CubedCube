@@ -19,6 +19,8 @@ GRRLIB (GX Version)
 
 #include <ogc/tpl.h>
 
+//My includes
+#include "typedefs.h"
 #include "camera.h"
 
 //Blocks TPL data
@@ -45,6 +47,8 @@ struct Cubito {
     CubeFace face[6];
     s16 x, y, z;
 };
+
+using namespace poyo;
 
 enum {
     BLOCK_STONE,
@@ -236,7 +240,7 @@ int main(int argc, char **argv) {
 
     generateTree(Tree1, 0, 0, 0);
 
-    Camera currentCam(glm::vec3{0.0f, 0.0f, 13.0f});
+    Camera currentCam(FVec3{0.0f, 0.0f, 13.0f});
     currentCam.speed_ = 0.5f;
 
     // Loop forever
