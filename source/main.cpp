@@ -19,6 +19,8 @@ GRRLIB (GX Version)
 
 #include <ogc/tpl.h>
 
+#include "camera.h"
+
 //Blocks TPL data
 #include "bloquitos_tpl.h"
 #include "bloquitos.h"
@@ -28,6 +30,10 @@ GRRLIB (GX Version)
 static TPLFile bloquitosTPL;
 static GXTexObj blocksTexture;
 static std::unordered_map<u8, std::pair<u16, u16>> tileUVMap;
+
+float deltaTime = 0.0f;
+float lastTime = 0.0f;
+float currentTime = 0.0f;
 
 struct CubeFace {
     s16 x, y, z;
@@ -48,7 +54,6 @@ enum {
     BLOCK_WOOD,
     BLOCK_TREE,
     BLOCK_LEAF,
-    BLOCK_GAMECUBE,
     BLOCK_COUNT // Contador para la cantidad de bloques
 };
 
@@ -124,7 +129,37 @@ void generateCube(Cubito& cube, s16 x, s16 y, s16 z, int block) {
     fillCube(cube, 5, 0, 0, 0, DIR_Z_BACK,  block);  // Derecha
 }
 
-void renderCube(Cubito& cube, float angleX, float angleY) {
+void generateTree(Cubito cubes[], s16 baseX, s16 baseY, s16 baseZ) {
+    int trunkHeight = 4;
+    int cubeIndex = 0;
+
+    // Generar el tronco
+    for (int y = 0; y < trunkHeight; ++y) {
+        generateCube(cubes[cubeIndex], baseX, baseY + y, baseZ, BLOCK_TREE);
+        cubeIndex++;  // Incrementar el índice del array
+    }
+
+    // Generar la copa de hojas (estructura tipo cruz)
+    for (int dx = -2; dx <= 2; ++dx) {
+        for (int dz = -2; dz <= 2; ++dz) {
+            int distance = abs(dx) + abs(dz);
+            if (distance <= 2) { // Condición para limitar la forma
+                generateCube(cubes[cubeIndex], baseX + dx, baseY + trunkHeight, baseZ + dz, BLOCK_LEAF);
+                cubeIndex++;  // Incrementar el índice del array
+            }
+        }
+    }
+
+    // Generar la capa superior de hojas (más compacta)
+    for (int dx = -1; dx <= 1; ++dx) {
+        for (int dz = -1; dz <= 1; ++dz) {
+            generateCube(cubes[cubeIndex], baseX + dx, baseY + trunkHeight + 1, baseZ + dz, BLOCK_LEAF);
+            cubeIndex++;  // Incrementar el índice del array
+        }
+    }
+}
+
+void renderCube(Cubito& cube, float angleX, float angleY, int worldX = 0, int worldY = 0, int worldZ = 0) {
     GRRLIB_ObjectView(cube.x, cube.y, cube.z, angleX, angleY, 0.0f, 1.0f, 1.0f, 1.0f);
     const u16 tileTexCoords[4][2] = {
         {0, 0},
@@ -135,16 +170,13 @@ void renderCube(Cubito& cube, float angleX, float angleY) {
 
     GX_Begin(GX_QUADS, GX_VTXFMT0, 24);
 
-    int x = 0;
-    int z = 0;
-
     for (int face = 0; face < 6; face++) {
         auto& currentFace = cube.face[face];
         for (int j = 0; j < 4; j++) {
             //Signed Short!!
-            GX_Position3s16(currentFace.x + cubeFaces[currentFace.direction][j][0] + x,
-                            currentFace.y + cubeFaces[currentFace.direction][j][1],
-                            currentFace.z + cubeFaces[currentFace.direction][j][2] + z);
+            GX_Position3s16(currentFace.x + cubeFaces[currentFace.direction][j][0] + worldX,
+                            currentFace.y + cubeFaces[currentFace.direction][j][1] + worldY,
+                            currentFace.z + cubeFaces[currentFace.direction][j][2] + worldZ);
             //GX_Color1u32 old
             //GX_Color1x8(255);
             GX_Color1u32(0xFFFFFFFF);
@@ -158,6 +190,12 @@ void renderCube(Cubito& cube, float angleX, float angleY) {
 
 
     GX_End();
+}
+
+void processDeltaTime() {
+    currentTime = static_cast<float>(SYS_Time());
+    deltaTime = (currentTime - lastTime) / 1000000.0f; // Convierte a segundos
+    lastTime = currentTime; // Actualiza el último tiempo
 }
 
 
@@ -178,7 +216,7 @@ int main(int argc, char **argv) {
 
     // Set the background color (Green in this case)
     GRRLIB_SetBackgroundColour(0x80, 0x80, 0x80, 0xFF);
-    GRRLIB_Camera3dSettings(0.0f,0.0f,13.0f, 0,1,0, 0,0,0);
+    //GRRLIB_Camera3dSettings(0.0f,0.0f,13.0f, 0,1,0, 0,0,0); //view matrix
 
     float angleX = 45.0f; // Ángulo de rotación en el eje X
     float angleY = 0.0f; // Ángulo de rotación en el eje Y
@@ -190,21 +228,30 @@ int main(int argc, char **argv) {
     Cubito grass;
     Cubito trunk;
 
+    Cubito Tree1[26];
+
     generateCube(stone, 0, -2, 0, BLOCK_STONE);
     generateCube(grass, 0,  0, 0, BLOCK_GRASS);
     generateCube(trunk, 0,  2, 0, BLOCK_TREE);
 
+    generateTree(Tree1, 0, 0, 0);
+
+    Camera currentCam(glm::vec3{0.0f, 0.0f, 13.0f});
+    currentCam.speed_ = 0.5f;
+
     // Loop forever
     while(1) {
+        processDeltaTime();
+        
         GRRLIB_2dMode();
         PAD_ScanPads(); // Scan the GameCube controllers
 
         // If [START/PAUSE] was pressed on the first GameCube controller, break out of the loop
         if(PAD_ButtonsDown(0) & PAD_BUTTON_START) exit(0);
 
+        currentCam.updateCamera(1.0f); //deltaTime
         // Limpiar pantalla y preparar para dibujo en 3D
-        GRRLIB_3dMode(0.1f, 1000.0f, 45.0f, 1, 0); // Configura el modo 3D
-
+        GRRLIB_3dMode(0.1f, 1000.0f, 45.0f, 1, 0); // Configura el modo 3D //Projection
 
         //GRRLIB_DrawCube(cubeSize, true, 0xFFFFFFFF); // Dibuja un cubo blanco
         //GRRLIB_SetTexture(tex_girl, 0);
@@ -219,6 +266,10 @@ int main(int argc, char **argv) {
         renderCube(stone, angleX, angleY);
         renderCube(grass, angleX, angleY);
         renderCube(trunk, angleX, angleY);
+
+        for (int i = 0; i < 26; i++) {
+            renderCube(Tree1[i], 0, 0, -2.5, -2.5, 0);
+        }
 
         // Incrementar los ángulos de rotación para darle animación
         //angleX += 0.5f; // Rotación en el eje X

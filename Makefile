@@ -20,13 +20,13 @@ BUILD		:=	build
 SOURCES		:=	source
 DATA		:=	data
 TEXTURES	:=	textures 
-INCLUDES	:=
+INCLUDES	:=  include deps/glm
 
 #---------------------------------------------------------------------------------
 # options for code generation
 #---------------------------------------------------------------------------------
 
-CFLAGS	= -g -O2 -Wall $(MACHDEP) $(INCLUDE)
+CFLAGS	= -g -O2 -Wall -Wno-unused-value $(MACHDEP) $(INCLUDE)
 CXXFLAGS	=	$(CFLAGS)
 
 LDFLAGS	=	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map
@@ -92,7 +92,8 @@ export HFILES := $(addsuffix .h,$(subst .,_,$(BINFILES))) $(addsuffix .h,$(subst
 export INCLUDE	:=	$(foreach dir,$(INCLUDES), -iquote $(CURDIR)/$(dir)) \
 					$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
 					-I$(CURDIR)/$(BUILD) \
-					-I$(LIBOGC_INC)
+					-I$(LIBOGC_INC) \
+                    -I$(CURDIR)/deps/glm #for deps
 
 #---------------------------------------------------------------------------------
 # build a list of library paths
