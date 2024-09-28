@@ -20,7 +20,7 @@ BUILD		:=	build
 SOURCES		:=	source
 DATA		:=	data
 TEXTURES	:=	textures 
-INCLUDES	:=  include deps/glm
+INCLUDES	:=  include deps/glm deps/
 
 #---------------------------------------------------------------------------------
 # options for code generation
@@ -139,6 +139,13 @@ $(OFILES_SOURCES) : $(HFILES)
 	@echo $(notdir $<)
 	$(bin2o)
 
+#---------------------------------------------------------------------------------
+# This rule links in binary data with the .ttf extension
+#---------------------------------------------------------------------------------
+%.ttf.o	:	%.ttf
+#---------------------------------------------------------------------------------
+	@echo $(notdir $<)
+	$(bin2o)
 
 #---------------------------------------------------------------------------------
 # This rule links in binary data with the .jpg extension

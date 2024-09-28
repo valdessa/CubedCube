@@ -47,6 +47,7 @@ project "Cubed Cube"
         "../build",
         "../examples",
         "../include",
+	    "../deps",
         "../deps/glm",
         "../deps/GRRLIB",
         "../deps/libogc",

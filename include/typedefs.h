@@ -4,6 +4,7 @@
 
 #define LOCK_NOT_NECESSARY //Define added in order to no compile not necessary things for the Nintendo GameCube D: (27/09/2024)
 
+#include <cstdint>
 #include <glm.hpp>
 #include <gtc/matrix_transform.hpp>
 
@@ -51,6 +52,11 @@ namespace poyo {
     using UVec2 = glm::uvec2; using cUVec2 = const glm::uvec2;
     using UVec3 = glm::uvec3; using cUVec3 = const glm::uvec3;
     using UVec4 = glm::uvec4; using cUVec4 = const glm::uvec4;
+
+    //******** Vector Unsigned Short ********//
+    using USVec2 = glm::lowp_uvec2; using cUSVec2 = const USVec2;
+    using USVec3 = glm::lowp_uvec3; using cUSVec3 = const USVec3;
+    using USVec4 = glm::lowp_uvec4; using cUSVec4 = const USVec4;
 
     //*********** Vector Float ***********//
     using FVec2 = glm::vec2;  using cFVec2 = const glm::vec2;
@@ -200,6 +206,8 @@ namespace poyo {
     using Opt = std::optional<T>;
 }
 
+#endif
+
 // Pairs
 #include <utility>
 
@@ -207,6 +215,8 @@ namespace poyo {
     template <typename T1, typename T2>
     using Pair = std::pair<T1, T2>;
 }
+
+#ifndef LOCK_NOT_NECESSARY
 
 // Futures
 #include <future>

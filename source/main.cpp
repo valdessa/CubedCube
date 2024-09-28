@@ -9,8 +9,6 @@ GRRLIB (GX Version)
 #include <ogc/pad.h>
 #include <math.h> // Para usar funciones trigonométricas
 
-#include <unordered_map>
-
 #include <stdlib.h>
 #include <string.h>
 #include <malloc.h>
@@ -18,24 +16,31 @@ GRRLIB (GX Version)
 #include <gccore.h>
 
 #include <ogc/tpl.h>
+#include <ogc/lwp_watchdog.h>   // Needed for gettime and ticks_to_millisecs
 
 //My includes
 #include "typedefs.h"
 #include "camera.h"
+#include "text_renderer.h"
 
 //Blocks TPL data
 #include "bloquitos_tpl.h"
 #include "bloquitos.h"
 
+// Font
+#include "Karma_ttf.h"
+
+using namespace poyo;
+
 #define TILE_SIZE 128
 
 static TPLFile bloquitosTPL;
 static GXTexObj blocksTexture;
-static std::unordered_map<u8, std::pair<u16, u16>> tileUVMap;
+static HashMap<u8, Pair<u16, u16>> tileUVMap;
 
-float deltaTime = 0.0f;
-float lastTime = 0.0f;
-float currentTime = 0.0f;
+float deltaTime = 0;
+u64 lastTime = 0;
+u64 currentTime = 0;
 
 struct CubeFace {
     s16 x, y, z;
@@ -47,8 +52,6 @@ struct Cubito {
     CubeFace face[6];
     s16 x, y, z;
 };
-
-using namespace poyo;
 
 enum {
     BLOCK_STONE,
@@ -113,7 +116,7 @@ void mapTileUVs(u8 tilesetWidth) {
     }
 }
 
-void fillCube(Cubito& cube, int cface, int x, int y, int z, int direction, int block) {
+void fillCube(Cubito& cube, int cface, s16 x, s16 y, s16 z, u8 direction, int block) {
     cube.face[cface].x = x;
     cube.face[cface].y = y;
     cube.face[cface].z = z;
@@ -134,32 +137,32 @@ void generateCube(Cubito& cube, s16 x, s16 y, s16 z, int block) {
 }
 
 void generateTree(Cubito cubes[], s16 baseX, s16 baseY, s16 baseZ) {
-    int trunkHeight = 4;
+    // Generar las hojas en las coordenadas superiores
     int cubeIndex = 0;
+    for (s16 i = -1; i <= 1; i++) {
+        for (s16 j = -1; j <= 1; j++) {
+            // Nivel de hojas en y + 3
+            generateCube(cubes[cubeIndex++], baseX + i, baseY + 3, baseZ + j, BLOCK_LEAF);
 
-    // Generar el tronco
-    for (int y = 0; y < trunkHeight; ++y) {
-        generateCube(cubes[cubeIndex], baseX, baseY + y, baseZ, BLOCK_TREE);
-        cubeIndex++;  // Incrementar el índice del array
-    }
-
-    // Generar la copa de hojas (estructura tipo cruz)
-    for (int dx = -2; dx <= 2; ++dx) {
-        for (int dz = -2; dz <= 2; ++dz) {
-            int distance = abs(dx) + abs(dz);
-            if (distance <= 2) { // Condición para limitar la forma
-                generateCube(cubes[cubeIndex], baseX + dx, baseY + trunkHeight, baseZ + dz, BLOCK_LEAF);
-                cubeIndex++;  // Incrementar el índice del array
-            }
+            // Nivel de hojas en y + 6
+            generateCube(cubes[cubeIndex++], baseX + i, baseY + 6, baseZ + j, BLOCK_LEAF);
         }
     }
 
-    // Generar la capa superior de hojas (más compacta)
-    for (int dx = -1; dx <= 1; ++dx) {
-        for (int dz = -1; dz <= 1; ++dz) {
-            generateCube(cubes[cubeIndex], baseX + dx, baseY + trunkHeight + 1, baseZ + dz, BLOCK_LEAF);
-            cubeIndex++;  // Incrementar el índice del array
+    // Generar las hojas en los niveles intermedios (y + 4 y y + 5)
+    for (s16 i = -2; i <= 2; i++) {
+        for (s16 j = -2; j <= 2; j++) {
+            // Nivel de hojas en y + 4
+            generateCube(cubes[cubeIndex++], baseX + i, baseY + 4, baseZ + j, BLOCK_LEAF);
+
+            // Nivel de hojas en y + 5
+            generateCube(cubes[cubeIndex++], baseX + i, baseY + 5, baseZ + j, BLOCK_LEAF);
         }
+    }
+
+    // Generar el tronco del árbol
+    for (s16 i = 0; i < 4; i++) {
+        generateCube(cubes[cubeIndex++], baseX, baseY + i, baseZ, BLOCK_TREE);
     }
 }
 
@@ -196,10 +199,16 @@ void renderCube(Cubito& cube, float angleX, float angleY, int worldX = 0, int wo
     GX_End();
 }
 
+void initializeLastTime() {
+    lastTime = gettick();
+}
+
 void processDeltaTime() {
-    currentTime = static_cast<float>(SYS_Time());
-    deltaTime = (currentTime - lastTime) / 1000000.0f; // Convierte a segundos
     lastTime = currentTime; // Actualiza el último tiempo
+    currentTime = gettick();
+    u64 deltaTimeTicks = currentTime - lastTime; 
+    deltaTime = static_cast<float>(ticks_to_millisecs(deltaTimeTicks)) / 1000.0f; //to seconds!!
+    //deltaTime = (double)ticks_to_secs(deltaTimeTicks);
 }
 
 
@@ -210,7 +219,12 @@ int main(int argc, char **argv) {
     // Initialise the GameCube controllers
     PAD_Init();
 
+    initializeLastTime();
+
     GRRLIB_SetAntiAliasing(true);
+    GRRLIB_Settings.antialias = true;
+    
+    //GRRLIB_ttfFont *myFont = GRRLIB_LoadTTF(Karma_ttf, Karma_ttf_size);
 
     TPL_OpenTPLFromMemory(&bloquitosTPL, (void*)bloquitos_tpl, bloquitos_tpl_size);
     TPL_GetTexture(&bloquitosTPL, blocksTextureId, &blocksTexture);
@@ -228,21 +242,40 @@ int main(int argc, char **argv) {
 
     mapTileUVs(6);
 
-    Cubito stone;
-    Cubito grass;
+    Cubito grass[9];
+    Cubito stone[25];
     Cubito trunk;
 
-    Cubito Tree1[26];
+    //Cubito Tree1[26];
+    Cubito Tree1[72];
 
-    generateCube(stone, 0, -2, 0, BLOCK_STONE);
-    generateCube(grass, 0,  0, 0, BLOCK_GRASS);
+    generateTree(Tree1, 0, 1, 0);
+    
+    int cubeIndex = 0;
+    for (int i = -1; i <= 1; i++) {       // Recorre las posiciones -1, 0, 1 en el eje X
+        for (int j = -1; j <= 1; j++) {   // Recorre las posiciones -1, 0, 1 en el eje Z
+            generateCube(grass[cubeIndex], i, 0, j, BLOCK_GRASS);  // Genera el bloque en la posición (x, y, z)
+            cubeIndex++;  // Aumenta el índice para el siguiente cubo
+        }
+    }
+    cubeIndex = 0;
+    for (int i = -2; i <= 2; i++) {       // Recorre las posiciones -2, -1, 0, 1, 2 en el eje X
+        for (int j = -2; j <= 2; j++) {   // Recorre las posiciones -2, -1, 0, 1, 2 en el eje Z
+            generateCube(stone[cubeIndex], i, -1, j, BLOCK_STONE);  // Genera el bloque en la posición (x, y, z)
+            cubeIndex++;  // Aumenta el índice para el siguiente cubo
+        }
+    }
+    
     generateCube(trunk, 0,  2, 0, BLOCK_TREE);
 
-    generateTree(Tree1, 0, 0, 0);
 
+    // aaaaaaaaaaaaaaaa
+    
+    TextRenderer text;
+    
     Camera currentCam(FVec3{0.0f, 0.0f, 13.0f});
-    currentCam.speed_ = 0.5f;
-
+    currentCam.speed_ = 15.0f;
+    
     // Loop forever
     while(1) {
         processDeltaTime();
@@ -253,7 +286,7 @@ int main(int argc, char **argv) {
         // If [START/PAUSE] was pressed on the first GameCube controller, break out of the loop
         if(PAD_ButtonsDown(0) & PAD_BUTTON_START) exit(0);
 
-        currentCam.updateCamera(1.0f); //deltaTime
+        currentCam.updateCamera(deltaTime); //deltaTime
         // Limpiar pantalla y preparar para dibujo en 3D
         GRRLIB_3dMode(0.1f, 1000.0f, 45.0f, 1, 0); // Configura el modo 3D //Projection
 
@@ -267,13 +300,34 @@ int main(int argc, char **argv) {
         GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_S16, 0);
 
         // Dibujar cubo en el centro de la pantalla con rotación
-        renderCube(stone, angleX, angleY);
-        renderCube(grass, angleX, angleY);
-        renderCube(trunk, angleX, angleY);
+        // renderCube(stone, angleX, angleY);
+        // renderCube(grass, angleX, angleY);
+        // renderCube(trunk, angleX, angleY);
 
-        for (int i = 0; i < 26; i++) {
-            renderCube(Tree1[i], 0, 0, -2.5, -2.5, 0);
+        for(int i = 0; i < 9; i++) {
+            renderCube(grass[i], 0, 0, 0, 0, 0);
         }
+        for(int i =0; i < 25; i++) {
+            renderCube(stone[i], 0, 0, 0, 0, 0);
+        }
+        for (int i = 0; i < 72; i++) {
+            renderCube(Tree1[i], 0, 0, 0, 0, 0);
+        }
+
+
+        auto cameraString = " X: " + std::to_string(currentCam.position_.x) + 
+                            " Y: " + std::to_string(currentCam.position_.y) +
+                            " Z: " + std::to_string(currentCam.position_.z);
+        GRRLIB_2dMode();
+        text.beginRender();
+        text.render(USVec2{5,  5}, ("Ticks:        " + std::to_string(gettick())).c_str());
+        text.render(USVec2{5, 20}, ("Time:         " + std::to_string(gettime())).c_str());
+        text.render(USVec2{5, 35}, ("Current Time: " + std::to_string(currentTime)).c_str());
+        text.render(USVec2{5, 50}, ("Last Time:    " + std::to_string(lastTime)).c_str());
+        text.render(USVec2{5, 65}, ("Delta Time:   " + std::to_string(deltaTime)).c_str());
+        text.render(USVec2{275, 5}, ("Camera: " + cameraString).c_str());
+
+        //GRRLIB_PrintfTTF(50, 50, myFont, "MINECRAFT", 16, 0x000000FF);
 
         // Incrementar los ángulos de rotación para darle animación
         //angleX += 0.5f; // Rotación en el eje X
