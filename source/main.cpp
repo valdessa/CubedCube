@@ -61,21 +61,28 @@ enum {
     BLOCK_WOOD,
     BLOCK_TREE,
     BLOCK_LEAF,
+    BLOCK_CACTUS,
+    BLOCK_SAND_DIRT,
     BLOCK_COUNT // Contador para la cantidad de bloques
 };
 
 enum {
-    TILE_DIRT       = 0,
-    TILE_GRASS_SIDE = 1,
-    TILE_GRASS      = 2,
+    TILE_DIRT        = 0,
+    TILE_GRASS_SIDE  = 1,
+    TILE_GRASS       = 2,
 
-    TILE_STONE      = 3,
+    TILE_STONE       = 3,
 
-    TILE_SAND       = 6,
-    TILE_TREE_SIDE  = 9,
-    TILE_TREE_TOP   = 10,
-    TILE_WOOD       = 11,
-    TILE_LEAF       = 12,
+    TILE_SAND        = 6,
+    TILE_SAND_DIRT   = 7,
+    
+    TILE_TREE_SIDE   = 9,
+    TILE_TREE_TOP    = 10,
+    TILE_WOOD        = 11,
+    TILE_LEAF        = 12,
+    TILE_CACTUS_BOT  = 18,
+    TILE_CACTUS_SIDE = 19,
+    TILE_CACTUS_TOP  = 20,
     NUM_TILES,
 };
 
@@ -95,9 +102,10 @@ static const u8 blockTiles[][6] = {
     [BLOCK_GRASS] =    {TILE_GRASS_SIDE, TILE_GRASS_SIDE, TILE_GRASS,    TILE_DIRT,      TILE_GRASS_SIDE, TILE_GRASS_SIDE},
     [BLOCK_WOOD] =     {TILE_WOOD,       TILE_WOOD,       TILE_WOOD,     TILE_WOOD,      TILE_WOOD,       TILE_WOOD},
     [BLOCK_TREE] =     {TILE_TREE_SIDE,  TILE_TREE_SIDE,  TILE_TREE_TOP, TILE_TREE_TOP,  TILE_TREE_SIDE,  TILE_TREE_SIDE},
-    [BLOCK_LEAF] =     {TILE_LEAF,       TILE_LEAF,       TILE_LEAF,     TILE_LEAF,      TILE_LEAF,       TILE_LEAF}//,
+    [BLOCK_LEAF] =     {TILE_LEAF,       TILE_LEAF,       TILE_LEAF,     TILE_LEAF,      TILE_LEAF,       TILE_LEAF},
+    [BLOCK_CACTUS] =   {TILE_CACTUS_SIDE, TILE_CACTUS_SIDE, TILE_CACTUS_TOP, TILE_CACTUS_BOT, TILE_CACTUS_SIDE, TILE_CACTUS_SIDE},
+    [BLOCK_SAND_DIRT] ={TILE_SAND_DIRT, TILE_SAND_DIRT, TILE_SAND, TILE_DIRT, TILE_SAND_DIRT, TILE_SAND_DIRT},
 };
-
 
 static const u8 cubeFaces[6][4][3] = {
     [DIR_X_FRONT] = {{0, 1, 1}, {0, 1, 0}, {0, 0, 0}, {0, 0, 1}},  //drawn clockwise looking x-
@@ -166,7 +174,7 @@ void generateTree(Cubito cubes[], s16 baseX, s16 baseY, s16 baseZ) {
     }
 }
 
-void renderCube(Cubito& cube, float angleX, float angleY, int worldX = 0, int worldY = 0, int worldZ = 0) {
+void renderCube(const Cubito& cube, float angleX, float angleY, s16 worldX = 0, s16 worldY = 0, s16 worldZ = 0) {
     GRRLIB_ObjectView(cube.x, cube.y, cube.z, angleX, angleY, 0.0f, 1.0f, 1.0f, 1.0f);
     const u16 tileTexCoords[4][2] = {
         {0, 0},
@@ -244,7 +252,10 @@ int main(int argc, char **argv) {
 
     Cubito grass[9];
     Cubito stone[25];
-    Cubito trunk;
+    Cubito dirt[25];
+    Cubito cactus[3];
+
+    Cubito sandDirt[9];
 
     //Cubito Tree1[26];
     Cubito Tree1[72];
@@ -265,11 +276,32 @@ int main(int argc, char **argv) {
             cubeIndex++;  // Aumenta el índice para el siguiente cubo
         }
     }
+    cubeIndex = 0;
+
+    //Cactus:
+    int baseX = -6;  // Posición inicial en el eje X
+    int baseY = 0;   // Posición en el eje Y (constante en este caso)
+    int baseZ = 0;   // Posición inicial en el eje Z
     
-    generateCube(trunk, 0,  2, 0, BLOCK_TREE);
+    generateCube(cactus[0], -6,  1, 0, BLOCK_CACTUS);
+    generateCube(cactus[1], -6,  2, 0, BLOCK_CACTUS);
+    generateCube(cactus[2], -6,  3, 0, BLOCK_CACTUS);
 
-
-    // aaaaaaaaaaaaaaaa
+    // Iterar para crear una cuadrícula de 3x3 alrededor de (-6, 0, 0)
+    for (int i = -1; i <= 1; i++) {       // Recorre las posiciones -1, 0, 1 en el eje X
+        for (int j = -1; j <= 1; j++) {   // Recorre las posiciones -1, 0, 1 en el eje Z
+            generateCube(sandDirt[cubeIndex], baseX + i, baseY, baseZ + j, BLOCK_SAND_DIRT);  // Genera el bloque en la posición (x, y, z)
+            cubeIndex++;  // Aumenta el índice para el siguiente cubo
+        }
+    }
+    cubeIndex = 0;
+    for (int i = -2; i <= 2; i++) {       // Recorre las posiciones -2, -1, 0, 1, 2 en el eje X
+        for (int j = -2; j <= 2; j++) {   // Recorre las posiciones -2, -1, 0, 1, 2 en el eje Z
+            generateCube(dirt[cubeIndex], baseX + i, -1, j, BLOCK_DIRT);  // Genera el bloque en la posición (x, y, z)
+            cubeIndex++;  // Aumenta el índice para el siguiente cubo
+        }
+    }
+    
     
     TextRenderer text;
     
@@ -294,7 +326,6 @@ int main(int argc, char **argv) {
         //GRRLIB_SetTexture(tex_girl, 0);
         GX_LoadTexObj(&blocksTexture, GX_TEXMAP0);
         GX_SetTexCoordScaleManually(GX_TEXCOORD0, GX_TRUE, TILE_SIZE, TILE_SIZE);
-
         
         GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
         GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_S16, 0);
@@ -307,20 +338,30 @@ int main(int argc, char **argv) {
         for(int i = 0; i < 9; i++) {
             renderCube(grass[i], 0, 0, 0, 0, 0);
         }
-        for(int i =0; i < 25; i++) {
-            renderCube(stone[i], 0, 0, 0, 0, 0);
+        for (auto& i : stone) {
+            renderCube(i, 0, 0, 0, 0, 0);
         }
         for (int i = 0; i < 72; i++) {
             renderCube(Tree1[i], 0, 0, 0, 0, 0);
         }
 
+        //Cactus
+        for (auto& cactu : cactus) {
+            renderCube(cactu, 0, 0);
+        }
+        for (auto& i : sandDirt) {
+            renderCube(i, 0, 0);
+        }
+        for (auto& i : dirt) {
+            renderCube(i, 0, 0);
+        }
 
         auto cameraString = " X: " + std::to_string(currentCam.position_.x) + 
                             " Y: " + std::to_string(currentCam.position_.y) +
                             " Z: " + std::to_string(currentCam.position_.z);
         GRRLIB_2dMode();
         text.beginRender();
-        text.render(USVec2{5,  5}, ("Ticks:        " + std::to_string(gettick())).c_str());
+        text.render(USVec2{5,  5}, ("Ticks (CPU):  " + std::to_string(gettick())).c_str());
         text.render(USVec2{5, 20}, ("Time:         " + std::to_string(gettime())).c_str());
         text.render(USVec2{5, 35}, ("Current Time: " + std::to_string(currentTime)).c_str());
         text.render(USVec2{5, 50}, ("Last Time:    " + std::to_string(lastTime)).c_str());
