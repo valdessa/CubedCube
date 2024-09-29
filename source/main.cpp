@@ -17,8 +17,9 @@ GRRLIB (GX Version)
 
 //My includes
 #include <typedefs.h>
-#include "camera.h"
-#include "text_renderer.h"
+#include <engine.h>
+#include <camera.h>
+#include <text_renderer.h>
 
 //Blocks TPL data
 #include "bloquitos_tpl.h"
@@ -34,10 +35,6 @@ using namespace poyo;
 static TPLFile bloquitosTPL;
 static GXTexObj blocksTexture;
 static HashMap<u8, Pair<u16, u16>> tileUVMap;
-
-float deltaTime = 0;
-u64 lastTime = 0;
-u64 currentTime = 0;
 
 struct CubeFace {
     s16 x, y, z;
@@ -204,18 +201,6 @@ void renderCube(const Cubito& cube, float angleX, float angleY, s16 worldX = 0, 
     GX_End();
 }
 
-void initializeLastTime() {
-    lastTime = gettick();
-}
-
-void processDeltaTime() {
-    lastTime = currentTime; // Actualiza el último tiempo
-    currentTime = gettick();
-    u64 deltaTimeTicks = currentTime - lastTime; 
-    deltaTime = static_cast<float>(ticks_to_millisecs(deltaTimeTicks)) / 1000.0f; //to seconds!!
-    //deltaTime = (double)ticks_to_secs(deltaTimeTicks);
-}
-
 
 int main(int argc, char **argv) {
     // Initialise the Graphics & Video subsystem
@@ -223,8 +208,6 @@ int main(int argc, char **argv) {
 
     // Initialise the GameCube controllers
     PAD_Init();
-
-    initializeLastTime();
 
     GRRLIB_SetAntiAliasing(true);
     GRRLIB_Settings.antialias = true;
@@ -304,7 +287,8 @@ int main(int argc, char **argv) {
     
     // Loop forever
     while(1) {
-        processDeltaTime();
+        Engine::UpdateEngine();
+        auto deltaTime = Engine::getDeltaTime();
         
         GRRLIB_2dMode();
         PAD_ScanPads(); // Scan the GameCube controllers
@@ -355,12 +339,12 @@ int main(int argc, char **argv) {
 
         auto camPos = currentCam.getPosition();
         GRRLIB_2dMode();
+        
         text.beginRender();
-        //text.render(USVec2{5,  5}, ("Ticks (CPU):  " + std::to_string(gettick())).c_str());
         text.render(USVec2{5,   5}, fmt::format("Ticks (CPU) : {}", gettick()).c_str());
         text.render(USVec2{5,  20}, fmt::format("Time        : {}", gettime()).c_str());
-        text.render(USVec2{5,  35}, fmt::format("Current Time: {}", currentTime).c_str());
-        text.render(USVec2{5,  50}, fmt::format("Last Time   : {}", lastTime).c_str());
+        text.render(USVec2{5,  35}, fmt::format("Current Time: {}", Engine::getCurrentTime()).c_str());
+        text.render(USVec2{5,  50}, fmt::format("Last Time   : {}", Engine::getLastTime()).c_str());
         text.render(USVec2{5,  65}, fmt::format("Delta Time  : {}", deltaTime).c_str());
         text.render(USVec2{275, 5}, fmt::format("Camera X [{:.4f}] Y [{:.4f}] Z [{:.4f}]", camPos.x, camPos.y, camPos.z).c_str());
         text.render(USVec2{275, 20}, fmt::format("Camera Pitch [{:.4f}] Yaw [{:.4f}]", currentCam.getPitch(), currentCam.getYaw()).c_str());

@@ -1,0 +1,39 @@
+#include <typedefs.h>
+#include <gctypes.h>
+
+#include <engine.h>
+
+#include <ogc/lwp_watchdog.h>
+
+using namespace poyo;
+
+Engine::Engine(){
+    deltaTime_ = 0.0f;
+    currentTime_ = 0;
+    lastTime_ = 0;
+}
+
+Engine& Engine::get(){
+    static Engine instance;
+    return instance;
+}
+
+void Engine::UpdateEngine() {
+    auto& e = get();
+    e.lastTime_ = e.currentTime_;
+    e.currentTime_ = gettick();
+    u64 deltaTimeTicks = e.currentTime_ - e.lastTime_;
+    e.deltaTime_ = static_cast<float>(ticks_to_millisecs(deltaTimeTicks)) / 1000.0f; //to seconds!!
+}
+
+cfloat Engine::getDeltaTime() {
+    return get().deltaTime_;
+}
+
+u64 Engine::getCurrentTime() {
+    return get().currentTime_;
+}
+
+u64 Engine::getLastTime() {
+    return get().lastTime_;
+}
