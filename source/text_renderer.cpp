@@ -1,7 +1,7 @@
-#include "typedefs.h"
+#include <typedefs.h>
 #include <gccore.h>
 
-#include "text_renderer.h"
+#include <text_renderer.h>
 
 #include <cstring>
 

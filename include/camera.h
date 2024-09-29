@@ -4,7 +4,7 @@
 namespace poyo {
 	class Camera {
 	 public:
-		Camera(cFVec3& position);
+		Camera(cFVec3& position, cfloat speed);
 		~Camera();
 
 		//Copy Constructor
@@ -17,6 +17,13 @@ namespace poyo {
 
 		void updateCamera(float deltaTime);
 
+		void setPosition(cFVec3& pos);
+
+		cFVec3& getPosition() const;
+		cfloat& getPitch() const;
+		cfloat& getYaw() const;
+		
+	 private:
 		FVec3 position_;
 		FVec3 forward_;
 		FVec3 right_;
@@ -25,7 +32,7 @@ namespace poyo {
 		FVec3 worldUp_;
 
 		float pitch_, yaw_;
-		float fov_, far_;
+		float fov_, far_, near_;
 		float speed_, sensitivity_;
 	};
 }

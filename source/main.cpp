@@ -5,21 +5,18 @@ GRRLIB (GX Version)
         Minimum Code To Use GRRLIB
 ============================================*/
 #include <grrlib.h>
-#include <stdlib.h>
+#include <cstdlib>
 #include <ogc/pad.h>
 #include <math.h> // Para usar funciones trigonométricas
-
-#include <stdlib.h>
-#include <string.h>
-#include <malloc.h>
-#include <math.h>
 #include <gccore.h>
 
 #include <ogc/tpl.h>
 #include <ogc/lwp_watchdog.h>   // Needed for gettime and ticks_to_millisecs
 
+#include <fmt/core.h>
+
 //My includes
-#include "typedefs.h"
+#include <typedefs.h>
 #include "camera.h"
 #include "text_renderer.h"
 
@@ -124,12 +121,12 @@ void mapTileUVs(u8 tilesetWidth) {
     }
 }
 
-void fillCube(Cubito& cube, int cface, s16 x, s16 y, s16 z, u8 direction, int block) {
-    cube.face[cface].x = x;
-    cube.face[cface].y = y;
-    cube.face[cface].z = z;
-    cube.face[cface].direction = direction;
-    cube.face[cface].tile = blockTiles[block][direction];
+void fillCube(Cubito& cube, u16 face, s16 x, s16 y, s16 z, u8 direction, int block) {
+    cube.face[face].x = x;
+    cube.face[face].y = y;
+    cube.face[face].z = z;
+    cube.face[face].direction = direction;
+    cube.face[face].tile = blockTiles[block][direction];
 }
 
 void generateCube(Cubito& cube, s16 x, s16 y, s16 z, int block) {
@@ -263,15 +260,15 @@ int main(int argc, char **argv) {
     generateTree(Tree1, 0, 1, 0);
     
     int cubeIndex = 0;
-    for (int i = -1; i <= 1; i++) {       // Recorre las posiciones -1, 0, 1 en el eje X
-        for (int j = -1; j <= 1; j++) {   // Recorre las posiciones -1, 0, 1 en el eje Z
+    for (s16 i = -1; i <= 1; i++) {       // Recorre las posiciones -1, 0, 1 en el eje X
+        for (s16 j = -1; j <= 1; j++) {   // Recorre las posiciones -1, 0, 1 en el eje Z
             generateCube(grass[cubeIndex], i, 0, j, BLOCK_GRASS);  // Genera el bloque en la posición (x, y, z)
             cubeIndex++;  // Aumenta el índice para el siguiente cubo
         }
     }
     cubeIndex = 0;
-    for (int i = -2; i <= 2; i++) {       // Recorre las posiciones -2, -1, 0, 1, 2 en el eje X
-        for (int j = -2; j <= 2; j++) {   // Recorre las posiciones -2, -1, 0, 1, 2 en el eje Z
+    for (s16 i = -2; i <= 2; i++) {       // Recorre las posiciones -2, -1, 0, 1, 2 en el eje X
+        for (s16 j = -2; j <= 2; j++) {   // Recorre las posiciones -2, -1, 0, 1, 2 en el eje Z
             generateCube(stone[cubeIndex], i, -1, j, BLOCK_STONE);  // Genera el bloque en la posición (x, y, z)
             cubeIndex++;  // Aumenta el índice para el siguiente cubo
         }
@@ -288,25 +285,22 @@ int main(int argc, char **argv) {
     generateCube(cactus[2], -6,  3, 0, BLOCK_CACTUS);
 
     // Iterar para crear una cuadrícula de 3x3 alrededor de (-6, 0, 0)
-    for (int i = -1; i <= 1; i++) {       // Recorre las posiciones -1, 0, 1 en el eje X
-        for (int j = -1; j <= 1; j++) {   // Recorre las posiciones -1, 0, 1 en el eje Z
+    for (s16 i = -1; i <= 1; i++) {       // Recorre las posiciones -1, 0, 1 en el eje X
+        for (s16 j = -1; j <= 1; j++) {   // Recorre las posiciones -1, 0, 1 en el eje Z
             generateCube(sandDirt[cubeIndex], baseX + i, baseY, baseZ + j, BLOCK_SAND_DIRT);  // Genera el bloque en la posición (x, y, z)
             cubeIndex++;  // Aumenta el índice para el siguiente cubo
         }
     }
     cubeIndex = 0;
-    for (int i = -2; i <= 2; i++) {       // Recorre las posiciones -2, -1, 0, 1, 2 en el eje X
-        for (int j = -2; j <= 2; j++) {   // Recorre las posiciones -2, -1, 0, 1, 2 en el eje Z
+    for (s16 i = -2; i <= 2; i++) {       // Recorre las posiciones -2, -1, 0, 1, 2 en el eje X
+        for (s16 j = -2; j <= 2; j++) {   // Recorre las posiciones -2, -1, 0, 1, 2 en el eje Z
             generateCube(dirt[cubeIndex], baseX + i, -1, j, BLOCK_DIRT);  // Genera el bloque en la posición (x, y, z)
             cubeIndex++;  // Aumenta el índice para el siguiente cubo
         }
     }
     
-    
     TextRenderer text;
-    
-    Camera currentCam(FVec3{0.0f, 0.0f, 13.0f});
-    currentCam.speed_ = 15.0f;
+    Camera currentCam(FVec3{0.0f, 0.0f, 13.0f}, 15.0f);
     
     // Loop forever
     while(1) {
@@ -356,17 +350,20 @@ int main(int argc, char **argv) {
             renderCube(i, 0, 0);
         }
 
-        auto cameraString = " X: " + std::to_string(currentCam.position_.x) + 
-                            " Y: " + std::to_string(currentCam.position_.y) +
-                            " Z: " + std::to_string(currentCam.position_.z);
+        if(PAD_ButtonsHeld(0) & PAD_TRIGGER_Z) currentCam.setPosition(FVec3{0, 0, 0});
+        
+
+        auto camPos = currentCam.getPosition();
         GRRLIB_2dMode();
         text.beginRender();
-        text.render(USVec2{5,  5}, ("Ticks (CPU):  " + std::to_string(gettick())).c_str());
-        text.render(USVec2{5, 20}, ("Time:         " + std::to_string(gettime())).c_str());
-        text.render(USVec2{5, 35}, ("Current Time: " + std::to_string(currentTime)).c_str());
-        text.render(USVec2{5, 50}, ("Last Time:    " + std::to_string(lastTime)).c_str());
-        text.render(USVec2{5, 65}, ("Delta Time:   " + std::to_string(deltaTime)).c_str());
-        text.render(USVec2{275, 5}, ("Camera: " + cameraString).c_str());
+        //text.render(USVec2{5,  5}, ("Ticks (CPU):  " + std::to_string(gettick())).c_str());
+        text.render(USVec2{5,   5}, fmt::format("Ticks (CPU) : {}", gettick()).c_str());
+        text.render(USVec2{5,  20}, fmt::format("Time        : {}", gettime()).c_str());
+        text.render(USVec2{5,  35}, fmt::format("Current Time: {}", currentTime).c_str());
+        text.render(USVec2{5,  50}, fmt::format("Last Time   : {}", lastTime).c_str());
+        text.render(USVec2{5,  65}, fmt::format("Delta Time  : {}", deltaTime).c_str());
+        text.render(USVec2{275, 5}, fmt::format("Camera X [{:.4f}] Y [{:.4f}] Z [{:.4f}]", camPos.x, camPos.y, camPos.z).c_str());
+        text.render(USVec2{275, 20}, fmt::format("Camera Pitch [{:.4f}] Yaw [{:.4f}]", currentCam.getPitch(), currentCam.getYaw()).c_str());
 
         //GRRLIB_PrintfTTF(50, 50, myFont, "MINECRAFT", 16, 0x000000FF);
 
@@ -382,86 +379,4 @@ int main(int argc, char **argv) {
 
     exit(0); // Use exit() to exit a program, do not use 'return' from main()
 }
-
-//void drawCube() {
-//    GX_Begin(GX_QUADS, GX_VTXFMT0, 24);
-//    GX_Position3f32(-1.0f, 1.0f, 1.0f);
-//    GX_Color1u32(0xFFFFFFFF);
-//    GX_TexCoord2f32(0.0f, 0.0f);
-//    GX_Position3f32(1.0f, 1.0f, 1.0f);
-//    GX_Color1u32(0xFFFFFFFF);
-//    GX_TexCoord2f32(1.0f, 0.0f);
-//    GX_Position3f32(1.0f, -1.0f, 1.0f);
-//    GX_Color1u32(0xFFFFFFFF);
-//    GX_TexCoord2f32(1.0f, 1.0f);
-//    GX_Position3f32(-1.0f, -1.0f, 1.0f);
-//    GX_Color1u32(0xFFFFFFFF);
-//    GX_TexCoord2f32(0.0f, 1.0f);
-//
-//    GX_Position3f32(1.0f, 1.0f, -1.0f);
-//    GX_Color1u32(0xFFFFFFFF);
-//    GX_TexCoord2f32(0.0f, 0.0f);
-//    GX_Position3f32(-1.0f, 1.0f, -1.0f);
-//    GX_Color1u32(0xFFFFFFFF);
-//    GX_TexCoord2f32(1.0f, 0.0f);
-//    GX_Position3f32(-1.0f, -1.0f, -1.0f);
-//    GX_Color1u32(0xFFFFFFFF);
-//    GX_TexCoord2f32(1.0f, 1.0f);
-//    GX_Position3f32(1.0f, -1.0f, -1.0f);
-//    GX_Color1u32(0xFFFFFFFF);
-//    GX_TexCoord2f32(0.0f, 1.0f);
-//
-//    GX_Position3f32(1.0f, 1.0f, 1.0f);
-//    GX_Color1u32(0xFFFFFFFF);
-//    GX_TexCoord2f32(0.0f, 0.0f);
-//    GX_Position3f32(1.0f, 1.0f, -1.0f);
-//    GX_Color1u32(0xFFFFFFFF);
-//    GX_TexCoord2f32(1.0f, 0.0f);
-//    GX_Position3f32(1.0f, -1.0f, -1.0f);
-//    GX_Color1u32(0xFFFFFFFF);
-//    GX_TexCoord2f32(1.0f, 1.0f);
-//    GX_Position3f32(1.0f, -1.0f, 1.0f);
-//    GX_Color1u32(0xFFFFFFFF);
-//    GX_TexCoord2f32(0.0f, 1.0f);
-//
-//    GX_Position3f32(-1.0f, 1.0f, -1.0f);
-//    GX_Color1u32(0xFFFFFFFF);
-//    GX_TexCoord2f32(0.0f, 0.0f);
-//    GX_Position3f32(-1.0f, 1.0f, 1.0f);
-//    GX_Color1u32(0xFFFFFFFF);
-//    GX_TexCoord2f32(1.0f, 0.0f);
-//    GX_Position3f32(-1.0f, -1.0f, 1.0f);
-//    GX_Color1u32(0xFFFFFFFF);
-//    GX_TexCoord2f32(1.0f, 1.0f);
-//    GX_Position3f32(-1.0f, -1.0f, -1.0f);
-//    GX_Color1u32(0xFFFFFFFF);
-//    GX_TexCoord2f32(0.0f, 1.0f);
-//
-//    GX_Position3f32(-1.0f, 1.0f, -1.0f);
-//    GX_Color1u32(0xFFFFFFFF);
-//    GX_TexCoord2f32(0.0f, 0.0f);
-//    GX_Position3f32(1.0f, 1.0f, -1.0f);
-//    GX_Color1u32(0xFFFFFFFF);
-//    GX_TexCoord2f32(1.0f, 0.0f);
-//    GX_Position3f32(1.0f, 1.0f, 1.0f);
-//    GX_Color1u32(0xFFFFFFFF);
-//    GX_TexCoord2f32(1.0f, 1.0f);
-//    GX_Position3f32(-1.0f, 1.0f, 1.0f);
-//    GX_Color1u32(0xFFFFFFFF);
-//    GX_TexCoord2f32(0.0f, 1.0f);
-//
-//    GX_Position3f32(1.0f, -1.0f, -1.0f);
-//    GX_Color1u32(0xFFFFFFFF);
-//    GX_TexCoord2f32(0.0f, 0.0f);
-//    GX_Position3f32(-1.0f, -1.0f, -1.0f);
-//    GX_Color1u32(0xFFFFFFFF);
-//    GX_TexCoord2f32(1.0f, 0.0f);
-//    GX_Position3f32(-1.0f, -1.0f, 1.0f);
-//    GX_Color1u32(0xFFFFFFFF);
-//    GX_TexCoord2f32(1.0f, 1.0f);
-//    GX_Position3f32(1.0f, -1.0f, 1.0f);
-//    GX_Color1u32(0xFFFFFFFF);
-//    GX_TexCoord2f32(0.0f, 1.0f);
-//    GX_End();
-//}
 

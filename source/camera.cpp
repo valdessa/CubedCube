@@ -1,15 +1,12 @@
 #include <grrlib.h>
+#include <typedefs.h>
 
-#include "typedefs.h"
+#include <camera.h>
 
-#include <ogc/gx.h>
-
-#include "camera.h"
 
 using namespace poyo;
 
-Camera::Camera(cFVec3& position) : position_(position), forward_(0, 0, 0) {
-
+Camera::Camera(cFVec3& position, cfloat speed) : position_(position), forward_(0, 0, 0), speed_(speed) {
     worldUp_ = glm::vec3(0, 1, 0);
     right_ = glm::vec3(1, 0, 0);
     up_ = glm::vec3(0, 1, 0);
@@ -17,13 +14,14 @@ Camera::Camera(cFVec3& position) : position_(position), forward_(0, 0, 0) {
 	pitch_ = 0.0f;
 	yaw_   = -90.0f;
 
-    speed_ = 1.0f;
+    near_ = 0.1f;
+    far_ = 1000.0f;
+    fov_ = 45.0f;
+    
     sensitivity_ = 1.0f;
 }
 
-Camera::~Camera() {
-
-}
+Camera::~Camera() = default;
 
 void Camera::updateCamera(float deltaTime) {
     // Read inputs from the left joystick (s8 type)
@@ -82,6 +80,22 @@ void Camera::updateCamera(float deltaTime) {
         position_.x, position_.y, position_.z,
         up_.x, up_.y, up_.z,
         center.x, center.y, center.z); // View matrix
+}
+
+void Camera::setPosition(cFVec3& pos) {
+    position_ = pos;
+}
+
+cFVec3& Camera::getPosition() const {
+    return position_;
+}
+
+cfloat& Camera::getPitch() const {
+    return pitch_;
+}
+
+cfloat& Camera::getYaw() const {
+    return yaw_;
 }
 
 

@@ -20,7 +20,7 @@ BUILD		:=	build
 SOURCES		:=	source
 DATA		:=	data
 TEXTURES	:=	textures 
-INCLUDES	:=  include deps/glm deps/
+INCLUDES	:=  include deps/glm deps/ deps/fmt
 
 #---------------------------------------------------------------------------------
 # options for code generation
@@ -38,12 +38,13 @@ LDFLAGS	=	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map
 LIBS	:= -lgrrlib -lpngu `$(PREFIX)pkg-config freetype2 libpng libjpeg --libs` -lfat
 #LIBS	+= -lmodplay -laesnd
 LIBS	+= -logc -lm
+LIBS    += -lfmt  # Especifica la ruta completa
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
 # include and lib
 #---------------------------------------------------------------------------------
-LIBDIRS	:= $(PORTLIBS)
+LIBDIRS	:= $(PORTLIBS) $(CURDIR)/deps/fmt
 
 #---------------------------------------------------------------------------------
 # no real need to edit anything past this point unless you need to add additional
@@ -93,7 +94,9 @@ export INCLUDE	:=	$(foreach dir,$(INCLUDES), -iquote $(CURDIR)/$(dir)) \
 					$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
 					-I$(CURDIR)/$(BUILD) \
 					-I$(LIBOGC_INC) \
-                    -I$(CURDIR)/deps/glm #for deps
+					-I$(CURDIR)/include \
+					-I$(CURDIR)/deps \
+					-I$(CURDIR)/deps/glm #for deps
 
 #---------------------------------------------------------------------------------
 # build a list of library paths
