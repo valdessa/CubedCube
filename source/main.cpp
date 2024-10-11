@@ -19,6 +19,7 @@ GRRLIB (GX Version)
 #include <typedefs.h>
 #include <engine.h>
 #include <camera.h>
+#include <memory.h>
 #include <text_renderer.h>
 
 //Blocks TPL data
@@ -203,6 +204,7 @@ void renderCube(const Cubito& cube, float angleX, float angleY, s16 worldX = 0, 
 
 
 int main(int argc, char **argv) {
+    size_t used1 = Memory::getTotalMemoryUsed();
     // Initialise the Graphics & Video subsystem
     GRRLIB_Init();
 
@@ -283,12 +285,25 @@ int main(int argc, char **argv) {
     }
     
     TextRenderer text;
-    Camera currentCam(FVec3{0.0f, 0.0f, 13.0f}, 15.0f);
+    Camera currentCam(FVec3{0.0f, 2.0f, 13.0f}, 15.0f);
+    
+    size_t used2 = Memory::getTotalMemoryUsed();
+
+    //Cubito* cubitos = (Cubito*)calloc(128, sizeof(Cubito));
+    //Cubito* cubitos = new Cubito[128];
+    std::vector<Cubito> cubitos(128);
+    //Cubito* cubitos = (Cubito*)calloc(128, sizeof(Cubito));
+    for(int i = 0; i < 128; i++) {
+        cubitos[i].x = 5;
+    }
+    
+    size_t used3 = Memory::getTotalMemoryUsed();
     
     // Loop forever
     while(1) {
         Engine::UpdateEngine();
         auto deltaTime = Engine::getDeltaTime();
+
         
         GRRLIB_2dMode();
         PAD_ScanPads(); // Scan the GameCube controllers
@@ -346,6 +361,11 @@ int main(int argc, char **argv) {
         text.render(USVec2{5,  35}, fmt::format("Current Time: {}", Engine::getCurrentTime()).c_str());
         text.render(USVec2{5,  50}, fmt::format("Last Time   : {}", Engine::getLastTime()).c_str());
         text.render(USVec2{5,  65}, fmt::format("Delta Time  : {}", deltaTime).c_str());
+        text.render(USVec2{5,  80}, fmt::format("Mem1  : {}", used1).c_str());
+        text.render(USVec2{5,  95}, fmt::format("Mem2  : {}", used2).c_str());
+        text.render(USVec2{5,  110}, fmt::format("Mem3  : {}", used3).c_str());
+        text.render(USVec2{5,  125}, fmt::format("Mem  : {}", used3 - used2).c_str());
+        text.render(USVec2{5,  140}, fmt::format("Free Memory  : {}", SYS_GetArena1Size()).c_str());
         text.render(USVec2{275, 5}, fmt::format("Camera X [{:.4f}] Y [{:.4f}] Z [{:.4f}]", camPos.x, camPos.y, camPos.z).c_str());
         text.render(USVec2{275, 20}, fmt::format("Camera Pitch [{:.4f}] Yaw [{:.4f}]", currentCam.getPitch(), currentCam.getYaw()).c_str());
 

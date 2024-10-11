@@ -16,7 +16,7 @@ include $(DEVKITPPC)/gamecube_rules
 # INCLUDES is a list of directories containing extra header files
 #---------------------------------------------------------------------------------
 TARGET		:=	$(notdir $(CURDIR))
-BUILD		:=	build
+BUILD		:=	bin
 SOURCES		:=	source
 DATA		:=	data
 TEXTURES	:=	textures 

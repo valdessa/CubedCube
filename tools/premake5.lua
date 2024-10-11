@@ -35,8 +35,18 @@ workspace "Cubed Cube"
 
 project "Cubed Cube"
 
-	kind "ConsoleApp"
 	language "C++"
+	kind "Makefile"
+
+    debugcommand("../run.bat")
+
+    -- Comandos para ejecutar el Makefile
+    buildcommands { "make -C .." }  -- Cambia a la carpeta anterior y ejecuta make
+    rebuildcommands { "make -C .. clean && make -C .." }
+    cleancommands { "make -C .. clean" }
+
+    -- Definir las propiedades necesarias para NMake
+    buildoutputs { "../bin/%{prj.name}/%{cfg.longname}/*" }  -- Ajusta según tu salida esperada
 
  	files { "../include/**.h", "../source/**.cpp" }
 
