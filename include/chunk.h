@@ -16,6 +16,7 @@ namespace poyo {
         Cubito& getCubito(const CubePosition& pos);
 
         U32 validBlocks = 0;
+        SVec2 position_;
         
 #ifdef OPTIMIZE_VECTOR
         Vector<Cubito> cubitos_;

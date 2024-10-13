@@ -9,14 +9,14 @@
 #define STONE_LEVEL 12
 #define MIN_HEIGHT  2
 
-//#define OPTIMIZE_VECTOR
-//#define OPTIMIZE_MAPS
+#define OPTIMIZE_VECTOR
+#define OPTIMIZE_MAPS
 
 namespace poyo {
     using CubePosition = SVec3;
 
     struct CubeFace {
-        S16 x, y, z;
+        U8 x, y, z;
         U8 direction;
         U8 tile;
     };

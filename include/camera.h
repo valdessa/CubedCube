@@ -5,6 +5,7 @@ namespace poyo {
 	class Camera {
 	 public:
 		Camera(cFVec3& position, cfloat speed);
+		Camera(cFVec3& position, cfloat& pitch, cfloat& yaw, cfloat speed);
 		~Camera();
 
 		//Copy Constructor

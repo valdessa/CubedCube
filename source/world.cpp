@@ -26,6 +26,8 @@ World::~World() {
 }
 
 void World::generateChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
+    chunk.position_.x = chunkX;
+    chunk.position_.y = chunkZ;
     for (S16 x = 0; x < CHUNK_SIZE; ++x) {
         for (S16 z = 0; z < CHUNK_SIZE; ++z) {
             S32 worldX = chunkX * CHUNK_SIZE + x;

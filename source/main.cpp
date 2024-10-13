@@ -10,6 +10,8 @@ GRRLIB (GX Version)
 #include <math.h> // Para usar funciones trigonométricas
 #include <gccore.h>
 
+#include <locale>
+
 #include <ogc/tpl.h>
 #include <ogc/lwp_watchdog.h>   // Needed for gettime and ticks_to_millisecs
 
@@ -22,6 +24,9 @@ GRRLIB (GX Version)
 #include <camera.h>
 #include <memory.h>
 
+#include <tick.h>
+#include <timer.h>
+
 #include <chunk.h>
 #include <world.h>
 #include <text_renderer.h>
@@ -31,6 +36,8 @@ GRRLIB (GX Version)
 #include "bloquitos.h"
 
 // Font
+#include <thread>
+
 #include "Karma_ttf.h"
 
 using namespace poyo;
@@ -128,16 +135,17 @@ void generateTree(Cubito cubes[], s16 baseX, s16 baseY, s16 baseZ) {
 }
 
 void renderCube(const Cubito& cube, float angleX, float angleY, s16 worldX = 0, s16 worldY = 0, s16 worldZ = 0) {
-    GRRLIB_ObjectView(cube.x, cube.y, cube.z, angleX, angleY, 0.0f, 1.0f, 1.0f, 1.0f);
+    GRRLIB_ObjectView(cube.x  + worldX, cube.y  + worldY, cube.z  + worldZ,
+        angleX, angleY, 0.0f, 1.0f, 1.0f, 1.0f);
 
     GX_Begin(GX_QUADS, GX_VTXFMT0, 24);
 
     for (auto& currentFace : cube.face) {
         for (int j = 0; j < 4; j++) {
             //Signed Short!!
-            GX_Position3s16(currentFace.x + cubeFaces[currentFace.direction][j][0] + worldX,
-                            currentFace.y + cubeFaces[currentFace.direction][j][1] + worldY,
-                            currentFace.z + cubeFaces[currentFace.direction][j][2] + worldZ);
+            GX_Position3u16(currentFace.x + cubeFaces[currentFace.direction][j][0],
+                            currentFace.y + cubeFaces[currentFace.direction][j][1],
+                            currentFace.z + cubeFaces[currentFace.direction][j][2]);
             //GX_Color1u32 old
             //GX_Color1x8(255);
             GX_Color1u32(0xFFFFFFFF);
@@ -163,7 +171,7 @@ void renderChunk(const Chunk& chunk) {
         if(currentCubito.type == BLOCK_AIR) continue;
         nDrawCalls++;
 
-        renderCube(currentCubito, 0, 0);
+        renderCube(currentCubito, 0, 0, chunk.position_.x, 0, chunk.position_.y);
     }
 #else
     for (size_t x = 0; x < cubitos.size(); ++x) {
@@ -172,12 +180,24 @@ void renderChunk(const Chunk& chunk) {
                 const Cubito& currentCubito = cubitos[x][y][z];
                 if(currentCubito.type == BLOCK_AIR) continue;
                 nDrawCalls++;
-                renderCube(currentCubito, 0, 0);
+                renderCube(currentCubito, 0, 0, chunk.position_.x, 0, chunk.position_.y);
             }
         }
     }
 #endif
-    
+}
+
+String formatThousands(size_t value) {
+    String num_str = std::to_string(value);  // Convert the number to a string
+    auto insert_position = num_str.length() - 3;   // Start 3 digits from the end
+
+    // Insert commas every three digits
+    while (insert_position > 0) {
+        num_str.insert(insert_position, ".");
+        insert_position -= 3;
+    }
+
+    return num_str;
 }
 
 int main(int argc, char **argv) {
@@ -261,23 +281,20 @@ int main(int argc, char **argv) {
 #endif
     
     TextRenderer text;
-    Camera currentCam(FVec3{0.0f, 2.0f, 13.0f}, 15.0f);
+    Camera currentCam(FVec3{0.0f, 20.0f, 50.0f}, -20, -90, 15.0f);
     
     size_t used2 = Memory::getTotalMemoryUsed();
-
-    // //Cubito* cubitos = (Cubito*)calloc(128, sizeof(Cubito));
-    // //Cubito* cubitos = new Cubito[128];
-    // std::vector<Cubito> cubitos(128);
-    // //Cubito* cubitos = (Cubito*)calloc(128, sizeof(Cubito));
-    // for(int i = 0; i < 128; i++) {
-    //     cubitos[i].x = 5;
-    // }
+    
     World currentWorld;
 
     auto& currentChunk = currentWorld.getOrCreateChunk(0, 0);
     currentWorld.generateChunk(currentChunk, 0, 0);
+    auto& currentChunk2 = currentWorld.getOrCreateChunk(CHUNK_SIZE, 0);
+    currentWorld.generateChunk(currentChunk2, CHUNK_SIZE, 0);
     
     size_t used3 = Memory::getTotalMemoryUsed();
+
+    Tick currentTick;
     // Loop forever
     while(1) {
         Engine::UpdateEngine();
@@ -300,7 +317,7 @@ int main(int argc, char **argv) {
         GX_SetTexCoordScaleManually(GX_TEXCOORD0, GX_TRUE, TILE_SIZE, TILE_SIZE);
         
         GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
-        GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_S16, 0); //Positions -> S16
+        GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_U16, 0); //Positions -> U16
         GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_U16, 0); //Textures  -> U16
         
 #ifdef USE_OLD
@@ -327,8 +344,13 @@ int main(int argc, char **argv) {
 #endif
 
         nDrawCalls = 0;
+        currentTick.start();
         renderChunk(currentChunk);
-
+        renderChunk(currentChunk2);
+        //std::this_thread::sleep_for(std::chrono::seconds(1));
+        auto drawTicks = currentTick.stopAndGetTick();
+        currentTick.reset();
+        
         if(PAD_ButtonsHeld(0) & PAD_TRIGGER_Z) currentCam.setPosition(FVec3{0, 0, 0});
         
 
@@ -340,17 +362,20 @@ int main(int argc, char **argv) {
         text.render(USVec2{5,  20}, fmt::format("Time        : {}", gettime()).c_str());
         text.render(USVec2{5,  35}, fmt::format("Current Time: {}", Engine::getCurrentTime()).c_str());
         text.render(USVec2{5,  50}, fmt::format("Last Time   : {}", Engine::getLastTime()).c_str());
-        text.render(USVec2{5,  65}, fmt::format("Delta Time  : {}", deltaTime).c_str());
+        text.render(USVec2{5,  65}, fmt::format("Delta Time  : {:.3f} s", deltaTime).c_str());
         text.render(USVec2{5,  80}, fmt::format("Mem1  : {}", used1).c_str());
         text.render(USVec2{5,  95}, fmt::format("Mem2  : {}", used2).c_str());
         text.render(USVec2{5,  110}, fmt::format("Mem3  : {}", used3).c_str());
         text.render(USVec2{5,  125}, fmt::format("Mem  : {:.2f} KB", convertirBytesAKilobytes(used3 - used2)).c_str());
         text.render(USVec2{5,  140}, fmt::format("Free Memory  : {}", SYS_GetArena1Size()).c_str());
-        text.render(USVec2{275, 5}, fmt::format("Camera X [{:.4f}] Y [{:.4f}] Z [{:.4f}]", camPos.x, camPos.y, camPos.z).c_str());
+        text.render(USVec2{275,  5}, fmt::format("Camera X [{:.4f}] Y [{:.4f}] Z [{:.4f}]", camPos.x, camPos.y, camPos.z).c_str());
         text.render(USVec2{275, 20}, fmt::format("Camera Pitch [{:.4f}] Yaw [{:.4f}]", currentCam.getPitch(), currentCam.getYaw()).c_str());
-        text.render(USVec2{275, 35}, fmt::format("NDraw Calls: [{}]", nDrawCalls).c_str());
-        text.render(USVec2{275, 50}, fmt::format("Helper: [{}]", currentWorld.helperCounter).c_str());
-        text.render(USVec2{275, 65}, fmt::format("Valid Blocks: [{}]", currentChunk.validBlocks).c_str());
+        //Render Things
+        text.render(USVec2{400,  50}, fmt::format("NDraw Calls : {}", nDrawCalls).c_str());
+        text.render(USVec2{400,  65}, fmt::format("Draw Cycles : {} ts", formatThousands(drawTicks)).c_str());
+        text.render(USVec2{400,  80}, fmt::format("Draw Time   : {} ms", Tick::TickToMs(drawTicks)).c_str());
+        text.render(USVec2{400,  95}, fmt::format("Helper      : {}", currentWorld.helperCounter).c_str());
+        text.render(USVec2{400, 110}, fmt::format("N Blocks    : {}", currentChunk.validBlocks).c_str());
 
         //GRRLIB_PrintfTTF(50, 50, myFont, "MINECRAFT", 16, 0x000000FF);
 

@@ -6,13 +6,15 @@
 
 using namespace poyo;
 
-Camera::Camera(cFVec3& position, cfloat speed) : position_(position), forward_(0, 0, 0), speed_(speed) {
+Camera::Camera(cFVec3& position, cfloat speed) :   Camera(position, 0, -90, speed) {
+    
+}
+
+Camera::Camera(cFVec3& position, cfloat& pitch, cfloat& yaw, cfloat speed) :
+    position_(position), forward_(0, 0, 0), pitch_(pitch), yaw_(yaw), speed_(speed) {
     worldUp_ = glm::vec3(0, 1, 0);
     right_ = glm::vec3(1, 0, 0);
     up_ = glm::vec3(0, 1, 0);
-
-	pitch_ = 0.0f;
-	yaw_   = -90.0f;
 
     near_ = 0.1f;
     far_ = 1000.0f;
