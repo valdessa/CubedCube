@@ -28,15 +28,15 @@ namespace poyo {
 
     using SizeT = size_t;     using cSizeT = const size_t;
     
-    using Int8  = int8_t;     using cInt8  = const int8_t;
-    using Int16 = int16_t;    using cInt16 = const int16_t;
-    using Int32 = int32_t;    using cInt32 = const int32_t;
-    using Int64 = int64_t;    using cInt64 = const int64_t;
+    using S8  = int8_t;       using cS8  = const int8_t;
+    using S16 = int16_t;      using cS16 = const int16_t;
+    using S32 = int32_t;      using cS32 = const int32_t;
+    using S64 = int64_t;      using cS64 = const int64_t;
 
-    using Uint8  = uint8_t;   using cUint8  = const uint8_t;
-    using Uint16 = uint16_t;  using cUint16 = const uint16_t;
-    using Uint32 = uint32_t;  using cUint32 = const uint32_t;
-    using Uint64 = uint64_t;  using cUint64 = const uint64_t; 
+    using U8  = uint8_t;      using cU8  = const uint8_t;
+    using U16 = uint16_t;     using cU16 = const uint16_t;
+    using U32 = uint32_t;     using cU32 = const uint32_t;
+    using U64 = uint64_t;     using cU64 = const uint64_t; 
 
     //*********** Vector Bool ***********//
     using BVec2 = glm::bvec2; using cBVec2 = const glm::bvec2;
@@ -47,6 +47,11 @@ namespace poyo {
     using IVec2 = glm::ivec2; using cIVec2 = const glm::ivec2;
     using IVec3 = glm::ivec3; using cIVec3 = const glm::ivec3;
     using IVec4 = glm::ivec4; using cIVec4 = const glm::ivec4;
+
+    //********** Vector Short **********//
+    using SVec2 = glm::lowp_ivec2; using cSVec2 = const SVec2;
+    using SVec3 = glm::lowp_ivec3; using cSVec3 = const SVec3;
+    using SVec4 = glm::lowp_ivec4; using cSVec4 = const SVec4;
     
     //*********** Vector Unsigned ***********//
     using UVec2 = glm::uvec2; using cUVec2 = const glm::uvec2;

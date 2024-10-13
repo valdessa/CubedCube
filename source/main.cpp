@@ -16,10 +16,14 @@ GRRLIB (GX Version)
 #include <fmt/core.h>
 
 //My includes
-#include <typedefs.h>
+#include <common.h>
+
 #include <engine.h>
 #include <camera.h>
 #include <memory.h>
+
+#include <chunk.h>
+#include <world.h>
 #include <text_renderer.h>
 
 //Blocks TPL data
@@ -31,92 +35,46 @@ GRRLIB (GX Version)
 
 using namespace poyo;
 
+//#define USE_OLD
+
 #define TILE_SIZE 128
 
 static TPLFile bloquitosTPL;
 static GXTexObj blocksTexture;
-static HashMap<u8, Pair<u16, u16>> tileUVMap;
+#ifdef OPTIMIZE_MAPS
+    static u16 tileUVMap[NUM_TILES][2]{};
+#else
+    static HashMap<u8, Pair<u16, u16>> tileUVMap;
+#endif
+static u16 nDrawCalls = 0;
 
-struct CubeFace {
-    s16 x, y, z;
-    u8 direction;
-    u8 tile;
-};
-
-struct Cubito {
-    CubeFace face[6];
-    s16 x, y, z;
-};
-
-enum {
-    BLOCK_STONE,
-    BLOCK_SAND,
-    BLOCK_DIRT,
-    BLOCK_GRASS,
-    BLOCK_WOOD,
-    BLOCK_TREE,
-    BLOCK_LEAF,
-    BLOCK_CACTUS,
-    BLOCK_SAND_DIRT,
-    BLOCK_COUNT // Contador para la cantidad de bloques
-};
-
-enum {
-    TILE_DIRT        = 0,
-    TILE_GRASS_SIDE  = 1,
-    TILE_GRASS       = 2,
-
-    TILE_STONE       = 3,
-
-    TILE_SAND        = 6,
-    TILE_SAND_DIRT   = 7,
-    
-    TILE_TREE_SIDE   = 9,
-    TILE_TREE_TOP    = 10,
-    TILE_WOOD        = 11,
-    TILE_LEAF        = 12,
-    TILE_CACTUS_BOT  = 18,
-    TILE_CACTUS_SIDE = 19,
-    TILE_CACTUS_TOP  = 20,
-    NUM_TILES,
-};
-
-enum {
-    DIR_X_FRONT,
-    DIR_X_BACK,
-    DIR_Y_FRONT,
-    DIR_Y_BACK,
-    DIR_Z_FRONT,
-    DIR_Z_BACK,
-};
-
-static const u8 blockTiles[][6] = {
-    [BLOCK_STONE] =    {TILE_STONE,      TILE_STONE,      TILE_STONE,    TILE_STONE,     TILE_STONE,      TILE_STONE},
-    [BLOCK_SAND] =     {TILE_SAND,       TILE_SAND,       TILE_SAND,     TILE_SAND,      TILE_SAND,       TILE_SAND},
-    [BLOCK_DIRT] =     {TILE_DIRT,       TILE_DIRT,       TILE_DIRT,     TILE_DIRT,      TILE_DIRT,       TILE_DIRT},
-    [BLOCK_GRASS] =    {TILE_GRASS_SIDE, TILE_GRASS_SIDE, TILE_GRASS,    TILE_DIRT,      TILE_GRASS_SIDE, TILE_GRASS_SIDE},
-    [BLOCK_WOOD] =     {TILE_WOOD,       TILE_WOOD,       TILE_WOOD,     TILE_WOOD,      TILE_WOOD,       TILE_WOOD},
-    [BLOCK_TREE] =     {TILE_TREE_SIDE,  TILE_TREE_SIDE,  TILE_TREE_TOP, TILE_TREE_TOP,  TILE_TREE_SIDE,  TILE_TREE_SIDE},
-    [BLOCK_LEAF] =     {TILE_LEAF,       TILE_LEAF,       TILE_LEAF,     TILE_LEAF,      TILE_LEAF,       TILE_LEAF},
-    [BLOCK_CACTUS] =   {TILE_CACTUS_SIDE, TILE_CACTUS_SIDE, TILE_CACTUS_TOP, TILE_CACTUS_BOT, TILE_CACTUS_SIDE, TILE_CACTUS_SIDE},
-    [BLOCK_SAND_DIRT] ={TILE_SAND_DIRT, TILE_SAND_DIRT, TILE_SAND, TILE_DIRT, TILE_SAND_DIRT, TILE_SAND_DIRT},
-};
-
-static const u8 cubeFaces[6][4][3] = {
-    [DIR_X_FRONT] = {{0, 1, 1}, {0, 1, 0}, {0, 0, 0}, {0, 0, 1}},  //drawn clockwise looking x-
-    [DIR_X_BACK] =  {{0, 1, 0}, {0, 1, 1}, {0, 0, 1}, {0, 0, 0}},  //drawn clockwise looking x+
-    [DIR_Y_FRONT] = {{0, 0, 0}, {1, 0, 0}, {1, 0, 1}, {0, 0, 1}},  //drawn clockwise looking y-
-    [DIR_Y_BACK] =  {{0, 0, 0}, {0, 0, 1}, {1, 0, 1}, {1, 0, 0}},  //drawn clockwise looking y+
-    [DIR_Z_FRONT] = {{0, 1, 0}, {1, 1, 0}, {1, 0, 0}, {0, 0, 0}},  //drawn clockwise looking z-
-    [DIR_Z_BACK] =  {{1, 1, 0}, {0, 1, 0}, {0, 0, 0}, {1, 0, 0}},  //drawn clockwise looking z+
+constexpr u16 tileTexCoords[4][2] = {
+    {0, 0},
+    {1, 0},
+    {1, 1},
+    {0, 1}
 };
 
 void mapTileUVs(u8 tilesetWidth) {
+#ifdef OPTIMIZE_MAPS
+    for (u8 tile = 0; tile < NUM_TILES; tile++) {
+        auto U = tile % tilesetWidth;     // Coordenada U (X)
+        auto V = tile / tilesetWidth;     // Coordenada V (Y)
+        tileUVMap[tile][0] = U;
+        tileUVMap[tile][1] = V;
+    }
+#else
     for (u8 tile = 0; tile < NUM_TILES; tile++) {
         auto U = tile % tilesetWidth;     // Coordenada U (X)
         auto V = tile / tilesetWidth;     // Coordenada V (Y)
         tileUVMap[tile] = {U, V};
     }
+#endif
+}
+
+double convertirBytesAKilobytes(size_t bytes) {
+    const double BYTES_POR_KILO = 1024.0; // 1 KB = 1024 bytes
+    return bytes / BYTES_POR_KILO;
 }
 
 void fillCube(Cubito& cube, u16 face, s16 x, s16 y, s16 z, u8 direction, int block) {
@@ -171,17 +129,10 @@ void generateTree(Cubito cubes[], s16 baseX, s16 baseY, s16 baseZ) {
 
 void renderCube(const Cubito& cube, float angleX, float angleY, s16 worldX = 0, s16 worldY = 0, s16 worldZ = 0) {
     GRRLIB_ObjectView(cube.x, cube.y, cube.z, angleX, angleY, 0.0f, 1.0f, 1.0f, 1.0f);
-    const u16 tileTexCoords[4][2] = {
-        {0, 0},
-        {1, 0},
-        {1, 1},
-        {0, 1}
-    };
 
     GX_Begin(GX_QUADS, GX_VTXFMT0, 24);
 
-    for (int face = 0; face < 6; face++) {
-        auto& currentFace = cube.face[face];
+    for (auto& currentFace : cube.face) {
         for (int j = 0; j < 4; j++) {
             //Signed Short!!
             GX_Position3s16(currentFace.x + cubeFaces[currentFace.direction][j][0] + worldX,
@@ -192,16 +143,42 @@ void renderCube(const Cubito& cube, float angleX, float angleY, s16 worldX = 0, 
             GX_Color1u32(0xFFFFFFFF);
             //GX_TexCoord2f32 old
 
-            auto UV = tileUVMap[currentFace.tile];
+            auto& UV = tileUVMap[currentFace.tile];
 
-            GX_TexCoord2f32(UV.first + tileTexCoords[j][0], UV.second + tileTexCoords[j][1]);
+#ifdef OPTIMIZE_MAPS
+            GX_TexCoord2u16(UV[0] + tileTexCoords[j][0], UV[1] + tileTexCoords[j][1]);
+            //GX_TexCoord2f32(UV[0] + tileTexCoords[j][0], UV[1] + tileTexCoords[j][1]);
+#else
+            GX_TexCoord2u16(UV.first + tileTexCoords[j][0], UV.second + tileTexCoords[j][1]);
+#endif
         }
     }
-
-
     GX_End();
 }
 
+void renderChunk(const Chunk& chunk) {
+    auto& cubitos = chunk.cubitos_;
+#ifdef OPTIMIZE_VECTOR
+    for (const auto& currentCubito : cubitos) {
+        if(currentCubito.type == BLOCK_AIR) continue;
+        nDrawCalls++;
+
+        renderCube(currentCubito, 0, 0);
+    }
+#else
+    for (size_t x = 0; x < cubitos.size(); ++x) {
+        for (size_t y = 0; y < cubitos[x].size(); ++y) {
+            for (size_t z = 0; z < cubitos[x][y].size(); ++z) {
+                const Cubito& currentCubito = cubitos[x][y][z];
+                if(currentCubito.type == BLOCK_AIR) continue;
+                nDrawCalls++;
+                renderCube(currentCubito, 0, 0);
+            }
+        }
+    }
+#endif
+    
+}
 
 int main(int argc, char **argv) {
     size_t used1 = Memory::getTotalMemoryUsed();
@@ -226,12 +203,9 @@ int main(int argc, char **argv) {
     GRRLIB_SetBackgroundColour(0x80, 0x80, 0x80, 0xFF);
     //GRRLIB_Camera3dSettings(0.0f,0.0f,13.0f, 0,1,0, 0,0,0); //view matrix
 
-    float angleX = 45.0f; // Ángulo de rotación en el eje X
-    float angleY = 0.0f; // Ángulo de rotación en el eje Y
-    //float cubeSize = 2.0f; // Tamaño del cubo
-
     mapTileUVs(6);
 
+#ifdef USE_OLD
     Cubito grass[9];
     Cubito stone[25];
     Cubito dirt[25];
@@ -283,22 +257,27 @@ int main(int argc, char **argv) {
             cubeIndex++;  // Aumenta el índice para el siguiente cubo
         }
     }
+
+#endif
     
     TextRenderer text;
     Camera currentCam(FVec3{0.0f, 2.0f, 13.0f}, 15.0f);
     
     size_t used2 = Memory::getTotalMemoryUsed();
 
-    //Cubito* cubitos = (Cubito*)calloc(128, sizeof(Cubito));
-    //Cubito* cubitos = new Cubito[128];
-    std::vector<Cubito> cubitos(128);
-    //Cubito* cubitos = (Cubito*)calloc(128, sizeof(Cubito));
-    for(int i = 0; i < 128; i++) {
-        cubitos[i].x = 5;
-    }
+    // //Cubito* cubitos = (Cubito*)calloc(128, sizeof(Cubito));
+    // //Cubito* cubitos = new Cubito[128];
+    // std::vector<Cubito> cubitos(128);
+    // //Cubito* cubitos = (Cubito*)calloc(128, sizeof(Cubito));
+    // for(int i = 0; i < 128; i++) {
+    //     cubitos[i].x = 5;
+    // }
+    World currentWorld;
+
+    auto& currentChunk = currentWorld.getOrCreateChunk(0, 0);
+    currentWorld.generateChunk(currentChunk, 0, 0);
     
     size_t used3 = Memory::getTotalMemoryUsed();
-    
     // Loop forever
     while(1) {
         Engine::UpdateEngine();
@@ -321,13 +300,10 @@ int main(int argc, char **argv) {
         GX_SetTexCoordScaleManually(GX_TEXCOORD0, GX_TRUE, TILE_SIZE, TILE_SIZE);
         
         GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
-        GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_S16, 0);
-
-        // Dibujar cubo en el centro de la pantalla con rotación
-        // renderCube(stone, angleX, angleY);
-        // renderCube(grass, angleX, angleY);
-        // renderCube(trunk, angleX, angleY);
-
+        GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_S16, 0); //Positions -> S16
+        GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_U16, 0); //Textures  -> U16
+        
+#ifdef USE_OLD
         for(int i = 0; i < 9; i++) {
             renderCube(grass[i], 0, 0, 0, 0, 0);
         }
@@ -348,6 +324,10 @@ int main(int argc, char **argv) {
         for (auto& i : dirt) {
             renderCube(i, 0, 0);
         }
+#endif
+
+        nDrawCalls = 0;
+        renderChunk(currentChunk);
 
         if(PAD_ButtonsHeld(0) & PAD_TRIGGER_Z) currentCam.setPosition(FVec3{0, 0, 0});
         
@@ -364,16 +344,15 @@ int main(int argc, char **argv) {
         text.render(USVec2{5,  80}, fmt::format("Mem1  : {}", used1).c_str());
         text.render(USVec2{5,  95}, fmt::format("Mem2  : {}", used2).c_str());
         text.render(USVec2{5,  110}, fmt::format("Mem3  : {}", used3).c_str());
-        text.render(USVec2{5,  125}, fmt::format("Mem  : {}", used3 - used2).c_str());
+        text.render(USVec2{5,  125}, fmt::format("Mem  : {:.2f} KB", convertirBytesAKilobytes(used3 - used2)).c_str());
         text.render(USVec2{5,  140}, fmt::format("Free Memory  : {}", SYS_GetArena1Size()).c_str());
         text.render(USVec2{275, 5}, fmt::format("Camera X [{:.4f}] Y [{:.4f}] Z [{:.4f}]", camPos.x, camPos.y, camPos.z).c_str());
         text.render(USVec2{275, 20}, fmt::format("Camera Pitch [{:.4f}] Yaw [{:.4f}]", currentCam.getPitch(), currentCam.getYaw()).c_str());
+        text.render(USVec2{275, 35}, fmt::format("NDraw Calls: [{}]", nDrawCalls).c_str());
+        text.render(USVec2{275, 50}, fmt::format("Helper: [{}]", currentWorld.helperCounter).c_str());
+        text.render(USVec2{275, 65}, fmt::format("Valid Blocks: [{}]", currentChunk.validBlocks).c_str());
 
         //GRRLIB_PrintfTTF(50, 50, myFont, "MINECRAFT", 16, 0x000000FF);
-
-        // Incrementar los ángulos de rotación para darle animación
-        //angleX += 0.5f; // Rotación en el eje X
-        angleY += 0.5f; // Rotación en el eje Y
 
         // Renderizar todo a la pantalla
         GRRLIB_Render(); // Render the frame buffer to the TV
