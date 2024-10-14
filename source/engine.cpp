@@ -26,6 +26,7 @@ void Engine::UpdateEngine() {
     auto deltaTimeMs  = diff_msec(e.lastTime_, e.currentTime_);
     //e.deltaTime_ = static_cast<float>(ticks_to_millisecs(deltaTimeTicks)) / 1000.0f; //to seconds!!
     e.deltaTime_ = static_cast<float>(deltaTimeMs ) / 1000.0f; //to seconds!!
+    e.deltaTime_ = glm::clamp(e.deltaTime_, 0.0f, 0.1f);
 }
 
 cfloat Engine::getDeltaTime() {

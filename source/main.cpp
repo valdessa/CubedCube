@@ -54,6 +54,8 @@ static GXTexObj blocksTexture;
     static HashMap<u8, Pair<u16, u16>> tileUVMap;
 #endif
 static u16 nDrawCalls = 0;
+guVector lightPos{0, 10, 0};
+float deltaSus = 0.0f;
 
 constexpr u16 tileTexCoords[4][2] = {
     {0, 0},
@@ -148,6 +150,8 @@ void renderCube(const Cubito& cube, float angleX, float angleY, s16 worldX = 0, 
                             currentFace.z + cubeFaces[currentFace.direction][j][2]);
             //GX_Color1u32 old
             //GX_Color1x8(255);
+            GX_Normal3f32(cubeNormals[currentFace.direction][0], cubeNormals[currentFace.direction][1], cubeNormals[currentFace.direction][2]);
+            //GX_Normal3f32(cubeNormals[currentFace.direction][j], cubeNormals[currentFace.direction][j], cubeNormals[currentFace.direction][j]);
             GX_Color1u32(0xFFFFFFFF);
             //GX_TexCoord2f32 old
 
@@ -200,7 +204,19 @@ String formatThousands(size_t value) {
     return num_str;
 }
 
+void updatePosition(guVector& point, float radius, float angle) {
+    // Actualiza las coordenadas X y Z para que el punto se mueva en un círculo
+    point.x = radius * cos(angle); // Movimiento circular en el eje X
+    point.z = radius * sin(angle); // Movimiento circular en el eje Z
+}
+
+
+//TODO: El lesson 8 tiene transparencias
+//Lesson 9 una luz toh guapa
+//lesson 10 tiene movimiento bien
+
 int main(int argc, char **argv) {
+    float angle = 0.0f;
     size_t used1 = Memory::getTotalMemoryUsed();
     // Initialise the Graphics & Video subsystem
     GRRLIB_Init();
@@ -222,7 +238,7 @@ int main(int argc, char **argv) {
     // Set the background color (Green in this case)
     GRRLIB_SetBackgroundColour(0x80, 0x80, 0x80, 0xFF);
     //GRRLIB_Camera3dSettings(0.0f,0.0f,13.0f, 0,1,0, 0,0,0); //view matrix
-
+    GRRLIB_SetLightAmbient(0x000000FF); //0x333333FF
     mapTileUVs(6);
 
 #ifdef USE_OLD
@@ -295,11 +311,21 @@ int main(int argc, char **argv) {
     size_t used3 = Memory::getTotalMemoryUsed();
 
     Tick currentTick;
+
+    Cubito deleteMe;
+    generateCube(deleteMe, 0,  10, 0, BLOCK_GRASS);
+    
     // Loop forever
     while(1) {
         Engine::UpdateEngine();
         auto deltaTime = Engine::getDeltaTime();
-
+        if(deltaTime > deltaSus) deltaSus = deltaTime;
+        angle+=deltaTime;
+        // if(PAD_ButtonsHeld(0) & PAD_BUTTON_RIGHT) lightPos.x += deltaTime * 2.5f;
+        // if(PAD_ButtonsHeld(0) & PAD_BUTTON_LEFT)  lightPos.x -= deltaTime * 2.5f;
+        // if(PAD_ButtonsHeld(0) & PAD_BUTTON_UP)    lightPos.y += deltaTime * 2.5f;
+        // if(PAD_ButtonsHeld(0) & PAD_BUTTON_DOWN)  lightPos.y -= deltaTime * 2.5f;
+        updatePosition(lightPos, 20, angle);
         
         GRRLIB_2dMode();
         PAD_ScanPads(); // Scan the GameCube controllers
@@ -308,17 +334,43 @@ int main(int argc, char **argv) {
         if(PAD_ButtonsDown(0) & PAD_BUTTON_START) exit(0);
 
         currentCam.updateCamera(deltaTime); //deltaTime
-        // Limpiar pantalla y preparar para dibujo en 3D
-        GRRLIB_3dMode(0.1f, 1000.0f, 45.0f, 1, 0); // Configura el modo 3D //Projection
 
+
+        GRRLIB_3dMode(0.1f, 1000.0f, 45.0f, false, true); // Configura el modo 3D //Projection
+        GRRLIB_SetLightOff();
+        GRRLIB_ObjectView(lightPos.x, lightPos.y, lightPos.z, 0,0,0,1,1,1);
+        GRRLIB_DrawSphere(1, 20, 20, true, 0x00FF00FF);
+        GRRLIB_SetLightDiff(1, lightPos,20.0f,1.0f,0xFFFFFFFF);
+
+        GRRLIB_ObjectView(1.0f,20,0, 0,0,0,1,1,1);
+        GRRLIB_DrawCube(1, true, 0xFFFFFFFF);
+        GRRLIB_ObjectView(0.0f,20,0, 0,0,0,1,1,1);
+        GRRLIB_DrawCube(1, true, 0xFFFFFFFF);
+
+        // Limpiar pantalla y preparar para dibujo en 3D
+        GRRLIB_3dMode(0.1f, 1000.0f, 45.0f, 1, 1); // Configura el modo 3D //Projection
+        
         //GRRLIB_DrawCube(cubeSize, true, 0xFFFFFFFF); // Dibuja un cubo blanco
         //GRRLIB_SetTexture(tex_girl, 0);
         GX_LoadTexObj(&blocksTexture, GX_TEXMAP0);
         GX_SetTexCoordScaleManually(GX_TEXCOORD0, GX_TRUE, TILE_SIZE, TILE_SIZE);
         
         GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
+        GX_SetVtxDesc(GX_VA_NRM, GX_DIRECT);  //added by Sebas
+        GX_SetVtxDesc(GX_VA_TEX0, GX_DIRECT); //added by Sebas
         GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_U16, 0); //Positions -> U16
+        GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_NRM, GX_NRM_XYZ, GX_F32, 0); //Normals   -> F32
         GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_U16, 0); //Textures  -> U16
+
+        renderCube(deleteMe, 0, 0);
+        // GRRLIB_3dMode(0.1f, 1000.0f, 45.0f, 0, 1);
+        // GRRLIB_ObjectView(0.0f,20,0, 0,0,0,1,1,1);
+       // GRRLIB_SetLightDiff(1, lightPos,20.0f,1.0f,0xFFFFFFFF);
+        //GRRLIB_ObjectView(0.0f,20,0, 0,0,0,1,1,1);
+        //GRRLIB_DrawCube(1, true, 0xFFFFFFFF);
+        // GRRLIB_DrawSphere(1, 20, 20, true, 0x00FF00FF);
+        
+
         
 #ifdef USE_OLD
         for(int i = 0; i < 9; i++) {
@@ -350,19 +402,23 @@ int main(int argc, char **argv) {
         //std::this_thread::sleep_for(std::chrono::seconds(1));
         auto drawTicks = currentTick.stopAndGetTick();
         currentTick.reset();
+
+        // GRRLIB_SetLightOff();
+        // GRRLIB_3dMode(0.1f, 1000.0f, 45.0f, 0, 1);
+        // GRRLIB_ObjectView(lightPos.x, lightPos.y, lightPos.z, 0,0,0,1,1,1);
+        // GRRLIB_DrawSphere(1, 20, 20, true, 0x00FF00FF);
         
         if(PAD_ButtonsHeld(0) & PAD_TRIGGER_Z) currentCam.setPosition(FVec3{0, 0, 0});
-        
 
         auto camPos = currentCam.getPosition();
+        // Switch to 2D Mode to display text
         GRRLIB_2dMode();
-        
         text.beginRender();
         text.render(USVec2{5,   5}, fmt::format("Ticks (CPU) : {}", gettick()).c_str());
         text.render(USVec2{5,  20}, fmt::format("Time        : {}", gettime()).c_str());
         text.render(USVec2{5,  35}, fmt::format("Current Time: {}", Engine::getCurrentTime()).c_str());
         text.render(USVec2{5,  50}, fmt::format("Last Time   : {}", Engine::getLastTime()).c_str());
-        text.render(USVec2{5,  65}, fmt::format("Delta Time  : {:.3f} s", deltaTime).c_str());
+        text.render(USVec2{5,  65}, fmt::format("Delta Time  : {:.3f} s", deltaSus).c_str());
         text.render(USVec2{5,  80}, fmt::format("Mem1  : {}", used1).c_str());
         text.render(USVec2{5,  95}, fmt::format("Mem2  : {}", used2).c_str());
         text.render(USVec2{5,  110}, fmt::format("Mem3  : {}", used3).c_str());

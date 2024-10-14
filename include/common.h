@@ -89,6 +89,15 @@ namespace poyo {
         [DIR_Z_FRONT] = {{0, 1, 0}, {1, 1, 0}, {1, 0, 0}, {0, 0, 0}},  //drawn clockwise looking z-
         [DIR_Z_BACK] =  {{1, 1, 0}, {0, 1, 0}, {0, 0, 0}, {1, 0, 0}},  //drawn clockwise looking z+
     };
+
+    static float cubeNormals[6][3] = {
+        [DIR_X_FRONT] = { 1.0f,  0.0f,  0.0f},  // Front (X+)
+        [DIR_X_BACK]  = {-1.0f,  0.0f,  0.0f},  // Back (X-)
+        [DIR_Y_FRONT] = { 0.0f,  1.0f,  0.0f},  // Top (Y+)
+        [DIR_Y_BACK]  = { 0.0f, -1.0f,  0.0f},  // Bottom (Y-)
+        [DIR_Z_FRONT] = { 0.0f,  0.0f,  1.0f},  // Left (Z+)
+        [DIR_Z_BACK]  = { 0.0f,  0.0f, -1.0f},  // Right (Z-)
+    };
 }
 
 #endif
