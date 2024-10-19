@@ -20,7 +20,7 @@ void Timer::start() {
 void Timer::stop() {
     if (running_) {
         const auto end_time = gettick();
-        const auto duration = end_time - start_time;
+        //const auto duration = end_time - start_time;
         elapsed_time += diff_msec(start_time, end_time);
         running_ = false;
     }

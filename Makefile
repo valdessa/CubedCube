@@ -27,7 +27,7 @@ INCLUDES	:=  include deps/glm deps/ deps/fmt
 #---------------------------------------------------------------------------------
 
 CFLAGS	= -g -O2 -Wall -Wno-unused-value $(MACHDEP) $(INCLUDE)
-CXXFLAGS	=	$(CFLAGS)
+CXXFLAGS	=	$(CFLAGS) #CXXFLAGS	= -std=c++20 $(CFLAGS)  # Agrega -std=c++20 para C++20
 
 LDFLAGS	=	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map
 

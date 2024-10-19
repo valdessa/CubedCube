@@ -9,8 +9,8 @@
 #define STONE_LEVEL 12
 #define MIN_HEIGHT  2
 
-#define OPTIMIZE_VECTOR
-#define OPTIMIZE_MAPS
+#define OPTIMIZATION_VECTOR
+#define OPTIMIZATION_MAPS
 
 namespace poyo {
     using CubePosition = SVec3;
@@ -44,6 +44,7 @@ namespace poyo {
         BLOCK_WOOD,
         BLOCK_TREE,
         BLOCK_LEAF,
+        BLOCK_LEAF2,
         BLOCK_CACTUS,
         BLOCK_SAND_DIRT,
         BLOCK_AIR //USED FOR COUNT/NOT BLOCK 
@@ -63,25 +64,29 @@ namespace poyo {
         TILE_TREE_TOP    = 10,
         TILE_WOOD        = 11,
         TILE_LEAF        = 12,
+        TILE_LEAF_TRANS  = 13,
         TILE_CACTUS_BOT  = 18,
         TILE_CACTUS_SIDE = 19,
         TILE_CACTUS_TOP  = 20,
         NUM_TILES,
     };
 
-    static const U8 blockTiles[][6] = {
+    inline const U8 blockTiles[][6] = {
         [BLOCK_STONE] =    {TILE_STONE,      TILE_STONE,      TILE_STONE,    TILE_STONE,     TILE_STONE,      TILE_STONE},
         [BLOCK_SAND] =     {TILE_SAND,       TILE_SAND,       TILE_SAND,     TILE_SAND,      TILE_SAND,       TILE_SAND},
         [BLOCK_DIRT] =     {TILE_DIRT,       TILE_DIRT,       TILE_DIRT,     TILE_DIRT,      TILE_DIRT,       TILE_DIRT},
         [BLOCK_GRASS] =    {TILE_GRASS_SIDE, TILE_GRASS_SIDE, TILE_GRASS,    TILE_DIRT,      TILE_GRASS_SIDE, TILE_GRASS_SIDE},
         [BLOCK_WOOD] =     {TILE_WOOD,       TILE_WOOD,       TILE_WOOD,     TILE_WOOD,      TILE_WOOD,       TILE_WOOD},
-        [BLOCK_TREE] =     {TILE_TREE_SIDE,  TILE_TREE_SIDE,  TILE_TREE_TOP, TILE_TREE_TOP,  TILE_TREE_SIDE,  TILE_TREE_SIDE},
-        [BLOCK_LEAF] =     {TILE_LEAF,       TILE_LEAF,       TILE_LEAF,     TILE_LEAF,      TILE_LEAF,       TILE_LEAF},
+        [BLOCK_TREE] =     {TILE_TREE_SIDE,  TILE_TREE_SIDE,  TILE_TREE_TOP,   TILE_TREE_TOP,   TILE_TREE_SIDE,   TILE_TREE_SIDE},
+        [BLOCK_LEAF] =     {TILE_LEAF,       TILE_LEAF,       TILE_LEAF,       TILE_LEAF,       TILE_LEAF,        TILE_LEAF},
+        [BLOCK_LEAF2] =    {TILE_LEAF_TRANS, TILE_LEAF_TRANS, TILE_LEAF_TRANS, TILE_LEAF_TRANS, TILE_LEAF_TRANS,  TILE_LEAF_TRANS},
         [BLOCK_CACTUS] =   {TILE_CACTUS_SIDE, TILE_CACTUS_SIDE, TILE_CACTUS_TOP, TILE_CACTUS_BOT, TILE_CACTUS_SIDE, TILE_CACTUS_SIDE},
         [BLOCK_SAND_DIRT] ={TILE_SAND_DIRT, TILE_SAND_DIRT, TILE_SAND, TILE_DIRT, TILE_SAND_DIRT, TILE_SAND_DIRT},
+
+        [BLOCK_AIR] = {TILE_STONE,      TILE_STONE,      TILE_STONE,    TILE_STONE,     TILE_STONE,      TILE_STONE},
     };
 
-    static const U8 cubeFaces[6][4][3] = {
+    inline const U8 cubeFaces[6][4][3] = {
         [DIR_X_FRONT] = {{0, 1, 1}, {0, 1, 0}, {0, 0, 0}, {0, 0, 1}},  //drawn clockwise looking x-
         [DIR_X_BACK] =  {{0, 1, 0}, {0, 1, 1}, {0, 0, 1}, {0, 0, 0}},  //drawn clockwise looking x+
         [DIR_Y_FRONT] = {{0, 0, 0}, {1, 0, 0}, {1, 0, 1}, {0, 0, 1}},  //drawn clockwise looking y-
@@ -89,8 +94,8 @@ namespace poyo {
         [DIR_Z_FRONT] = {{0, 1, 0}, {1, 1, 0}, {1, 0, 0}, {0, 0, 0}},  //drawn clockwise looking z-
         [DIR_Z_BACK] =  {{1, 1, 0}, {0, 1, 0}, {0, 0, 0}, {1, 0, 0}},  //drawn clockwise looking z+
     };
-
-    static float cubeNormals[6][3] = {
+    
+    inline float cubeNormals[6][3] = {
         [DIR_X_FRONT] = { 1.0f,  0.0f,  0.0f},  // Front (X+)
         [DIR_X_BACK]  = {-1.0f,  0.0f,  0.0f},  // Back (X-)
         [DIR_Y_FRONT] = { 0.0f,  1.0f,  0.0f},  // Top (Y+)
@@ -98,6 +103,12 @@ namespace poyo {
         [DIR_Z_FRONT] = { 0.0f,  0.0f,  1.0f},  // Left (Z+)
         [DIR_Z_BACK]  = { 0.0f,  0.0f, -1.0f},  // Right (Z-)
     };
+    
+#ifdef OPTIMIZATION_MAPS
+    inline U16 tileUVMap[NUM_TILES][2]{};
+#else
+    inline Map<U8, USVec2> tileUVMap;
+#endif
 }
 
 #endif

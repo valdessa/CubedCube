@@ -18,7 +18,7 @@ namespace poyo {
         U32 validBlocks = 0;
         SVec2 position_;
         
-#ifdef OPTIMIZE_VECTOR
+#ifdef OPTIMIZATION_VECTOR
         Vector<Cubito> cubitos_;
 #else
         Vector<Vector<Vector<Cubito>>> cubitos_; //To Optimize

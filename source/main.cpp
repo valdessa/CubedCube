@@ -19,6 +19,7 @@ GRRLIB (GX Version)
 
 //My includes
 #include <common.h>
+#include <utilities.h>
 
 #include <engine.h>
 #include <camera.h>
@@ -31,14 +32,8 @@ GRRLIB (GX Version)
 #include <world.h>
 #include <text_renderer.h>
 
-//Blocks TPL data
-#include "bloquitos_tpl.h"
-#include "bloquitos.h"
-
-// Font
-#include <thread>
-
-#include "Karma_ttf.h"
+//TPL and Fonts
+#include <main.h>
 
 using namespace poyo;
 
@@ -48,11 +43,7 @@ using namespace poyo;
 
 static TPLFile bloquitosTPL;
 static GXTexObj blocksTexture;
-#ifdef OPTIMIZE_MAPS
-    static u16 tileUVMap[NUM_TILES][2]{};
-#else
-    static HashMap<u8, Pair<u16, u16>> tileUVMap;
-#endif
+
 static u16 nDrawCalls = 0;
 guVector lightPos{0, 10, 0};
 float deltaSus = 0.0f;
@@ -63,28 +54,6 @@ constexpr u16 tileTexCoords[4][2] = {
     {1, 1},
     {0, 1}
 };
-
-void mapTileUVs(u8 tilesetWidth) {
-#ifdef OPTIMIZE_MAPS
-    for (u8 tile = 0; tile < NUM_TILES; tile++) {
-        auto U = tile % tilesetWidth;     // Coordenada U (X)
-        auto V = tile / tilesetWidth;     // Coordenada V (Y)
-        tileUVMap[tile][0] = U;
-        tileUVMap[tile][1] = V;
-    }
-#else
-    for (u8 tile = 0; tile < NUM_TILES; tile++) {
-        auto U = tile % tilesetWidth;     // Coordenada U (X)
-        auto V = tile / tilesetWidth;     // Coordenada V (Y)
-        tileUVMap[tile] = {U, V};
-    }
-#endif
-}
-
-double convertirBytesAKilobytes(size_t bytes) {
-    const double BYTES_POR_KILO = 1024.0; // 1 KB = 1024 bytes
-    return bytes / BYTES_POR_KILO;
-}
 
 void fillCube(Cubito& cube, u16 face, s16 x, s16 y, s16 z, u8 direction, int block) {
     cube.face[face].x = x;
@@ -112,10 +81,10 @@ void generateTree(Cubito cubes[], s16 baseX, s16 baseY, s16 baseZ) {
     for (s16 i = -1; i <= 1; i++) {
         for (s16 j = -1; j <= 1; j++) {
             // Nivel de hojas en y + 3
-            generateCube(cubes[cubeIndex++], baseX + i, baseY + 3, baseZ + j, BLOCK_LEAF);
+            generateCube(cubes[cubeIndex++], baseX + i, baseY + 3, baseZ + j, BLOCK_LEAF2);
 
             // Nivel de hojas en y + 6
-            generateCube(cubes[cubeIndex++], baseX + i, baseY + 6, baseZ + j, BLOCK_LEAF);
+            generateCube(cubes[cubeIndex++], baseX + i, baseY + 6, baseZ + j, BLOCK_LEAF2);
         }
     }
 
@@ -123,10 +92,10 @@ void generateTree(Cubito cubes[], s16 baseX, s16 baseY, s16 baseZ) {
     for (s16 i = -2; i <= 2; i++) {
         for (s16 j = -2; j <= 2; j++) {
             // Nivel de hojas en y + 4
-            generateCube(cubes[cubeIndex++], baseX + i, baseY + 4, baseZ + j, BLOCK_LEAF);
+            generateCube(cubes[cubeIndex++], baseX + i, baseY + 4, baseZ + j, BLOCK_LEAF2);
 
             // Nivel de hojas en y + 5
-            generateCube(cubes[cubeIndex++], baseX + i, baseY + 5, baseZ + j, BLOCK_LEAF);
+            generateCube(cubes[cubeIndex++], baseX + i, baseY + 5, baseZ + j, BLOCK_LEAF2);
         }
     }
 
@@ -157,11 +126,10 @@ void renderCube(const Cubito& cube, float angleX, float angleY, s16 worldX = 0, 
 
             auto& UV = tileUVMap[currentFace.tile];
 
-#ifdef OPTIMIZE_MAPS
+#ifdef OPTIMIZATION_MAPS
             GX_TexCoord2u16(UV[0] + tileTexCoords[j][0], UV[1] + tileTexCoords[j][1]);
-            //GX_TexCoord2f32(UV[0] + tileTexCoords[j][0], UV[1] + tileTexCoords[j][1]);
 #else
-            GX_TexCoord2u16(UV.first + tileTexCoords[j][0], UV.second + tileTexCoords[j][1]);
+            GX_TexCoord2u16(UV.x + tileTexCoords[j][0], UV.y + tileTexCoords[j][1]);
 #endif
         }
     }
@@ -170,7 +138,7 @@ void renderCube(const Cubito& cube, float angleX, float angleY, s16 worldX = 0, 
 
 void renderChunk(const Chunk& chunk) {
     auto& cubitos = chunk.cubitos_;
-#ifdef OPTIMIZE_VECTOR
+#ifdef OPTIMIZATION_VECTOR
     for (const auto& currentCubito : cubitos) {
         if(currentCubito.type == BLOCK_AIR) continue;
         nDrawCalls++;
@@ -230,7 +198,7 @@ int main(int argc, char **argv) {
     //GRRLIB_ttfFont *myFont = GRRLIB_LoadTTF(Karma_ttf, Karma_ttf_size);
 
     TPL_OpenTPLFromMemory(&bloquitosTPL, (void*)bloquitos_tpl, bloquitos_tpl_size);
-    TPL_GetTexture(&bloquitosTPL, blocksTextureId, &blocksTexture);
+    TPL_GetTexture(&bloquitosTPL, blocksTextureID, &blocksTexture);
     GX_InitTexObjFilterMode(&blocksTexture, GX_NEAR, GX_NEAR);
     GX_SetTexCoordGen(GX_TEXCOORD1, GX_TG_MTX2x4, GX_TG_TEX1, GX_IDENTITY);
     GX_InvalidateTexAll();
@@ -240,6 +208,10 @@ int main(int argc, char **argv) {
     //GRRLIB_Camera3dSettings(0.0f,0.0f,13.0f, 0,1,0, 0,0,0); //view matrix
     GRRLIB_SetLightAmbient(0x000000FF); //0x333333FF
     mapTileUVs(6);
+
+    Cubito Tree1[72];
+
+    generateTree(Tree1, 0, 1, 0);
 
 #ifdef USE_OLD
     Cubito grass[9];
@@ -362,7 +334,7 @@ int main(int argc, char **argv) {
         GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_NRM, GX_NRM_XYZ, GX_F32, 0); //Normals   -> F32
         GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_U16, 0); //Textures  -> U16
 
-        renderCube(deleteMe, 0, 0);
+        //renderCube(deleteMe, 0, 0);
         // GRRLIB_3dMode(0.1f, 1000.0f, 45.0f, 0, 1);
         // GRRLIB_ObjectView(0.0f,20,0, 0,0,0,1,1,1);
        // GRRLIB_SetLightDiff(1, lightPos,20.0f,1.0f,0xFFFFFFFF);
@@ -370,7 +342,13 @@ int main(int argc, char **argv) {
         //GRRLIB_DrawCube(1, true, 0xFFFFFFFF);
         // GRRLIB_DrawSphere(1, 20, 20, true, 0x00FF00FF);
         
-
+        //GRRLIB_SetBlend(GRRLIB_BLEND_ALPHA);
+        GX_SetPixelFmt(GX_PF_RGBA6_Z24, GX_ZC_LINEAR);
+        GX_SetAlphaUpdate(GX_TRUE);
+        GX_SetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_CLEAR);
+        for (int i = 0; i < 72; i++) {
+            renderCube(Tree1[i], 0, 0, 0, 10, 0);
+        }
         
 #ifdef USE_OLD
         for(int i = 0; i < 9; i++) {
@@ -422,16 +400,18 @@ int main(int argc, char **argv) {
         text.render(USVec2{5,  80}, fmt::format("Mem1  : {}", used1).c_str());
         text.render(USVec2{5,  95}, fmt::format("Mem2  : {}", used2).c_str());
         text.render(USVec2{5,  110}, fmt::format("Mem3  : {}", used3).c_str());
-        text.render(USVec2{5,  125}, fmt::format("Mem  : {:.2f} KB", convertirBytesAKilobytes(used3 - used2)).c_str());
+        text.render(USVec2{5,  125}, fmt::format("Mem  : {:.2f} KB", convertBytesToKilobytes(used3 - used2)).c_str());
         text.render(USVec2{5,  140}, fmt::format("Free Memory  : {}", SYS_GetArena1Size()).c_str());
         text.render(USVec2{275,  5}, fmt::format("Camera X [{:.4f}] Y [{:.4f}] Z [{:.4f}]", camPos.x, camPos.y, camPos.z).c_str());
         text.render(USVec2{275, 20}, fmt::format("Camera Pitch [{:.4f}] Yaw [{:.4f}]", currentCam.getPitch(), currentCam.getYaw()).c_str());
         //Render Things
+
         text.render(USVec2{400,  50}, fmt::format("NDraw Calls : {}", nDrawCalls).c_str());
         text.render(USVec2{400,  65}, fmt::format("Draw Cycles : {} ts", formatThousands(drawTicks)).c_str());
         text.render(USVec2{400,  80}, fmt::format("Draw Time   : {} ms", Tick::TickToMs(drawTicks)).c_str());
         text.render(USVec2{400,  95}, fmt::format("Helper      : {}", currentWorld.helperCounter).c_str());
         text.render(USVec2{400, 110}, fmt::format("N Blocks    : {}", currentChunk.validBlocks).c_str());
+
 
         //GRRLIB_PrintfTTF(50, 50, myFont, "MINECRAFT", 16, 0x000000FF);
 
