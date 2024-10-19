@@ -1,4 +1,5 @@
 #include <common.h>
+#include <ogc/system.h>
 
 namespace std {
     template<>
@@ -23,6 +24,20 @@ World::World() {
 }
 
 World::~World() {
+}
+
+void World::generateChunks(S16 startX, S16 startZ, S16 numChunksX, S16 numChunksZ) {
+    // Recorremos la región de terreno especificada
+    for (S16 chunkX = startX; chunkX < startX + numChunksX; ++chunkX) {
+        for (S16 chunkZ = startZ; chunkZ < startZ + numChunksZ; ++chunkZ) {
+
+            auto worldX = chunkX * CHUNK_SIZE;
+            auto worldZ = chunkZ * CHUNK_SIZE;
+                    
+            // Genera o recupera el chunk de la posición actual
+            validBlocks_ += getOrCreateChunk(worldX, worldZ).validBlocks;
+        }
+    }
 }
 
 void World::generateChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
@@ -58,6 +73,30 @@ void World::generateChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
     }
 }
 
+void World::generateSolidChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
+    chunk.position_.x = chunkX;
+    chunk.position_.y = chunkZ;
+    for (S16 x = 0; x < CHUNK_SIZE; ++x) {
+        for(S16 y = 0; y < CHUNK_SIZE; y++) {
+            for (S16 z = 0; z < CHUNK_SIZE; ++z) {
+                S32 worldX = chunkX * CHUNK_SIZE + x;
+                S32 worldZ = chunkZ * CHUNK_SIZE + z;
+                CubePosition pos = CubePosition{x, y, z};
+                // Determinar tipo de bloque según la altura
+                if (y < STONE_LEVEL) {
+                    chunk.setCubito(pos, BLOCK_STONE); // Piedra en capas profundas
+                } else if (y < GRASS_LEVEL) {
+                    chunk.setCubito(pos, BLOCK_DIRT);  // Tierra en las capas superiores
+                } else if (y == GRASS_LEVEL) {
+                    chunk.setCubito(pos, BLOCK_GRASS); // Bloque en la superficie -> césped
+                } else {
+                    chunk.setCubito(pos, BLOCK_AIR);
+                }
+            } 
+        }
+    }
+}
+
 Chunk& World::getOrCreateChunk(S16 chunkX, S16 chunkZ) {
     // Cargar o crear el chunk si no existe en esa posición
     const auto chunkKey = std::make_pair(chunkX, chunkZ);
@@ -72,6 +111,7 @@ Chunk& World::getOrCreateChunk(S16 chunkX, S16 chunkZ) {
 
 float World::getHeightAt(S32 x, S32 z) {
     // Una simple función de terreno ondulado usando senos
-    float height = 5.0f * sinf(x * 0.1f) + 5.0f * cosf(z * 0.1f);
+    //float height = 5.0f * sinf(x * 0.1f) + 5.0f * cosf(z * 0.1f);
+    float height = 5.0f * noise_.perlin(x * 0.2f, z * 0.2f);
     return std::max(static_cast<float>(MIN_HEIGHT), height + 10.0f);
 }

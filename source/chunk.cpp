@@ -37,7 +37,7 @@ setCubito(const CubePosition& pos, BLOCK_TYPE block) {
     fillCubito(currentCubito, 4, 0, 0, 1, DIR_Z_FRONT, block);  // Left
     fillCubito(currentCubito, 5, 0, 0, 0, DIR_Z_BACK,  block);  // Right
 
-    if(block != BLOCK_AIR) validBlocks++;
+    if(block == BLOCK_AIR) validBlocks++;
 }
 
 void Chunk::render() {

@@ -275,10 +275,22 @@ int main(int argc, char **argv) {
     
     World currentWorld;
 
-    auto& currentChunk = currentWorld.getOrCreateChunk(0, 0);
-    currentWorld.generateChunk(currentChunk, 0, 0);
-    auto& currentChunk2 = currentWorld.getOrCreateChunk(CHUNK_SIZE, 0);
-    currentWorld.generateChunk(currentChunk2, CHUNK_SIZE, 0);
+    //auto& currentChunk = currentWorld.getOrCreateChunk(0, 0);
+    //currentWorld.generateChunk(currentChunk, 0, 0);
+    // auto& currentChunk2 = currentWorld.getOrCreateChunk(CHUNK_SIZE, 0);
+    // currentWorld.generateChunk(currentChunk2, CHUNK_SIZE, 0);
+
+    // Definir la posición inicial para la generación de chunks
+    S16 startX = 0; // Coordenada X de inicio
+    S16 startZ = 0; // Coordenada Z de inicio
+
+    // Definir el número de chunks a generar en ambas direcciones
+    S16 numChunksX = 3; // Número de chunks a generar en la dirección X
+    S16 numChunksZ = 3; // Número de chunks a generar en la dirección Z
+
+    
+    currentWorld.generateChunks(startX, startZ, numChunksX, numChunksZ);
+    SYS_Report("N Blocks: %llu\n", currentWorld.validBlocks_);
     
     size_t used3 = Memory::getTotalMemoryUsed();
 
@@ -375,8 +387,14 @@ int main(int argc, char **argv) {
 
         nDrawCalls = 0;
         currentTick.start();
-        renderChunk(currentChunk);
-        renderChunk(currentChunk2);
+        //renderChunk(currentChunk);
+        // renderChunk(currentChunk2);
+
+        auto& chunkitos = currentWorld.getChunks();
+        for(const auto& [fst, chunkito] : chunkitos) {
+            renderChunk(chunkito);
+        }
+        
         //std::this_thread::sleep_for(std::chrono::seconds(1));
         auto drawTicks = currentTick.stopAndGetTick();
         currentTick.reset();
@@ -401,16 +419,16 @@ int main(int argc, char **argv) {
         text.render(USVec2{5,  95}, fmt::format("Mem2  : {}", used2).c_str());
         text.render(USVec2{5,  110}, fmt::format("Mem3  : {}", used3).c_str());
         text.render(USVec2{5,  125}, fmt::format("Mem  : {:.2f} KB", convertBytesToKilobytes(used3 - used2)).c_str());
-        text.render(USVec2{5,  140}, fmt::format("Free Memory  : {}", SYS_GetArena1Size()).c_str());
+        text.render(USVec2{5,  140}, fmt::format("Free Memory  : {:.2f} KB", convertBytesToKilobytes(SYS_GetArena1Size())).c_str());
         text.render(USVec2{275,  5}, fmt::format("Camera X [{:.4f}] Y [{:.4f}] Z [{:.4f}]", camPos.x, camPos.y, camPos.z).c_str());
         text.render(USVec2{275, 20}, fmt::format("Camera Pitch [{:.4f}] Yaw [{:.4f}]", currentCam.getPitch(), currentCam.getYaw()).c_str());
         //Render Things
 
         text.render(USVec2{400,  50}, fmt::format("NDraw Calls : {}", nDrawCalls).c_str());
-        text.render(USVec2{400,  65}, fmt::format("Draw Cycles : {} ts", formatThousands(drawTicks)).c_str());
-        text.render(USVec2{400,  80}, fmt::format("Draw Time   : {} ms", Tick::TickToMs(drawTicks)).c_str());
-        text.render(USVec2{400,  95}, fmt::format("Helper      : {}", currentWorld.helperCounter).c_str());
-        text.render(USVec2{400, 110}, fmt::format("N Blocks    : {}", currentChunk.validBlocks).c_str());
+        //text.render(USVec2{400,  65}, fmt::format("Draw Cycles : {} ts", formatThousands(drawTicks)).c_str());
+        //text.render(USVec2{400,  80}, fmt::format("Draw Time   : {} ms", Tick::TickToMs(drawTicks)).c_str());
+        //text.render(USVec2{400,  95}, fmt::format("Helper      : {}", currentWorld.helperCounter).c_str());
+        //text.render(USVec2{400, 110}, fmt::format("N Blocks    : {}", currentChunk.validBlocks).c_str());
 
 
         //GRRLIB_PrintfTTF(50, 50, myFont, "MINECRAFT", 16, 0x000000FF);
