@@ -2,6 +2,7 @@
 #define INCLUDE_WORLD_H_ 1
 
 #include "noise.h"
+#include "FastNoiseLite.h"
 
 namespace poyo {
     class Chunk;
@@ -10,16 +11,21 @@ namespace poyo {
         World();
         ~World();
 
+        void generateLand(U8 Radius = 1);
+        void generateLandChunk(Chunk& chunk, S16 chunkX, S16 chunkZ);
+        Chunk& getOrCreateChunkForLand(S16 chunkX, S16 chunkZ);
+        
         void generateChunks(S16 middleX, S16 middleZ, S16 numChunksX, S16 numChunksZ);
 
         void generateChunk(Chunk& chunk, S16 chunkX, S16 chunkZ);
         void generateSolidChunk(Chunk& chunk, S16 chunkX, S16 chunkZ);
 
         Chunk& getOrCreateChunk(S16 chunkX, S16 chunkZ);
+
         const HashMap<Pair<S16, S16>, Chunk>& getChunks() const {
             return chunks_;
         }
-
+        FastNoiseLite noiseLite_;
         Noise noise_;
         
         U32 helperCounter = 0;

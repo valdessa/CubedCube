@@ -3,30 +3,29 @@
 
 #include <typedefs.h>
 
-#define CHUNK_SIZE 16
-#define WATER_LEVEL 5 
-#define GRASS_LEVEL 10
-#define STONE_LEVEL 12
+#define CHUNK_SIZE   16   // Ancho de cada chunk (X, Z)
+#define CHUNK_HEIGHT 16  // Altura de cada chunk (Y)
+
+// #define WATER_LEVEL 5 
+// #define GRASS_LEVEL 10
+// #define STONE_LEVEL 12
 #define MIN_HEIGHT  2
+
+#define WATER_LEVEL 8        // Nivel del agua
+#define DIRT_LEVEL 2         // Capas de tierra bajo el césped
+#define STONE_LEVEL 4        // Capas de roca bajo la tierra
+#define GRASS_LEVEL (WATER_LEVEL + DIRT_LEVEL) // Capa de césped
 
 #define OPTIMIZATION_VECTOR
 #define OPTIMIZATION_MAPS
 
 namespace poyo {
-    using CubePosition = SVec3;
-
-    struct CubeFace {
-        U8 x, y, z;
-        U8 direction;
-        U8 tile;
+    struct ChunkPosition{
+        S16 x, z;
     };
     
-    struct Cubito {
-        CubeFace face[6];
-        S16 x, y, z;
-        U8 type;
-    };
-
+    using CubePosition = SVec3;
+    
     enum {
         DIR_X_FRONT,
         DIR_X_BACK,
@@ -69,6 +68,18 @@ namespace poyo {
         TILE_CACTUS_SIDE = 19,
         TILE_CACTUS_TOP  = 20,
         NUM_TILES,
+    };
+
+    struct CubeFace {
+        U8 x, y, z;
+        U8 direction;
+        U8 tile;
+    };
+    
+    struct Cubito {
+        CubeFace face[6];
+        S16 x, y, z;
+        U8 type = BLOCK_AIR;
     };
 
     inline const U8 blockTiles[][6] = {

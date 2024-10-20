@@ -108,7 +108,7 @@ void renderChunk(const Chunk& chunk) {
         if(currentCubito.type == BLOCK_AIR) continue;
         nDrawCalls++;
 
-        Renderer::RenderCube(currentCubito, cFVec3(chunk.position_.x, 0, chunk.position_.y));
+        Renderer::RenderCube(currentCubito, cFVec3(chunk.position_.x, 0, chunk.position_.z));
     }
 #else
     for (size_t x = 0; x < cubitos.size(); ++x) {
@@ -117,7 +117,7 @@ void renderChunk(const Chunk& chunk) {
                 const Cubito& currentCubito = cubitos[x][y][z];
                 if(currentCubito.type == BLOCK_AIR) continue;
                 nDrawCalls++;
-                Renderer::RenderCube(currentCubito, cFVec3(chunk.position_.x, 0, chunk.position_.y));
+                Renderer::RenderCube(currentCubito, cFVec3(chunk.position_.x, 0, chunk.position_.z));
             }
         }
     }
@@ -171,7 +171,8 @@ int main(int argc, char **argv) {
     S16 numChunksX = 2; // Número de chunks a generar en la dirección X
     S16 numChunksZ = 2; // Número de chunks a generar en la dirección Z
     
-    currentWorld.generateChunks(0, 0, numChunksX, numChunksZ);
+    //currentWorld.generateChunks(0, 0, numChunksX, numChunksZ);
+    currentWorld.generateLand(2);
     SYS_Report("N Blocks: %llu\n", currentWorld.validBlocks_);
     //SYS_Report("Start X Z: %zd %zd\n", startX, startZ);
     
@@ -245,7 +246,7 @@ int main(int argc, char **argv) {
             GRRLIB_SetLightOff();
             Renderer::PrepareToRender(true, false, true, false);
             for(const auto& [fst, chunkito] : chunkitos) {
-                Renderer::RenderBoundingBox(chunkito.position_.x, 0, chunkito.position_.y, CHUNK_SIZE, UCVec3{0, 255, 255}, true);
+                Renderer::RenderBoundingBox(chunkito.position_.x, 0, chunkito.position_.z, CHUNK_SIZE, UCVec3{0, 255, 255}, true);
             } 
         }
         
@@ -274,8 +275,8 @@ int main(int argc, char **argv) {
             //Render Things
 
             text.render(USVec2{400,  50}, fmt::format("NDraw Calls : {}", nDrawCalls).c_str());
-            text.render(USVec2{400,  65}, fmt::format("Draw Cycles : {} ts", formatThousands(drawTicks)).c_str());
-            text.render(USVec2{400,  80}, fmt::format("Draw Time   : {} ms", Tick::TickToMs(drawTicks)).c_str());
+            // text.render(USVec2{400,  65}, fmt::format("Draw Cycles : {} ts", formatThousands(drawTicks)).c_str());
+            // text.render(USVec2{400,  80}, fmt::format("Draw Time   : {} ms", Tick::TickToMs(drawTicks)).c_str());
             //text.render(USVec2{400,  95}, fmt::format("Helper      : {}", currentWorld.helperCounter).c_str());
             //text.render(USVec2{400, 110}, fmt::format("N Blocks    : {}", currentChunk.validBlocks).c_str());
         }

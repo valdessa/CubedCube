@@ -20,10 +20,66 @@ namespace std {
 using namespace poyo;
 
 World::World() {
-    
+    //noiseLite_.SetSeed(seed);
+    noiseLite_.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+    noiseLite_.SetFrequency(0.05f);
 }
 
 World::~World() {
+}
+
+void World::generateLand(U8 radius) {
+    for (s16 chunkX = -radius; chunkX <= radius; ++chunkX) {
+        for (s16 chunkZ = -radius; chunkZ <= radius; ++chunkZ) {
+
+            validBlocks_ += getOrCreateChunkForLand(chunkX, chunkZ).validBlocks;
+        }
+    }
+}
+
+void World::generateLandChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
+    chunk.position_.x = chunkX * CHUNK_SIZE;
+    chunk.position_.z = chunkZ * CHUNK_SIZE;
+    
+    for (int x = 0; x < CHUNK_SIZE; ++x) {
+        for (int z = 0; z < CHUNK_SIZE; ++z) {
+            // Calculamos la posición global en el mundo
+            int worldX = x + (chunkX * CHUNK_SIZE);
+            int worldZ = z + (chunkZ * CHUNK_SIZE);
+
+            // Generamos una altura basada en ruido para la posición (x, z)
+            float height = noiseLite_.GetNoise((float)worldX, (float)worldZ);
+            int blockHeight = (int)((height + 1) * (CHUNK_HEIGHT / 2));
+
+            // Asignamos bloques según la altura generada
+            for (int y = 0; y < CHUNK_HEIGHT; ++y) {
+                CubePosition pos(x, y, z);
+                if (y > blockHeight) {
+                    chunk.setCubito(pos, BLOCK_AIR); // Espacio vacío
+                } else if (y == blockHeight) {
+                    chunk.setCubito(pos, BLOCK_GRASS);  // Césped en la cima
+                } else if (y > blockHeight - DIRT_LEVEL) {
+                    chunk.setCubito(pos, BLOCK_DIRT);   // Tierra debajo del césped
+                } else if (y > blockHeight - STONE_LEVEL) {
+                    chunk.setCubito(pos, BLOCK_STONE);  // Roca debajo de la tierra
+                } else {
+                    chunk.setCubito(pos, BLOCK_STONE); // Todo lo demás es roca
+                }
+            }
+        }
+    }
+}
+
+Chunk& World::getOrCreateChunkForLand(S16 chunkX, S16 chunkZ) {
+    // Cargar o crear el chunk si no existe en esa posición
+    const auto chunkKey = std::make_pair(chunkX, chunkZ);
+    if (chunks_.find(chunkKey) == chunks_.end()) {
+        // Si no existe, lo generamos
+        auto& NewChunk = chunks_.emplace(chunkKey, Chunk()).first->second;
+        generateLandChunk(NewChunk, chunkX, chunkZ);
+        return NewChunk;
+    }
+    return chunks_[chunkKey];
 }
 
 void World::generateChunks(S16 middleX, S16 middleZ, S16 numChunksX, S16 numChunksZ) {
@@ -47,7 +103,7 @@ void World::generateChunks(S16 middleX, S16 middleZ, S16 numChunksX, S16 numChun
 
 void World::generateChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
     chunk.position_.x = chunkX;
-    chunk.position_.y = chunkZ;
+    chunk.position_.z = chunkZ;
     for (S16 x = 0; x < CHUNK_SIZE; ++x) {
         for (S16 z = 0; z < CHUNK_SIZE; ++z) {
             S32 worldX = chunkX * CHUNK_SIZE + x;
@@ -80,7 +136,7 @@ void World::generateChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
 
 void World::generateSolidChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
     chunk.position_.x = chunkX;
-    chunk.position_.y = chunkZ;
+    chunk.position_.z = chunkZ;
     for (S16 x = 0; x < CHUNK_SIZE; ++x) {
         for(S16 y = 0; y < CHUNK_SIZE; y++) {
             for (S16 z = 0; z < CHUNK_SIZE; ++z) {

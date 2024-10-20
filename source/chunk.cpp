@@ -5,11 +5,11 @@
 using namespace poyo;
 
 #ifdef OPTIMIZATION_VECTOR
-Chunk::Chunk() : cubitos_(CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE) {
+Chunk::Chunk() : cubitos_(CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE) {
     
 }
 #else
-Chunk::Chunk() : cubitos_(CHUNK_SIZE, Vector<Vector<Cubito>>(CHUNK_SIZE, Vector<Cubito>(CHUNK_SIZE))) {
+Chunk::Chunk() : cubitos_(CHUNK_SIZE, Vector<Vector<Cubito>>(CHUNK_HEIGHT, Vector<Cubito>(CHUNK_SIZE))) {
     
 }
 #endif
@@ -21,7 +21,8 @@ Chunk::~Chunk() {
 void Chunk::
 setCubito(const CubePosition& pos, BLOCK_TYPE block) {
 #ifdef OPTIMIZATION_VECTOR
-    auto index = pos.x + CHUNK_SIZE * (pos.y + CHUNK_SIZE * pos.z);
+    auto index = pos.x + CHUNK_SIZE * (pos.y + CHUNK_SIZE * pos.z); //better
+    //auto index = (pos.y * CHUNK_SIZE * CHUNK_SIZE) + (pos.z * CHUNK_SIZE) + pos.x;
     auto& currentCubito = cubitos_[index];
 #else
     auto& currentCubito = cubitos_[pos.x][pos.y][pos.z];
