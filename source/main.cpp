@@ -42,8 +42,14 @@ using namespace poyo;
 
 static u16 nDrawCalls = 0;
 guVector lightPos{0, 10, 0};
-float deltaSus = 0.0f;
-static bool RenderBoundingBox = false;
+
+struct Options {
+    bool boundingBox = false;
+    bool lightning = true;
+    bool debugUI = false;
+};
+
+Options options;
 
 void fillCube(Cubito& cube, u16 face, s16 x, s16 y, s16 z, u8 direction, int block) {
     cube.face[face].x = x;
@@ -180,7 +186,7 @@ int main(int argc, char **argv) {
     while(1) {
         Engine::UpdateEngine();
         auto deltaTime = Engine::getDeltaTime();
-        if(deltaTime > deltaSus) deltaSus = deltaTime;
+
         angle+=deltaTime;
         // if(PAD_ButtonsHeld(0) & PAD_BUTTON_RIGHT) lightPos.x += deltaTime * 2.5f;
         // if(PAD_ButtonsHeld(0) & PAD_BUTTON_LEFT)  lightPos.x -= deltaTime * 2.5f;
@@ -193,7 +199,10 @@ int main(int argc, char **argv) {
 
         // If [START/PAUSE] was pressed on the first GameCube controller, break out of the loop
         if(PAD_ButtonsDown(0) & PAD_BUTTON_START) break;
-        if(PAD_ButtonsDown(0) & PAD_TRIGGER_Z) RenderBoundingBox = !RenderBoundingBox;;
+        if(PAD_ButtonsDown(0) & PAD_TRIGGER_Z) currentCam.setPosition(FVec3(0));
+        if(PAD_ButtonsDown(0) & PAD_BUTTON_UP) options.debugUI = !options.debugUI;;
+        if(PAD_ButtonsDown(0) & PAD_BUTTON_RIGHT) options.boundingBox = !options.boundingBox;;
+        if(PAD_ButtonsDown(0) & PAD_BUTTON_LEFT) options.lightning = !options.lightning;;
         
         currentCam.updateCamera(deltaTime); //deltaTime
 
@@ -201,8 +210,10 @@ int main(int argc, char **argv) {
         GRRLIB_3dMode(0.1f, 1000.0f, 45.0f, false, true); // Configura el modo 3D //Projection
         GRRLIB_SetLightOff();
         GRRLIB_ObjectView(lightPos.x, lightPos.y, lightPos.z, 0,0,0,1,1,1);
-        GRRLIB_DrawSphere(1, 20, 20, true, 0x00FF00FF);
-        GRRLIB_SetLightDiff(1, lightPos,20.0f,1.0f,0xFFFFFFFF);
+        GRRLIB_DrawSphere(1, 20, 20, true, 0xFFFF00FF);
+        if(options.lightning) {
+            GRRLIB_SetLightDiff(1, lightPos,20.0f,1.0f,0xFFFFFFFF);
+        }
 
         GRRLIB_ObjectView(1.0f,20,0, 0,0,0,1,1,1);
         GRRLIB_DrawCube(1, true, 0xFFFFFFFF);
@@ -230,7 +241,7 @@ int main(int argc, char **argv) {
             renderChunk(chunkito);
         }
         
-        if(RenderBoundingBox) {
+        if(options.boundingBox) {
             GRRLIB_SetLightOff();
             Renderer::PrepareToRender(true, false, true, false);
             for(const auto& [fst, chunkito] : chunkitos) {
@@ -246,26 +257,28 @@ int main(int argc, char **argv) {
         auto camPos = currentCam.getPosition();
         // Switch to 2D Mode to display text
         GRRLIB_2dMode();
-        text.beginRender();
-        text.render(USVec2{5,   5}, fmt::format("Ticks (CPU) : {}", gettick()).c_str());
-        text.render(USVec2{5,  20}, fmt::format("Time        : {}", gettime()).c_str());
-        text.render(USVec2{5,  35}, fmt::format("Current Time: {}", Engine::getCurrentTime()).c_str());
-        text.render(USVec2{5,  50}, fmt::format("Last Time   : {}", Engine::getLastTime()).c_str());
-        text.render(USVec2{5,  65}, fmt::format("Delta Time  : {:.3f} s", deltaSus).c_str());
-        text.render(USVec2{5,  80}, fmt::format("Mem1  : {}", used1).c_str());
-        text.render(USVec2{5,  95}, fmt::format("Mem2  : {}", used2).c_str());
-        text.render(USVec2{5,  110}, fmt::format("Mem3  : {}", used3).c_str());
-        text.render(USVec2{5,  125}, fmt::format("Mem  : {:.2f} KB", convertBytesToKilobytes(used3 - used2)).c_str());
-        text.render(USVec2{5,  140}, fmt::format("Free Memory  : {:.2f} KB", convertBytesToKilobytes(SYS_GetArena1Size())).c_str());
-        text.render(USVec2{275,  5}, fmt::format("Camera X [{:.4f}] Y [{:.4f}] Z [{:.4f}]", camPos.x, camPos.y, camPos.z).c_str());
-        text.render(USVec2{275, 20}, fmt::format("Camera Pitch [{:.4f}] Yaw [{:.4f}]", currentCam.getPitch(), currentCam.getYaw()).c_str());
-        //Render Things
+        if(options.debugUI) {
+            text.beginRender();
+            text.render(USVec2{5,   5}, fmt::format("Ticks (CPU) : {}", gettick()).c_str());
+            text.render(USVec2{5,  20}, fmt::format("Time        : {}", gettime()).c_str());
+            text.render(USVec2{5,  35}, fmt::format("Current Time: {}", Engine::getCurrentTime()).c_str());
+            text.render(USVec2{5,  50}, fmt::format("Last Time   : {}", Engine::getLastTime()).c_str());
+            text.render(USVec2{5,  65}, fmt::format("Delta Time  : {:.3f} s", deltaTime).c_str());
+            text.render(USVec2{5,  80}, fmt::format("Mem1  : {}", used1).c_str());
+            text.render(USVec2{5,  95}, fmt::format("Mem2  : {}", used2).c_str());
+            text.render(USVec2{5,  110}, fmt::format("Mem3  : {}", used3).c_str());
+            text.render(USVec2{5,  125}, fmt::format("Mem  : {:.2f} KB", convertBytesToKilobytes(used3 - used2)).c_str());
+            text.render(USVec2{5,  140}, fmt::format("Free Memory  : {:.2f} KB", convertBytesToKilobytes(SYS_GetArena1Size())).c_str());
+            text.render(USVec2{275,  5}, fmt::format("Camera X [{:.4f}] Y [{:.4f}] Z [{:.4f}]", camPos.x, camPos.y, camPos.z).c_str());
+            text.render(USVec2{275, 20}, fmt::format("Camera Pitch [{:.4f}] Yaw [{:.4f}]", currentCam.getPitch(), currentCam.getYaw()).c_str());
+            //Render Things
 
-        text.render(USVec2{400,  50}, fmt::format("NDraw Calls : {}", nDrawCalls).c_str());
-        text.render(USVec2{400,  65}, fmt::format("Draw Cycles : {} ts", formatThousands(drawTicks)).c_str());
-        text.render(USVec2{400,  80}, fmt::format("Draw Time   : {} ms", Tick::TickToMs(drawTicks)).c_str());
-        //text.render(USVec2{400,  95}, fmt::format("Helper      : {}", currentWorld.helperCounter).c_str());
-        //text.render(USVec2{400, 110}, fmt::format("N Blocks    : {}", currentChunk.validBlocks).c_str());
+            text.render(USVec2{400,  50}, fmt::format("NDraw Calls : {}", nDrawCalls).c_str());
+            text.render(USVec2{400,  65}, fmt::format("Draw Cycles : {} ts", formatThousands(drawTicks)).c_str());
+            text.render(USVec2{400,  80}, fmt::format("Draw Time   : {} ms", Tick::TickToMs(drawTicks)).c_str());
+            //text.render(USVec2{400,  95}, fmt::format("Helper      : {}", currentWorld.helperCounter).c_str());
+            //text.render(USVec2{400, 110}, fmt::format("N Blocks    : {}", currentChunk.validBlocks).c_str());
+        }
 
 
         //GRRLIB_PrintfTTF(50, 50, myFont, "MINECRAFT", 16, 0x000000FF);
