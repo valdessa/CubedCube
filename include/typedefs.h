@@ -43,20 +43,30 @@ namespace poyo {
     using BVec3 = glm::bvec3; using cBVec3 = const glm::bvec3;
     using BVec4 = glm::bvec4; using cBVec4 = const glm::bvec4;
 
+    //*********** Vector Char ***********//
+    using CVec2 = glm::detail::tvec2<char>; using cCVec2 = const CVec2;
+    using CVec3 = glm::detail::tvec3<char>; using cCVec3 = const CVec3;
+    using CVec4 = glm::detail::tvec4<char>; using cCVec4 = const CVec4;
+
+    //*********** Vector Unsigned Char ***********//
+    using UCVec2 = glm::detail::tvec2<unsigned char>; using cUCVec2 = const UCVec2;
+    using UCVec3 = glm::detail::tvec3<unsigned char>; using cUCVec3 = const UCVec3;
+    using UCVec4 = glm::detail::tvec4<unsigned char>; using cUCVec4 = const UCVec4;
+
     //*********** Vector Int ***********//
     using IVec2 = glm::ivec2; using cIVec2 = const glm::ivec2;
     using IVec3 = glm::ivec3; using cIVec3 = const glm::ivec3;
     using IVec4 = glm::ivec4; using cIVec4 = const glm::ivec4;
 
-    //********** Vector Short **********//
-    using SVec2 = glm::lowp_ivec2; using cSVec2 = const SVec2;
-    using SVec3 = glm::lowp_ivec3; using cSVec3 = const SVec3;
-    using SVec4 = glm::lowp_ivec4; using cSVec4 = const SVec4;
-    
     //*********** Vector Unsigned ***********//
     using UVec2 = glm::uvec2; using cUVec2 = const glm::uvec2;
     using UVec3 = glm::uvec3; using cUVec3 = const glm::uvec3;
     using UVec4 = glm::uvec4; using cUVec4 = const glm::uvec4;
+
+    //********** Vector Short **********//
+    using SVec2 = glm::lowp_ivec2; using cSVec2 = const SVec2;
+    using SVec3 = glm::lowp_ivec3; using cSVec3 = const SVec3;
+    using SVec4 = glm::lowp_ivec4; using cSVec4 = const SVec4;
 
     //******** Vector Unsigned Short ********//
     using USVec2 = glm::lowp_uvec2; using cUSVec2 = const USVec2;

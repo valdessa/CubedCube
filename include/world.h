@@ -10,7 +10,7 @@ namespace poyo {
         World();
         ~World();
 
-        void generateChunks(S16 startX, S16 startZ, S16 numChunksX, S16 numChunksZ);
+        void generateChunks(S16 middleX, S16 middleZ, S16 numChunksX, S16 numChunksZ);
 
         void generateChunk(Chunk& chunk, S16 chunkX, S16 chunkZ);
         void generateSolidChunk(Chunk& chunk, S16 chunkX, S16 chunkZ);

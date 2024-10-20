@@ -26,14 +26,19 @@ World::World() {
 World::~World() {
 }
 
-void World::generateChunks(S16 startX, S16 startZ, S16 numChunksX, S16 numChunksZ) {
-    // Recorremos la región de terreno especificada
-    for (S16 chunkX = startX; chunkX < startX + numChunksX; ++chunkX) {
-        for (S16 chunkZ = startZ; chunkZ < startZ + numChunksZ; ++chunkZ) {
+void World::generateChunks(S16 middleX, S16 middleZ, S16 numChunksX, S16 numChunksZ) {
 
-            auto worldX = chunkX * CHUNK_SIZE;
-            auto worldZ = chunkZ * CHUNK_SIZE;
-                    
+    S16 halfChunk = CHUNK_SIZE / 2;
+    S16 offsetX = halfChunk * numChunksX;
+    S16 offsetZ = halfChunk * numChunksZ;
+    
+    // Recorremos la región de terreno especificada
+    for (S16 chunkX = middleX; chunkX < middleX + numChunksX; ++chunkX) {
+        for (S16 chunkZ = middleZ; chunkZ < middleZ + numChunksZ; ++chunkZ) {
+
+            auto worldX = chunkX * CHUNK_SIZE - offsetX;
+            auto worldZ = chunkZ * CHUNK_SIZE - offsetZ;
+            
             // Genera o recupera el chunk de la posición actual
             validBlocks_ += getOrCreateChunk(worldX, worldZ).validBlocks;
         }
@@ -90,7 +95,7 @@ void World::generateSolidChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
                 } else if (y == GRASS_LEVEL) {
                     chunk.setCubito(pos, BLOCK_GRASS); // Bloque en la superficie -> césped
                 } else {
-                    chunk.setCubito(pos, BLOCK_AIR);
+                    chunk.setCubito(pos, BLOCK_SAND);
                 }
             } 
         }

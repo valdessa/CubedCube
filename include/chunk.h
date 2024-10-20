@@ -1,9 +1,7 @@
 #ifndef INCLUDE_CHUNK_H_
 #define INCLUDE_CHUNK_H_ 1
-#include "common.h"
 
 namespace poyo {
-    
     class Chunk {
      public:
         Chunk();

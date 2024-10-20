@@ -3,7 +3,7 @@
 workspace "Cubed Cube"	
 	location "../build"
     language ("C++")
-    cppdialect "C++20"
+    cppdialect "C++17"
 
     architecture "x86_64"
     
@@ -46,7 +46,7 @@ project "Cubed Cube"
     cleancommands { "make -C .. clean" }
 
     -- Definir las propiedades necesarias para NMake
-    buildoutputs { "../bin/%{prj.name}/%{cfg.longname}/*" }  -- Ajusta según tu salida esperada
+    buildoutputs { "../bin/%{prj.name}/%{cfg.longname}/*" }  -- Ajusta segï¿½n tu salida esperada
 
  	files { "../include/**.h", "../source/**.cpp" }
 

@@ -23,6 +23,7 @@ GRRLIB (GX Version)
 
 #include <engine.h>
 #include <camera.h>
+#include <renderer.h>
 #include <memory.h>
 
 #include <tick.h>
@@ -37,23 +38,12 @@ GRRLIB (GX Version)
 
 using namespace poyo;
 
-//#define USE_OLD
-
 #define TILE_SIZE 128
-
-static TPLFile bloquitosTPL;
-static GXTexObj blocksTexture;
 
 static u16 nDrawCalls = 0;
 guVector lightPos{0, 10, 0};
 float deltaSus = 0.0f;
-
-constexpr u16 tileTexCoords[4][2] = {
-    {0, 0},
-    {1, 0},
-    {1, 1},
-    {0, 1}
-};
+static bool RenderBoundingBox = false;
 
 void fillCube(Cubito& cube, u16 face, s16 x, s16 y, s16 z, u8 direction, int block) {
     cube.face[face].x = x;
@@ -105,37 +95,6 @@ void generateTree(Cubito cubes[], s16 baseX, s16 baseY, s16 baseZ) {
     }
 }
 
-void renderCube(const Cubito& cube, float angleX, float angleY, s16 worldX = 0, s16 worldY = 0, s16 worldZ = 0) {
-    GRRLIB_ObjectView(cube.x  + worldX, cube.y  + worldY, cube.z  + worldZ,
-        angleX, angleY, 0.0f, 1.0f, 1.0f, 1.0f);
-
-    GX_Begin(GX_QUADS, GX_VTXFMT0, 24);
-
-    for (auto& currentFace : cube.face) {
-        for (int j = 0; j < 4; j++) {
-            //Signed Short!!
-            GX_Position3u16(currentFace.x + cubeFaces[currentFace.direction][j][0],
-                            currentFace.y + cubeFaces[currentFace.direction][j][1],
-                            currentFace.z + cubeFaces[currentFace.direction][j][2]);
-            //GX_Color1u32 old
-            //GX_Color1x8(255);
-            GX_Normal3f32(cubeNormals[currentFace.direction][0], cubeNormals[currentFace.direction][1], cubeNormals[currentFace.direction][2]);
-            //GX_Normal3f32(cubeNormals[currentFace.direction][j], cubeNormals[currentFace.direction][j], cubeNormals[currentFace.direction][j]);
-            GX_Color1u32(0xFFFFFFFF);
-            //GX_TexCoord2f32 old
-
-            auto& UV = tileUVMap[currentFace.tile];
-
-#ifdef OPTIMIZATION_MAPS
-            GX_TexCoord2u16(UV[0] + tileTexCoords[j][0], UV[1] + tileTexCoords[j][1]);
-#else
-            GX_TexCoord2u16(UV.x + tileTexCoords[j][0], UV.y + tileTexCoords[j][1]);
-#endif
-        }
-    }
-    GX_End();
-}
-
 void renderChunk(const Chunk& chunk) {
     auto& cubitos = chunk.cubitos_;
 #ifdef OPTIMIZATION_VECTOR
@@ -143,7 +102,7 @@ void renderChunk(const Chunk& chunk) {
         if(currentCubito.type == BLOCK_AIR) continue;
         nDrawCalls++;
 
-        renderCube(currentCubito, 0, 0, chunk.position_.x, 0, chunk.position_.y);
+        Renderer::RenderCube(currentCubito, cFVec3(chunk.position_.x, 0, chunk.position_.y));
     }
 #else
     for (size_t x = 0; x < cubitos.size(); ++x) {
@@ -152,24 +111,11 @@ void renderChunk(const Chunk& chunk) {
                 const Cubito& currentCubito = cubitos[x][y][z];
                 if(currentCubito.type == BLOCK_AIR) continue;
                 nDrawCalls++;
-                renderCube(currentCubito, 0, 0, chunk.position_.x, 0, chunk.position_.y);
+                Renderer::RenderCube(currentCubito, cFVec3(chunk.position_.x, 0, chunk.position_.y));
             }
         }
     }
 #endif
-}
-
-String formatThousands(size_t value) {
-    String num_str = std::to_string(value);  // Convert the number to a string
-    auto insert_position = num_str.length() - 3;   // Start 3 digits from the end
-
-    // Insert commas every three digits
-    while (insert_position > 0) {
-        num_str.insert(insert_position, ".");
-        insert_position -= 3;
-    }
-
-    return num_str;
 }
 
 void updatePosition(guVector& point, float radius, float angle) {
@@ -177,7 +123,6 @@ void updatePosition(guVector& point, float radius, float angle) {
     point.x = radius * cos(angle); // Movimiento circular en el eje X
     point.z = radius * sin(angle); // Movimiento circular en el eje Z
 }
-
 
 //TODO: El lesson 8 tiene transparencias
 //Lesson 9 una luz toh guapa
@@ -193,80 +138,21 @@ int main(int argc, char **argv) {
     PAD_Init();
 
     GRRLIB_SetAntiAliasing(true);
-    GRRLIB_Settings.antialias = true;
     
     //GRRLIB_ttfFont *myFont = GRRLIB_LoadTTF(Karma_ttf, Karma_ttf_size);
 
-    TPL_OpenTPLFromMemory(&bloquitosTPL, (void*)bloquitos_tpl, bloquitos_tpl_size);
-    TPL_GetTexture(&bloquitosTPL, blocksTextureID, &blocksTexture);
-    GX_InitTexObjFilterMode(&blocksTexture, GX_NEAR, GX_NEAR);
-    GX_SetTexCoordGen(GX_TEXCOORD1, GX_TG_MTX2x4, GX_TG_TEX1, GX_IDENTITY);
-    GX_InvalidateTexAll();
+    loadResources();
 
     // Set the background color (Green in this case)
     GRRLIB_SetBackgroundColour(0x80, 0x80, 0x80, 0xFF);
     //GRRLIB_Camera3dSettings(0.0f,0.0f,13.0f, 0,1,0, 0,0,0); //view matrix
     GRRLIB_SetLightAmbient(0x000000FF); //0x333333FF
-    mapTileUVs(6);
+
+    Renderer::Initialize();
 
     Cubito Tree1[72];
 
     generateTree(Tree1, 0, 1, 0);
-
-#ifdef USE_OLD
-    Cubito grass[9];
-    Cubito stone[25];
-    Cubito dirt[25];
-    Cubito cactus[3];
-
-    Cubito sandDirt[9];
-
-    //Cubito Tree1[26];
-    Cubito Tree1[72];
-
-    generateTree(Tree1, 0, 1, 0);
-    
-    int cubeIndex = 0;
-    for (s16 i = -1; i <= 1; i++) {       // Recorre las posiciones -1, 0, 1 en el eje X
-        for (s16 j = -1; j <= 1; j++) {   // Recorre las posiciones -1, 0, 1 en el eje Z
-            generateCube(grass[cubeIndex], i, 0, j, BLOCK_GRASS);  // Genera el bloque en la posición (x, y, z)
-            cubeIndex++;  // Aumenta el índice para el siguiente cubo
-        }
-    }
-    cubeIndex = 0;
-    for (s16 i = -2; i <= 2; i++) {       // Recorre las posiciones -2, -1, 0, 1, 2 en el eje X
-        for (s16 j = -2; j <= 2; j++) {   // Recorre las posiciones -2, -1, 0, 1, 2 en el eje Z
-            generateCube(stone[cubeIndex], i, -1, j, BLOCK_STONE);  // Genera el bloque en la posición (x, y, z)
-            cubeIndex++;  // Aumenta el índice para el siguiente cubo
-        }
-    }
-    cubeIndex = 0;
-
-    //Cactus:
-    int baseX = -6;  // Posición inicial en el eje X
-    int baseY = 0;   // Posición en el eje Y (constante en este caso)
-    int baseZ = 0;   // Posición inicial en el eje Z
-    
-    generateCube(cactus[0], -6,  1, 0, BLOCK_CACTUS);
-    generateCube(cactus[1], -6,  2, 0, BLOCK_CACTUS);
-    generateCube(cactus[2], -6,  3, 0, BLOCK_CACTUS);
-
-    // Iterar para crear una cuadrícula de 3x3 alrededor de (-6, 0, 0)
-    for (s16 i = -1; i <= 1; i++) {       // Recorre las posiciones -1, 0, 1 en el eje X
-        for (s16 j = -1; j <= 1; j++) {   // Recorre las posiciones -1, 0, 1 en el eje Z
-            generateCube(sandDirt[cubeIndex], baseX + i, baseY, baseZ + j, BLOCK_SAND_DIRT);  // Genera el bloque en la posición (x, y, z)
-            cubeIndex++;  // Aumenta el índice para el siguiente cubo
-        }
-    }
-    cubeIndex = 0;
-    for (s16 i = -2; i <= 2; i++) {       // Recorre las posiciones -2, -1, 0, 1, 2 en el eje X
-        for (s16 j = -2; j <= 2; j++) {   // Recorre las posiciones -2, -1, 0, 1, 2 en el eje Z
-            generateCube(dirt[cubeIndex], baseX + i, -1, j, BLOCK_DIRT);  // Genera el bloque en la posición (x, y, z)
-            cubeIndex++;  // Aumenta el índice para el siguiente cubo
-        }
-    }
-
-#endif
     
     TextRenderer text;
     Camera currentCam(FVec3{0.0f, 20.0f, 50.0f}, -20, -90, 15.0f);
@@ -275,29 +161,20 @@ int main(int argc, char **argv) {
     
     World currentWorld;
 
-    //auto& currentChunk = currentWorld.getOrCreateChunk(0, 0);
-    //currentWorld.generateChunk(currentChunk, 0, 0);
-    // auto& currentChunk2 = currentWorld.getOrCreateChunk(CHUNK_SIZE, 0);
-    // currentWorld.generateChunk(currentChunk2, CHUNK_SIZE, 0);
-
-    // Definir la posición inicial para la generación de chunks
-    S16 startX = 0; // Coordenada X de inicio
-    S16 startZ = 0; // Coordenada Z de inicio
-
     // Definir el número de chunks a generar en ambas direcciones
-    S16 numChunksX = 3; // Número de chunks a generar en la dirección X
-    S16 numChunksZ = 3; // Número de chunks a generar en la dirección Z
-
+    S16 numChunksX = 2; // Número de chunks a generar en la dirección X
+    S16 numChunksZ = 2; // Número de chunks a generar en la dirección Z
     
-    currentWorld.generateChunks(startX, startZ, numChunksX, numChunksZ);
+    currentWorld.generateChunks(0, 0, numChunksX, numChunksZ);
     SYS_Report("N Blocks: %llu\n", currentWorld.validBlocks_);
+    //SYS_Report("Start X Z: %zd %zd\n", startX, startZ);
     
     size_t used3 = Memory::getTotalMemoryUsed();
 
     Tick currentTick;
-
+    
     Cubito deleteMe;
-    generateCube(deleteMe, 0,  10, 0, BLOCK_GRASS);
+    generateCube(deleteMe, 0,  10, 0, BLOCK_LEAF2);
     
     // Loop forever
     while(1) {
@@ -315,8 +192,9 @@ int main(int argc, char **argv) {
         PAD_ScanPads(); // Scan the GameCube controllers
 
         // If [START/PAUSE] was pressed on the first GameCube controller, break out of the loop
-        if(PAD_ButtonsDown(0) & PAD_BUTTON_START) exit(0);
-
+        if(PAD_ButtonsDown(0) & PAD_BUTTON_START) break;
+        if(PAD_ButtonsDown(0) & PAD_TRIGGER_Z) RenderBoundingBox = !RenderBoundingBox;;
+        
         currentCam.updateCamera(deltaTime); //deltaTime
 
 
@@ -334,78 +212,37 @@ int main(int argc, char **argv) {
         // Limpiar pantalla y preparar para dibujo en 3D
         GRRLIB_3dMode(0.1f, 1000.0f, 45.0f, 1, 1); // Configura el modo 3D //Projection
         
-        //GRRLIB_DrawCube(cubeSize, true, 0xFFFFFFFF); // Dibuja un cubo blanco
-        //GRRLIB_SetTexture(tex_girl, 0);
-        GX_LoadTexObj(&blocksTexture, GX_TEXMAP0);
-        GX_SetTexCoordScaleManually(GX_TEXCOORD0, GX_TRUE, TILE_SIZE, TILE_SIZE);
+        Renderer::BindTexture(blocksTexture, 0);
+        Renderer::SetTextureCoordScaling(0, TILE_SIZE, TILE_SIZE);
+        Renderer::DisableBlend();
         
-        GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
-        GX_SetVtxDesc(GX_VA_NRM, GX_DIRECT);  //added by Sebas
-        GX_SetVtxDesc(GX_VA_TEX0, GX_DIRECT); //added by Sebas
-        GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_U16, 0); //Positions -> U16
-        GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_NRM, GX_NRM_XYZ, GX_F32, 0); //Normals   -> F32
-        GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_U16, 0); //Textures  -> U16
-
-        //renderCube(deleteMe, 0, 0);
-        // GRRLIB_3dMode(0.1f, 1000.0f, 45.0f, 0, 1);
-        // GRRLIB_ObjectView(0.0f,20,0, 0,0,0,1,1,1);
-       // GRRLIB_SetLightDiff(1, lightPos,20.0f,1.0f,0xFFFFFFFF);
-        //GRRLIB_ObjectView(0.0f,20,0, 0,0,0,1,1,1);
-        //GRRLIB_DrawCube(1, true, 0xFFFFFFFF);
-        // GRRLIB_DrawSphere(1, 20, 20, true, 0x00FF00FF);
         
-        //GRRLIB_SetBlend(GRRLIB_BLEND_ALPHA);
-        GX_SetPixelFmt(GX_PF_RGBA6_Z24, GX_ZC_LINEAR);
-        GX_SetAlphaUpdate(GX_TRUE);
-        GX_SetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_CLEAR);
         for (int i = 0; i < 72; i++) {
-            renderCube(Tree1[i], 0, 0, 0, 10, 0);
+            Renderer::RenderCube(Tree1[i], cFVec3(0, 10, 0));
         }
-        
-#ifdef USE_OLD
-        for(int i = 0; i < 9; i++) {
-            renderCube(grass[i], 0, 0, 0, 0, 0);
-        }
-        for (auto& i : stone) {
-            renderCube(i, 0, 0, 0, 0, 0);
-        }
-        for (int i = 0; i < 72; i++) {
-            renderCube(Tree1[i], 0, 0, 0, 0, 0);
-        }
-
-        //Cactus
-        for (auto& cactu : cactus) {
-            renderCube(cactu, 0, 0);
-        }
-        for (auto& i : sandDirt) {
-            renderCube(i, 0, 0);
-        }
-        for (auto& i : dirt) {
-            renderCube(i, 0, 0);
-        }
-#endif
+        Renderer::RenderCube(deleteMe);
 
         nDrawCalls = 0;
         currentTick.start();
-        //renderChunk(currentChunk);
-        // renderChunk(currentChunk2);
 
         auto& chunkitos = currentWorld.getChunks();
         for(const auto& [fst, chunkito] : chunkitos) {
             renderChunk(chunkito);
         }
         
+        if(RenderBoundingBox) {
+            GRRLIB_SetLightOff();
+            Renderer::PrepareToRender(true, false, true, false);
+            for(const auto& [fst, chunkito] : chunkitos) {
+                Renderer::RenderBoundingBox(chunkito.position_.x, 0, chunkito.position_.y, CHUNK_SIZE, UCVec3{0, 255, 255}, true);
+            } 
+        }
+        
         //std::this_thread::sleep_for(std::chrono::seconds(1));
         auto drawTicks = currentTick.stopAndGetTick();
         currentTick.reset();
 
-        // GRRLIB_SetLightOff();
-        // GRRLIB_3dMode(0.1f, 1000.0f, 45.0f, 0, 1);
-        // GRRLIB_ObjectView(lightPos.x, lightPos.y, lightPos.z, 0,0,0,1,1,1);
-        // GRRLIB_DrawSphere(1, 20, 20, true, 0x00FF00FF);
         
-        if(PAD_ButtonsHeld(0) & PAD_TRIGGER_Z) currentCam.setPosition(FVec3{0, 0, 0});
-
         auto camPos = currentCam.getPosition();
         // Switch to 2D Mode to display text
         GRRLIB_2dMode();
@@ -425,8 +262,8 @@ int main(int argc, char **argv) {
         //Render Things
 
         text.render(USVec2{400,  50}, fmt::format("NDraw Calls : {}", nDrawCalls).c_str());
-        //text.render(USVec2{400,  65}, fmt::format("Draw Cycles : {} ts", formatThousands(drawTicks)).c_str());
-        //text.render(USVec2{400,  80}, fmt::format("Draw Time   : {} ms", Tick::TickToMs(drawTicks)).c_str());
+        text.render(USVec2{400,  65}, fmt::format("Draw Cycles : {} ts", formatThousands(drawTicks)).c_str());
+        text.render(USVec2{400,  80}, fmt::format("Draw Time   : {} ms", Tick::TickToMs(drawTicks)).c_str());
         //text.render(USVec2{400,  95}, fmt::format("Helper      : {}", currentWorld.helperCounter).c_str());
         //text.render(USVec2{400, 110}, fmt::format("N Blocks    : {}", currentChunk.validBlocks).c_str());
 

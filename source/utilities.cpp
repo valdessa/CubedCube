@@ -19,3 +19,16 @@ void poyo::mapTileUVs(U8 tilesetWidth) {
 double poyo::convertBytesToKilobytes(const size_t bytes) {
     return static_cast<double>(bytes) / 1024.0; // 1 KB = 1024 bytes
 }
+
+String poyo::formatThousands(size_t value) {
+    String num_str = std::to_string(value);  // Convert the number to a string
+    auto insert_position = num_str.length() - 3;   // Start 3 digits from the end
+
+    // Insert commas every three digits
+    while (insert_position > 0) {
+        num_str.insert(insert_position, ".");
+        insert_position -= 3;
+    }
+
+    return num_str;
+}

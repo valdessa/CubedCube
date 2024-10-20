@@ -4,6 +4,7 @@
 namespace poyo {
     void mapTileUVs(U8 tilesetWidth);
     double convertBytesToKilobytes(size_t bytes);
+    String formatThousands(size_t value);
 }
 
 #endif
