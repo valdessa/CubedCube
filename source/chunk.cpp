@@ -2,6 +2,11 @@
 
 #include <chunk.h>
 
+#include <grrlib.h>
+#include <ogc/gx.h>
+
+#include "renderer.h"
+
 using namespace poyo;
 
 #ifdef OPTIMIZATION_VECTOR
@@ -41,8 +46,10 @@ setCubito(const CubePosition& pos, BLOCK_TYPE block) {
     if(block != BLOCK_AIR) validBlocks++;
 }
 
-void Chunk::render() {
-    
+void Chunk::render() const {
+    u16 blockToRender = validBlocks * 24;
+
+    Renderer::RenderCubeVector(cubitos_, blockToRender, cFVec3(position_.x, 0, position_.z));
 }
 
 void Chunk::fillCubito(Cubito& cubito, U8 face, U8 x, U8 y, U8 z, U8 direction, S32 block) {

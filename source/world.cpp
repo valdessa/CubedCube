@@ -71,15 +71,20 @@ void World::generateLandChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
 }
 
 Chunk& World::getOrCreateChunkForLand(S16 chunkX, S16 chunkZ) {
-    // Cargar o crear el chunk si no existe en esa posición
     const auto chunkKey = std::make_pair(chunkX, chunkZ);
-    if (chunks_.find(chunkKey) == chunks_.end()) {
-        // Si no existe, lo generamos
-        auto& NewChunk = chunks_.emplace(chunkKey, Chunk()).first->second;
-        generateLandChunk(NewChunk, chunkX, chunkZ);
-        return NewChunk;
+    auto it = chunks_.find(chunkKey);
+    if (it == chunks_.end()) {
+        it = chunks_.emplace(chunkKey, Chunk()).first;
+        generateLandChunk(it->second, chunkX, chunkZ);
     }
-    return chunks_[chunkKey];
+    return it->second;
+    // if (chunks_.find(chunkKey) == chunks_.end()) {
+    //     // Si no existe, lo generamos
+    //     auto& NewChunk = chunks_.emplace(chunkKey, Chunk()).first->second;
+    //     generateLandChunk(NewChunk, chunkX, chunkZ);
+    //     return NewChunk;
+    // }
+    // return chunks_[chunkKey];
 }
 
 void World::generateChunks(S16 middleX, S16 middleZ, S16 numChunksX, S16 numChunksZ) {

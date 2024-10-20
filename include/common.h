@@ -6,9 +6,6 @@
 #define CHUNK_SIZE   16   // Ancho de cada chunk (X, Z)
 #define CHUNK_HEIGHT 16  // Altura de cada chunk (Y)
 
-// #define WATER_LEVEL 5 
-// #define GRASS_LEVEL 10
-// #define STONE_LEVEL 12
 #define MIN_HEIGHT  2
 
 #define WATER_LEVEL 8        // Nivel del agua
@@ -18,6 +15,7 @@
 
 #define OPTIMIZATION_VECTOR
 #define OPTIMIZATION_MAPS
+#define OPTIMIZATION_BATCHING
 
 namespace poyo {
     struct ChunkPosition{
@@ -82,7 +80,7 @@ namespace poyo {
         U8 type = BLOCK_AIR;
     };
 
-    inline const U8 blockTiles[][6] = {
+    inline constexpr U8 blockTiles[][6] = {
         [BLOCK_STONE] =    {TILE_STONE,      TILE_STONE,      TILE_STONE,    TILE_STONE,     TILE_STONE,      TILE_STONE},
         [BLOCK_SAND] =     {TILE_SAND,       TILE_SAND,       TILE_SAND,     TILE_SAND,      TILE_SAND,       TILE_SAND},
         [BLOCK_DIRT] =     {TILE_DIRT,       TILE_DIRT,       TILE_DIRT,     TILE_DIRT,      TILE_DIRT,       TILE_DIRT},
@@ -97,7 +95,7 @@ namespace poyo {
         [BLOCK_AIR] = {TILE_STONE,      TILE_STONE,      TILE_STONE,    TILE_STONE,     TILE_STONE,      TILE_STONE},
     };
 
-    inline const U8 cubeFaces[6][4][3] = {
+    inline constexpr U8 cubeFaces[6][4][3] = {
         [DIR_X_FRONT] = {{0, 1, 1}, {0, 1, 0}, {0, 0, 0}, {0, 0, 1}},  //drawn clockwise looking x-
         [DIR_X_BACK] =  {{0, 1, 0}, {0, 1, 1}, {0, 0, 1}, {0, 0, 0}},  //drawn clockwise looking x+
         [DIR_Y_FRONT] = {{0, 0, 0}, {1, 0, 0}, {1, 0, 1}, {0, 0, 1}},  //drawn clockwise looking y-
@@ -106,7 +104,7 @@ namespace poyo {
         [DIR_Z_BACK] =  {{1, 1, 0}, {0, 1, 0}, {0, 0, 0}, {1, 0, 0}},  //drawn clockwise looking z+
     };
     
-    inline float cubeNormals[6][3] = {
+    inline constexpr float cubeNormals[6][3] = {
         [DIR_X_FRONT] = { 1.0f,  0.0f,  0.0f},  // Front (X+)
         [DIR_X_BACK]  = {-1.0f,  0.0f,  0.0f},  // Back (X-)
         [DIR_Y_FRONT] = { 0.0f,  1.0f,  0.0f},  // Top (Y+)

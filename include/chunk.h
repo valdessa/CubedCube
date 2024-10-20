@@ -9,11 +9,11 @@ namespace poyo {
 
         void setCubito(const CubePosition& pos, BLOCK_TYPE block);
 
-        void render();
+        void render() const;
         
         Cubito& getCubito(const CubePosition& pos);
 
-        U32 validBlocks = 0;
+        U16 validBlocks = 0;
         ChunkPosition position_;
         
 #ifdef OPTIMIZATION_VECTOR

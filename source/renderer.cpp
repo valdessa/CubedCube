@@ -106,6 +106,35 @@ void Renderer::RenderCube(const Cubito& cube, cFVec3& worldPos, cFVec3& angle) {
     GX_End();
 }
 
+void Renderer::RenderCubeVector(const Vector<Cubito>& cubes, U16 validBlocks, cFVec3& worldPos) {
+    GRRLIB_ObjectView(worldPos.x, worldPos.y, worldPos.z,
+                      0.0f, 0.0f, 0.0f,
+                      1.0f, 1.0f, 1.0f);
+    
+    GX_Begin(GX_QUADS, GX_VTXFMT2, validBlocks);
+    for(auto& cubito: cubes) {
+        if(cubito.type == BLOCK_AIR) continue; //TODO: FIX THIS WHEN CHANGING CUBE
+        for (auto& currentFace : cubito.face) {
+            for (int j = 0; j < 4; j++) {
+                GX_Position3u16(currentFace.x + cubeFaces[currentFace.direction][j][0] + cubito.x,
+                                currentFace.y + cubeFaces[currentFace.direction][j][1] + cubito.y,
+                                currentFace.z + cubeFaces[currentFace.direction][j][2] + cubito.z);
+                GX_Normal3f32(cubeNormals[currentFace.direction][0], cubeNormals[currentFace.direction][1], cubeNormals[currentFace.direction][2]);
+                GX_Color4u8(255, 255, 255, 255);
+                auto& UV = tileUVMap[currentFace.tile];
+
+#ifdef OPTIMIZATION_MAPS
+                GX_TexCoord2u16(UV[0] + tileTexCoords[j][0], UV[1] + tileTexCoords[j][1]);
+#else
+                GX_TexCoord2u16(UV.x + tileTexCoords[j][0], UV.y + tileTexCoords[j][1]);
+#endif
+            }
+        }
+    }
+
+    GX_End();
+}
+
 void Renderer::RenderBoundingBox(S16 originX, S16 originY, S16 originZ, U16 size, cUCVec3& color, bool RenderCross) {
     // Set the view for the cube based on origin and size
     GRRLIB_ObjectView(originX, originY, originZ, 0, 0, 0.0f, size, size, size);

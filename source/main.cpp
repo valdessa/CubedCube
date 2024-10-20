@@ -45,7 +45,7 @@ guVector lightPos{0, 10, 0};
 
 struct Options {
     bool boundingBox = false;
-    bool lightning = true;
+    bool lightning = false;
     bool debugUI = false;
 };
 
@@ -161,7 +161,7 @@ int main(int argc, char **argv) {
     generateTree(Tree1, 0, 1, 0);
     
     TextRenderer text;
-    Camera currentCam(FVec3{0.0f, 20.0f, 50.0f}, -20, -90, 15.0f);
+    Camera currentCam(FVec3{0.0f, 30.0f, 50.0f}, -20, -90, 15.0f);
     
     size_t used2 = Memory::getTotalMemoryUsed();
     
@@ -172,7 +172,7 @@ int main(int argc, char **argv) {
     S16 numChunksZ = 2; // Número de chunks a generar en la dirección Z
     
     //currentWorld.generateChunks(0, 0, numChunksX, numChunksZ);
-    currentWorld.generateLand(2);
+    currentWorld.generateLand(1);
     SYS_Report("N Blocks: %llu\n", currentWorld.validBlocks_);
     //SYS_Report("Start X Z: %zd %zd\n", startX, startZ);
     
@@ -188,12 +188,11 @@ int main(int argc, char **argv) {
         Engine::UpdateEngine();
         auto deltaTime = Engine::getDeltaTime();
 
-        angle+=deltaTime;
-        // if(PAD_ButtonsHeld(0) & PAD_BUTTON_RIGHT) lightPos.x += deltaTime * 2.5f;
-        // if(PAD_ButtonsHeld(0) & PAD_BUTTON_LEFT)  lightPos.x -= deltaTime * 2.5f;
-        // if(PAD_ButtonsHeld(0) & PAD_BUTTON_UP)    lightPos.y += deltaTime * 2.5f;
-        // if(PAD_ButtonsHeld(0) & PAD_BUTTON_DOWN)  lightPos.y -= deltaTime * 2.5f;
-        updatePosition(lightPos, 20, angle);
+        if(options.lightning) {
+            angle+=deltaTime;
+            updatePosition(lightPos, 20, angle);
+        }
+
         
         GRRLIB_2dMode();
         PAD_ScanPads(); // Scan the GameCube controllers
@@ -238,8 +237,12 @@ int main(int argc, char **argv) {
         currentTick.start();
 
         auto& chunkitos = currentWorld.getChunks();
-        for(const auto& [fst, chunkito] : chunkitos) {
+        for(auto& [fst, chunkito] : chunkitos) {
+#ifdef OPTIMIZATION_BATCHING
+            chunkito.render();
+#else
             renderChunk(chunkito);
+#endif
         }
         
         if(options.boundingBox) {
