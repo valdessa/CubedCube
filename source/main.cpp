@@ -105,10 +105,16 @@ void renderChunk(const Chunk& chunk) {
     auto& cubitos = chunk.cubitos_;
 #ifdef OPTIMIZATION_VECTOR
     for (const auto& currentCubito : cubitos) {
-        if(currentCubito.type == BLOCK_AIR) continue;
+        if(!currentCubito.visible) continue;
+#ifdef OPTIMIZATION_OCCLUSION_CULLING
+        if(!chunk.isCompletelyOccluded(currentCubito.x, currentCubito.y, currentCubito.z, chunk.offsetPosition_)) {
+            nDrawCalls++;
+            Renderer::RenderCube(currentCubito, cFVec3(chunk.worldPosition_.x, 0, chunk.worldPosition_.z));
+        }
+#else
         nDrawCalls++;
-
-        Renderer::RenderCube(currentCubito, cFVec3(chunk.position_.x, 0, chunk.position_.z));
+        Renderer::RenderCube(currentCubito, cFVec3(chunk.worldPosition_.x, 0, chunk.worldPosition_.z));
+#endif
     }
 #else
     for (size_t x = 0; x < cubitos.size(); ++x) {
@@ -117,7 +123,7 @@ void renderChunk(const Chunk& chunk) {
                 const Cubito& currentCubito = cubitos[x][y][z];
                 if(currentCubito.type == BLOCK_AIR) continue;
                 nDrawCalls++;
-                Renderer::RenderCube(currentCubito, cFVec3(chunk.position_.x, 0, chunk.position_.z));
+                Renderer::RenderCube(currentCubito, cFVec3(chunk.worldPosition_.x, 0, chunk.worldPosition_.z));
             }
         }
     }
@@ -251,7 +257,7 @@ int main(int argc, char **argv) {
             GRRLIB_SetLightOff();
             Renderer::PrepareToRender(true, false, true, false);
             for(const auto& chunkito : chunkitos) {
-                Renderer::RenderBoundingBox(chunkito->position_.x, 0, chunkito->position_.z, CHUNK_SIZE, UCVec3{0, 255, 255}, true);
+                Renderer::RenderBoundingBox(chunkito->worldPosition_.x, 0, chunkito->worldPosition_.z, CHUNK_SIZE, UCVec3{0, 255, 255}, true);
             } 
         }
         

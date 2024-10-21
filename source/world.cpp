@@ -41,11 +41,17 @@ void World::generateLand(S16 radius) {
         chunks->createDisplayList();
     }
 #endif
+
+#ifdef OPTIMIZATION_OCCLUSION_PRECALCULATED
+    occludeChunks();
+#endif
 }
 
-void World::generateLandChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
-    chunk.position_.x = chunkX * CHUNK_SIZE;
-    chunk.position_.z = chunkZ * CHUNK_SIZE;
+void World::generateLandChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) const {
+    chunk.offsetPosition_.x = chunkX;
+    chunk.offsetPosition_.z = chunkZ;
+    chunk.worldPosition_.x = chunkX * CHUNK_SIZE;
+    chunk.worldPosition_.z = chunkZ * CHUNK_SIZE;
     
     for (int x = 0; x < CHUNK_SIZE; ++x) {
         for (int z = 0; z < CHUNK_SIZE; ++z) {
@@ -80,7 +86,7 @@ Chunk& World::getOrCreateChunkForLand(S16 chunkX, S16 chunkZ) {
     const auto chunkKey = std::make_pair(chunkX, chunkZ);
     auto it = positionMap_.find(chunkKey);
     if (it == positionMap_.end()) {
-        auto& currentChunk = chunks_.emplace_back(MUnique<Chunk>());
+        auto& currentChunk = chunks_.emplace_back(MUnique<Chunk>(this));
         generateLandChunk(*currentChunk, chunkX, chunkZ);
         positionMap_[chunkKey] = chunks_.size() - 1; // índice del nuevo chunk
         return *currentChunk;
@@ -108,8 +114,8 @@ void World::generateChunks(S16 middleX, S16 middleZ, S16 numChunksX, S16 numChun
 }
 
 void World::generateChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
-    chunk.position_.x = chunkX;
-    chunk.position_.z = chunkZ;
+    chunk.worldPosition_.x = chunkX;
+    chunk.worldPosition_.z = chunkZ;
     for (S16 x = 0; x < CHUNK_SIZE; ++x) {
         for (S16 z = 0; z < CHUNK_SIZE; ++z) {
             S32 worldX = chunkX * CHUNK_SIZE + x;
@@ -141,8 +147,8 @@ void World::generateChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
 }
 
 void World::generateSolidChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
-    chunk.position_.x = chunkX;
-    chunk.position_.z = chunkZ;
+    chunk.worldPosition_.x = chunkX;
+    chunk.worldPosition_.z = chunkZ;
     for (S16 x = 0; x < CHUNK_SIZE; ++x) {
         for(S16 y = 0; y < CHUNK_SIZE; y++) {
             for (S16 z = 0; z < CHUNK_SIZE; ++z) {
@@ -171,6 +177,20 @@ Chunk* World::getChunk(S16 chunkX, S16 chunkZ) {
         return nullptr;
     }
     return chunks_[it->second].get();
+}
+
+void World::occludeChunks() const {
+    for(auto& chunk : chunks_) {
+        for(auto& cubito : chunk->cubitos_) {
+            if(cubito.type == BLOCK_AIR) {
+                cubito.visible = false;
+                continue;
+            }
+            if(!chunk->isCompletelyOccluded(cubito.x, cubito.y, cubito.z, chunk->offsetPosition_)) {
+                cubito.visible = true;
+            }
+        }
+    }
 }
 
 void World::renderChunksAround(int playerX, int playerZ) {

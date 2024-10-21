@@ -17,8 +17,14 @@ const int CHUNK_LOAD_RADIUS = 2;
 
 #define OPTIMIZATION_VECTOR
 #define OPTIMIZATION_MAPS
-#define OPTIMIZATION_BATCHING
+//#define OPTIMIZATION_BATCHING
 //#define OPTIMIZATION_DISPLAY_LIST
+#define OPTIMIZATION_OCCLUSION_CULLING
+#define OPTIMIZATION_OCCLUSION_PRECALCULATED
+
+#ifdef OPTIMIZATION_OCCLUSION_PRECALCULATED
+    #undef OPTIMIZATION_OCCLUSION_CULLING
+#endif
 
 namespace poyo {
     struct ChunkPosition{
@@ -81,6 +87,7 @@ namespace poyo {
         CubeFace face[6];
         S16 x, y, z;
         U8 type = BLOCK_AIR;
+        bool visible = false;
     };
 
     inline constexpr U8 blockTiles[][6] = {

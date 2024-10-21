@@ -6,16 +6,17 @@
 #include <ogc/gx.h>
 
 #include "renderer.h"
+#include <world.h>
 
 using namespace poyo;
 
 #ifdef OPTIMIZATION_VECTOR
-Chunk::Chunk() : cubitos_(CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE) {
-    position_= {0, 0};
+Chunk::Chunk(World* world) : cubitos_(CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE), world_(world) {
+    worldPosition_= {0, 0};
 }
 #else
 Chunk::Chunk() : cubitos_(CHUNK_SIZE, Vector<Vector<Cubito>>(CHUNK_HEIGHT, Vector<Cubito>(CHUNK_SIZE))) {
-    position_= {0, 0};
+    worldPosition_= {0, 0};
 }
 #endif
 
@@ -75,15 +76,49 @@ void Chunk::render() const {
     renderDisplayList();
 #else
     u16 blockToRender = validBlocks * 24;
-    Renderer::RenderCubeVector(cubitos_, blockToRender, cFVec3(position_.x, 0, position_.z));
+    Renderer::RenderCubeVector(cubitos_, blockToRender, cFVec3(worldPosition_.x, 0, worldPosition_.z));
 #endif
 }
 
 void Chunk::renderDisplayList() const {
-    GRRLIB_ObjectView(position_.x, 0, position_.z,
+    GRRLIB_ObjectView(worldPosition_.x, 0, worldPosition_.z,
                   0.0f, 0.0f, 0.0f,
                   1.0f, 1.0f, 1.0f);
     GX_CallDispList(displayList, displayListSize);
+}
+
+bool Chunk::isSolid(S16 x, S16 y, S16 z) const {
+    const auto index = x + CHUNK_SIZE * (y + CHUNK_SIZE * z); //better
+    return cubitos_[index].type != BLOCK_AIR; //TODO: also with water
+}
+
+bool Chunk::isSolid(S16 x, S16 y, S16 z, const ChunkPosition& currentChunkPos) const {
+    if (x < 0 || x >= CHUNK_SIZE || y < 0 || y >= CHUNK_HEIGHT || z < 0 || z >= CHUNK_SIZE) {
+        //return false;
+        ChunkPosition neighborChunkPos = currentChunkPos;
+                
+        if (x < 0) {
+            neighborChunkPos.x--; x += CHUNK_SIZE; // Mira el chunk a la izquierda
+        } else if (x >= CHUNK_SIZE) {
+            neighborChunkPos.x++; x -= CHUNK_SIZE; // Mira el chunk a la derecha
+        }
+
+        if (z < 0) {
+            neighborChunkPos.z--; z += CHUNK_SIZE; // Mira el chunk de atrás
+        } else if (z >= CHUNK_SIZE) {
+            neighborChunkPos.z++; z -= CHUNK_SIZE; // Mira el chunk de adelante
+        }
+
+        // Intenta obtener el chunk vecino del ChunkManager
+        const Chunk* neighborChunk = world_->getChunk(neighborChunkPos.x, neighborChunkPos.z);
+        if (neighborChunk) {
+            return neighborChunk->isSolid(x, y, z); // Verifica el bloque en el chunk vecino
+        }
+        return false; // Si no hay un chunk vecino, tratamos la posición como no sólida
+    }
+    
+    const auto index = x + CHUNK_SIZE * (y + CHUNK_SIZE * z); //better
+    return cubitos_[index].type != BLOCK_AIR; //TODO: also with water
 }
 
 void Chunk::fillCubito(Cubito& cubito, U8 face, U8 x, U8 y, U8 z, U8 direction, S32 block) {

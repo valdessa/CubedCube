@@ -12,7 +12,7 @@ namespace poyo {
         ~World();
 
         void generateLand(S16 Radius = 1);
-        void generateLandChunk(Chunk& chunk, S16 chunkX, S16 chunkZ);
+        void generateLandChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) const;
         Chunk& getOrCreateChunkForLand(S16 chunkX, S16 chunkZ);
         
         void generateChunks(S16 middleX, S16 middleZ, S16 numChunksX, S16 numChunksZ);
@@ -27,7 +27,9 @@ namespace poyo {
             return chunks_;
         }
         
+        void occludeChunks() const;
 
+        
         void renderChunksAround(int playerX, int playerZ);
         
         FastNoiseLite noiseLite_;
