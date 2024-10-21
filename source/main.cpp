@@ -133,13 +133,13 @@ void updatePosition(guVector& point, float radius, float angle) {
 //TODO: El lesson 8 tiene transparencias
 //Lesson 9 una luz toh guapa
 //lesson 10 tiene movimiento bien
-
+//display list en CavEX
 int main(int argc, char **argv) {
     float angle = 0.0f;
     size_t used1 = Memory::getTotalMemoryUsed();
     // Initialise the Graphics & Video subsystem
     GRRLIB_Init();
-
+   
     // Initialise the GameCube controllers
     PAD_Init();
 
@@ -168,10 +168,11 @@ int main(int argc, char **argv) {
     World currentWorld;
 
     // Definir el número de chunks a generar en ambas direcciones
-    S16 numChunksX = 2; // Número de chunks a generar en la dirección X
-    S16 numChunksZ = 2; // Número de chunks a generar en la dirección Z
+    //S16 numChunksX = 2; // Número de chunks a generar en la dirección X
+    //S16 numChunksZ = 2; // Número de chunks a generar en la dirección Z
     
     //currentWorld.generateChunks(0, 0, numChunksX, numChunksZ);
+    SYS_Report("N Blocks: %llu\n", 0);
     currentWorld.generateLand(1);
     SYS_Report("N Blocks: %llu\n", currentWorld.validBlocks_);
     //SYS_Report("Start X Z: %zd %zd\n", startX, startZ);
@@ -205,8 +206,7 @@ int main(int argc, char **argv) {
         if(PAD_ButtonsDown(0) & PAD_BUTTON_LEFT) options.lightning = !options.lightning;;
         
         currentCam.updateCamera(deltaTime); //deltaTime
-
-
+        
         GRRLIB_3dMode(0.1f, 1000.0f, 45.0f, false, true); // Configura el modo 3D //Projection
         GRRLIB_SetLightOff();
         GRRLIB_ObjectView(lightPos.x, lightPos.y, lightPos.z, 0,0,0,1,1,1);
@@ -228,28 +228,30 @@ int main(int argc, char **argv) {
         Renderer::DisableBlend();
         
         
-        for (int i = 0; i < 72; i++) {
-            Renderer::RenderCube(Tree1[i], cFVec3(0, 10, 0));
-        }
-        Renderer::RenderCube(deleteMe);
+        // for (int i = 0; i < 72; i++) {
+        //     Renderer::RenderCube(Tree1[i], cFVec3(0, 10, 0));
+        // }
+        // Renderer::RenderCube(deleteMe);
 
         nDrawCalls = 0;
         currentTick.start();
-
-        auto& chunkitos = currentWorld.getChunks();
-        for(auto& [fst, chunkito] : chunkitos) {
+//         Renderer::PrepareToRender(true, true, true, true);
+         auto& chunkitos = currentWorld.getChunks();
+        for(auto& chunkito : chunkitos) {
 #ifdef OPTIMIZATION_BATCHING
-            chunkito.render();
+            chunkito->render();
 #else
-            renderChunk(chunkito);
+            renderChunk(*chunkito);
 #endif
         }
+        
+        //currentWorld.renderChunksAround(currentCam.getPosition().x, currentCam.getPosition().z);
         
         if(options.boundingBox) {
             GRRLIB_SetLightOff();
             Renderer::PrepareToRender(true, false, true, false);
-            for(const auto& [fst, chunkito] : chunkitos) {
-                Renderer::RenderBoundingBox(chunkito.position_.x, 0, chunkito.position_.z, CHUNK_SIZE, UCVec3{0, 255, 255}, true);
+            for(const auto& chunkito : chunkitos) {
+                Renderer::RenderBoundingBox(chunkito->position_.x, 0, chunkito->position_.z, CHUNK_SIZE, UCVec3{0, 255, 255}, true);
             } 
         }
         

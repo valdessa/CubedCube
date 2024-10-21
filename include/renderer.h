@@ -21,6 +21,7 @@ namespace poyo {
 
         static void RenderCube(const Cubito& cube, cFVec3& worldPos = cFVec3(0), cFVec3& angle = cFVec3(0));
         static void RenderCubeVector(const Vector<Cubito>& cubes, U16 validBlocks, cFVec3& worldPos = cFVec3(0));
+        static void RenderCubeVector2(const Vector<Cubito>& cubes, U16 validBlocks);
         static void RenderBoundingBox(S16 originX, S16 originY, S16 originZ, U16 size, cUCVec3& color, bool RenderCross = false);
 
     };

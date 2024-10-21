@@ -13,9 +13,12 @@
 #define STONE_LEVEL 4        // Capas de roca bajo la tierra
 #define GRASS_LEVEL (WATER_LEVEL + DIRT_LEVEL) // Capa de césped
 
+const int CHUNK_LOAD_RADIUS = 2; 
+
 #define OPTIMIZATION_VECTOR
 #define OPTIMIZATION_MAPS
 #define OPTIMIZATION_BATCHING
+//#define OPTIMIZATION_DISPLAY_LIST
 
 namespace poyo {
     struct ChunkPosition{
@@ -104,13 +107,13 @@ namespace poyo {
         [DIR_Z_BACK] =  {{1, 1, 0}, {0, 1, 0}, {0, 0, 0}, {1, 0, 0}},  //drawn clockwise looking z+
     };
     
-    inline constexpr float cubeNormals[6][3] = {
-        [DIR_X_FRONT] = { 1.0f,  0.0f,  0.0f},  // Front (X+)
-        [DIR_X_BACK]  = {-1.0f,  0.0f,  0.0f},  // Back (X-)
-        [DIR_Y_FRONT] = { 0.0f,  1.0f,  0.0f},  // Top (Y+)
-        [DIR_Y_BACK]  = { 0.0f, -1.0f,  0.0f},  // Bottom (Y-)
-        [DIR_Z_FRONT] = { 0.0f,  0.0f,  1.0f},  // Left (Z+)
-        [DIR_Z_BACK]  = { 0.0f,  0.0f, -1.0f},  // Right (Z-)
+    inline constexpr S8 cubeNormals[6][3] = {
+        [DIR_X_FRONT] = { 1,  0,  0},  // Front (X+)
+        [DIR_X_BACK]  = {-1,  0,  0},  // Back (X-)
+        [DIR_Y_FRONT] = { 0,  1,  0},  // Top (Y+)
+        [DIR_Y_BACK]  = { 0, -1,  0},  // Bottom (Y-)
+        [DIR_Z_FRONT] = { 0,  0,  1},  // Left (Z+)
+        [DIR_Z_BACK]  = { 0,  0, -1},  // Right (Z-)
     };
     
 #ifdef OPTIMIZATION_MAPS

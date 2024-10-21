@@ -23,7 +23,7 @@ void Renderer::Initialize() {
     GX_SetVtxDesc(GX_VA_TEX0, GX_DIRECT); 
     
     GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_POS, GX_POS_XYZ, GX_U16, 0);     //Positions -> U16
-    GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_NRM, GX_NRM_XYZ, GX_F32, 0);     //Normals   -> F32
+    GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_NRM, GX_NRM_XYZ, GX_S8, 0);     //Normals   -> S8
     GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0); //Color     -> UChar
     GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_TEX0, GX_TEX_ST, GX_U16, 0);     //Textures  -> U16
 }
@@ -66,7 +66,7 @@ void Renderer::PrepareToRender(bool pos, bool nrm, bool clr, bool tex) {
     if(tex)     GX_SetVtxDesc(GX_VA_TEX0, GX_DIRECT); 
     
     if(pos)     GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_POS, GX_POS_XYZ, GX_U16, 0);     //Positions -> U16
-    if(nrm)     GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_NRM, GX_NRM_XYZ, GX_F32, 0);     //Normals   -> F32
+    if(nrm)     GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_NRM, GX_NRM_XYZ, GX_S8, 0);      //Normals   -> S8
     if(clr)     GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0); //Color     -> UChar
     if(tex)     GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_TEX0, GX_TEX_ST, GX_U16, 0);     //Textures  -> U16
 }
@@ -88,7 +88,7 @@ void Renderer::RenderCube(const Cubito& cube, cFVec3& worldPos, cFVec3& angle) {
                             currentFace.z + cubeFaces[currentFace.direction][j][2]);
             //GX_Color1u32 old
             //GX_Color1x8(255);
-            GX_Normal3f32(cubeNormals[currentFace.direction][0], cubeNormals[currentFace.direction][1], cubeNormals[currentFace.direction][2]);
+            GX_Normal3s8(cubeNormals[currentFace.direction][0], cubeNormals[currentFace.direction][1], cubeNormals[currentFace.direction][2]);
             //GX_Normal3f32(cubeNormals[currentFace.direction][j], cubeNormals[currentFace.direction][j], cubeNormals[currentFace.direction][j]);
             //GX_Color1u32(0xFFFFFFFF);
             GX_Color4u8(255, 255, 255, 255);
@@ -119,7 +119,32 @@ void Renderer::RenderCubeVector(const Vector<Cubito>& cubes, U16 validBlocks, cF
                 GX_Position3u16(currentFace.x + cubeFaces[currentFace.direction][j][0] + cubito.x,
                                 currentFace.y + cubeFaces[currentFace.direction][j][1] + cubito.y,
                                 currentFace.z + cubeFaces[currentFace.direction][j][2] + cubito.z);
-                GX_Normal3f32(cubeNormals[currentFace.direction][0], cubeNormals[currentFace.direction][1], cubeNormals[currentFace.direction][2]);
+                GX_Normal3s8(cubeNormals[currentFace.direction][0], cubeNormals[currentFace.direction][1], cubeNormals[currentFace.direction][2]);
+                GX_Color4u8(255, 255, 255, 255);
+                auto& UV = tileUVMap[currentFace.tile];
+
+#ifdef OPTIMIZATION_MAPS
+                GX_TexCoord2u16(UV[0] + tileTexCoords[j][0], UV[1] + tileTexCoords[j][1]);
+#else
+                GX_TexCoord2u16(UV.x + tileTexCoords[j][0], UV.y + tileTexCoords[j][1]);
+#endif
+            }
+        }
+    }
+
+    GX_End();
+}
+
+void Renderer::RenderCubeVector2(const Vector<Cubito>& cubes, U16 validBlocks) {
+    GX_Begin(GX_QUADS, GX_VTXFMT2, validBlocks);
+    for(auto& cubito: cubes) {
+        if(cubito.type == BLOCK_AIR) continue; //TODO: FIX THIS WHEN CHANGING CUBE
+        for (auto& currentFace : cubito.face) {
+            for (int j = 0; j < 4; j++) {
+                GX_Position3u16(currentFace.x + cubeFaces[currentFace.direction][j][0] + cubito.x,
+                                currentFace.y + cubeFaces[currentFace.direction][j][1] + cubito.y,
+                                currentFace.z + cubeFaces[currentFace.direction][j][2] + cubito.z);
+                GX_Normal3s8(cubeNormals[currentFace.direction][0], cubeNormals[currentFace.direction][1], cubeNormals[currentFace.direction][2]);
                 GX_Color4u8(255, 255, 255, 255);
                 auto& UV = tileUVMap[currentFace.tile];
 

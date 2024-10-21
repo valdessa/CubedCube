@@ -11,11 +11,11 @@ using namespace poyo;
 
 #ifdef OPTIMIZATION_VECTOR
 Chunk::Chunk() : cubitos_(CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE) {
-    
+    position_= {0, 0};
 }
 #else
 Chunk::Chunk() : cubitos_(CHUNK_SIZE, Vector<Vector<Cubito>>(CHUNK_HEIGHT, Vector<Cubito>(CHUNK_SIZE))) {
-    
+    position_= {0, 0};
 }
 #endif
 
@@ -46,10 +46,44 @@ setCubito(const CubePosition& pos, BLOCK_TYPE block) {
     if(block != BLOCK_AIR) validBlocks++;
 }
 
-void Chunk::render() const {
-    u16 blockToRender = validBlocks * 24;
+static inline int round_up(int number, int multiple) {
+    return ((number + multiple - 1) / multiple) * multiple;
+}
 
+void Chunk::createDisplayList() {
+    auto blockToRender = validBlocks * 4 * 6;
+    //The GX_DRAW_QUADS command takes up 3 bytes.
+    //Each face is a quad with 4 vertexes.
+    //Each vertex takes up three u16 for the position coordinate, one u8 for the color index, and two u16 for the texture coordinate.
+    //Because of the write gathering pipe, an extra 63 bytes are needed.
+    size_t listSize = 3 + blockToRender * (3 * sizeof(s16) + 3 * sizeof(float) + 4 * sizeof(u8) + 2 * sizeof(u16)) + 63;
+    //The list size also must be a multiple of 32, so round up to the next multiple of 32.
+    listSize = round_up(listSize, 32);
+
+    displayList = memalign(32, listSize);
+    //Remove this block of memory from the CPU's cache because the write gather pipe is used to write the commands
+    DCInvalidateRange(displayList, listSize);
+    
+    GX_BeginDispList(displayList, listSize); 
+    Renderer::RenderCubeVector2(cubitos_, blockToRender);
+    displayListSize = GX_EndDispList();
+    assert(displayListSize != 0);
+}
+
+void Chunk::render() const {
+#ifdef OPTIMIZATION_DISPLAY_LIST
+    renderDisplayList();
+#else
+    u16 blockToRender = validBlocks * 24;
     Renderer::RenderCubeVector(cubitos_, blockToRender, cFVec3(position_.x, 0, position_.z));
+#endif
+}
+
+void Chunk::renderDisplayList() const {
+    GRRLIB_ObjectView(position_.x, 0, position_.z,
+                  0.0f, 0.0f, 0.0f,
+                  1.0f, 1.0f, 1.0f);
+    GX_CallDispList(displayList, displayListSize);
 }
 
 void Chunk::fillCubito(Cubito& cubito, U8 face, U8 x, U8 y, U8 z, U8 direction, S32 block) {

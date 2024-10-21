@@ -11,7 +11,7 @@ namespace poyo {
         World();
         ~World();
 
-        void generateLand(U8 Radius = 1);
+        void generateLand(S16 Radius = 1);
         void generateLandChunk(Chunk& chunk, S16 chunkX, S16 chunkZ);
         Chunk& getOrCreateChunkForLand(S16 chunkX, S16 chunkZ);
         
@@ -21,17 +21,23 @@ namespace poyo {
         void generateSolidChunk(Chunk& chunk, S16 chunkX, S16 chunkZ);
 
         Chunk& getOrCreateChunk(S16 chunkX, S16 chunkZ);
+        Chunk* getChunk(S16 chunkX, S16 chunkZ);
 
-        const HashMap<Pair<S16, S16>, Chunk>& getChunks() const {
+        const Vector<UPtr<Chunk>>& getChunks() const {
             return chunks_;
         }
+        
+
+        void renderChunksAround(int playerX, int playerZ);
+        
         FastNoiseLite noiseLite_;
         Noise noise_;
         
         U32 helperCounter = 0;
         U64 validBlocks_ = 0;
      private:
-        HashMap<Pair<S16, S16>, Chunk> chunks_;
+        Vector<UPtr<Chunk>> chunks_;
+        HashMap<Pair<S16, S16>, U16> positionMap_;
 
         float getHeightAt(S32 x, S32 z);
     };

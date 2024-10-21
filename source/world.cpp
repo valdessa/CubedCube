@@ -28,13 +28,19 @@ World::World() {
 World::~World() {
 }
 
-void World::generateLand(U8 radius) {
-    for (s16 chunkX = -radius; chunkX <= radius; ++chunkX) {
-        for (s16 chunkZ = -radius; chunkZ <= radius; ++chunkZ) {
+void World::generateLand(S16 radius) {
+    for (int chunkX = -radius; chunkX <= radius; ++chunkX) {
+        for (int chunkZ = -radius; chunkZ <= radius; ++chunkZ) {
 
             validBlocks_ += getOrCreateChunkForLand(chunkX, chunkZ).validBlocks;
         }
     }
+
+#ifdef OPTIMIZATION_DISPLAY_LIST
+    for(auto& chunks : getChunks()) {
+        chunks->createDisplayList();
+    }
+#endif
 }
 
 void World::generateLandChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
@@ -72,19 +78,14 @@ void World::generateLandChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
 
 Chunk& World::getOrCreateChunkForLand(S16 chunkX, S16 chunkZ) {
     const auto chunkKey = std::make_pair(chunkX, chunkZ);
-    auto it = chunks_.find(chunkKey);
-    if (it == chunks_.end()) {
-        it = chunks_.emplace(chunkKey, Chunk()).first;
-        generateLandChunk(it->second, chunkX, chunkZ);
+    auto it = positionMap_.find(chunkKey);
+    if (it == positionMap_.end()) {
+        auto& currentChunk = chunks_.emplace_back(MUnique<Chunk>());
+        generateLandChunk(*currentChunk, chunkX, chunkZ);
+        positionMap_[chunkKey] = chunks_.size() - 1; // índice del nuevo chunk
+        return *currentChunk;
     }
-    return it->second;
-    // if (chunks_.find(chunkKey) == chunks_.end()) {
-    //     // Si no existe, lo generamos
-    //     auto& NewChunk = chunks_.emplace(chunkKey, Chunk()).first->second;
-    //     generateLandChunk(NewChunk, chunkX, chunkZ);
-    //     return NewChunk;
-    // }
-    // return chunks_[chunkKey];
+    return *chunks_[it->second];
 }
 
 void World::generateChunks(S16 middleX, S16 middleZ, S16 numChunksX, S16 numChunksZ) {
@@ -163,17 +164,43 @@ void World::generateSolidChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
     }
 }
 
-Chunk& World::getOrCreateChunk(S16 chunkX, S16 chunkZ) {
-    // Cargar o crear el chunk si no existe en esa posición
+Chunk* World::getChunk(S16 chunkX, S16 chunkZ) {
     const auto chunkKey = std::make_pair(chunkX, chunkZ);
-    if (chunks_.find(chunkKey) == chunks_.end()) {
-        // Si no existe, lo generamos
-        auto& NewChunk = chunks_.emplace(chunkKey, Chunk()).first->second;
-        generateChunk(NewChunk, chunkX, chunkZ);
-        return NewChunk;
+    auto it = positionMap_.find(chunkKey);
+    if (it == positionMap_.end()) {
+        return nullptr;
     }
-    return chunks_[chunkKey];
+    return chunks_[it->second].get();
 }
+
+void World::renderChunksAround(int playerX, int playerZ) {
+    int chunkX = playerX / CHUNK_SIZE; // Divide para obtener el índice del chunk en X
+    int chunkZ = playerZ / CHUNK_SIZE; // Divide para obtener el índice del chunk en Z
+
+    int counter = 0;
+    for (int x = -CHUNK_LOAD_RADIUS; x <= CHUNK_LOAD_RADIUS; ++x) {
+        for (int z = -CHUNK_LOAD_RADIUS; z <= CHUNK_LOAD_RADIUS; ++z) {
+            auto currentChunk = getChunk(chunkX + x, chunkZ + z);
+            if(currentChunk) {
+                currentChunk->render();
+                counter++;
+            }
+        }
+    }
+    //SYS_Report("N Chunks: %d\n", counter);
+}
+
+// Chunk& World::getOrCreateChunk(S16 chunkX, S16 chunkZ) {
+//     // Cargar o crear el chunk si no existe en esa posición
+//     const auto chunkKey = std::make_pair(chunkX, chunkZ);
+//     if (positionMap_.find(chunkKey) == positionMap_.end()) {
+//         // Si no existe, lo generamos
+//         auto& NewChunk = positionMap_.emplace(chunkKey, Chunk()).first->second;
+//         generateChunk(NewChunk, chunkX, chunkZ);
+//         return NewChunk;
+//     }
+//     return positionMap_[chunkKey];
+// }
 
 float World::getHeightAt(S32 x, S32 z) {
     // Una simple función de terreno ondulado usando senos

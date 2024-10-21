@@ -8,14 +8,17 @@ namespace poyo {
         ~Chunk();
 
         void setCubito(const CubePosition& pos, BLOCK_TYPE block);
+        void createDisplayList();
 
         void render() const;
+        void renderDisplayList() const;
         
         Cubito& getCubito(const CubePosition& pos);
 
         U16 validBlocks = 0;
         ChunkPosition position_;
-        
+        void* displayList = nullptr;
+        U32 displayListSize = 0;
 #ifdef OPTIMIZATION_VECTOR
         Vector<Cubito> cubitos_;
 #else
