@@ -182,13 +182,11 @@ Chunk* World::getChunk(S16 chunkX, S16 chunkZ) {
 void World::occludeChunks() const {
     for(auto& chunk : chunks_) {
         for(auto& cubito : chunk->cubitos_) {
-            if(cubito.type == BLOCK_AIR) {
+            if(!chunk->isSolid(cubito)) {
                 cubito.visible = false;
                 continue;
             }
-            if(!chunk->isCompletelyOccluded(cubito.x, cubito.y, cubito.z, chunk->offsetPosition_)) {
-                cubito.visible = true;
-            }
+            cubito.visible = !chunk->isCompletelyOccluded(cubito.x, cubito.y, cubito.z, chunk->offsetPosition_);
         }
     }
 }

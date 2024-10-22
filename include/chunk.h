@@ -13,16 +13,10 @@ namespace poyo {
         void render() const;
         void renderDisplayList() const;
 
+        bool isSolid(const Cubito& cubito) const;
         bool isSolid(S16 x, S16 y, S16 z) const;
         bool isSolid(S16 x, S16 y, S16 z, const ChunkPosition& currentChunkPos) const;
-        inline bool isCompletelyOccluded(S16 x, S16 y, S16 z, const ChunkPosition& currentChunkPos) const {
-            return isSolid(x + 1, y, z, currentChunkPos) &&  // Cubito at the right
-                   isSolid(x - 1, y, z, currentChunkPos) &&  // Cubito at the left
-                   isSolid(x, y + 1, z, currentChunkPos) &&  // Cubito at the top
-                   isSolid(x, y - 1, z, currentChunkPos) &&  // Cubito at the bottom
-                   isSolid(x, y, z + 1, currentChunkPos) &&  // Cubito at the front
-                   isSolid(x, y, z - 1, currentChunkPos);    // Cubito at the back
-        }
+        bool isCompletelyOccluded(S16 x, S16 y, S16 z, const ChunkPosition& currentChunkPos) const;
         
         Cubito& getCubito(const CubePosition& pos);
 

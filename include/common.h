@@ -22,6 +22,8 @@ const int CHUNK_LOAD_RADIUS = 2;
 #define OPTIMIZATION_OCCLUSION_CULLING
 #define OPTIMIZATION_OCCLUSION_PRECALCULATED
 
+#define OPTIMIZATION_STRUCTS
+
 #ifdef OPTIMIZATION_OCCLUSION_PRECALCULATED
     #undef OPTIMIZATION_OCCLUSION_CULLING
 #endif
@@ -53,6 +55,9 @@ namespace poyo {
         BLOCK_LEAF2,
         BLOCK_CACTUS,
         BLOCK_SAND_DIRT,
+
+        //BLOCK_WATER, //TODO: FIX THIS
+        
         BLOCK_AIR //USED FOR COUNT/NOT BLOCK 
     };
 
@@ -77,18 +82,37 @@ namespace poyo {
         NUM_TILES,
     };
 
-    struct CubeFace {
-        U8 x, y, z;
-        U8 direction;
-        U8 tile;
+#ifdef OPTIMIZATION_STRUCTS
+    struct CubeFace {   //Size = 2 bytes
+        U8 x : 1;           // 1 bit for x (0-1)
+        U8 y : 1;           // 1 bit for y (0-1)
+        U8 z : 1;           // 1 bit for z (0-1)
+        U8 direction : 4;   // 4 bits for direction (0-15)
+        U8 tile : 8;        // 1 byte for tile (0-255)
     };
-    
-    struct Cubito {
-        CubeFace face[6];
+    struct Cubito {     //Size = 16 bytes
+        CubeFace face[6];   // 6 CubeFace (12 bytes total, packed)
+        S8 x, y, z;         // 3 bytes (total 15 bits)
+        U8 type : 7;        // 7 bits for the block type (0-127)
+        U8 visible : 1;     // 1 bit for visibility (0-1)
+
+        Cubito() : face{}, x(0), y(0), z(0), type(BLOCK_AIR), visible(false) {
+            
+        }
+    };
+#else
+    struct CubeFace {   //Size = 5 bytes
+        U8 x, y, z;           
+        U8 direction;   
+        U8 tile;        
+    };
+    struct Cubito {     //Size = 38 bytes
         S16 x, y, z;
+        CubeFace face[6];
         U8 type = BLOCK_AIR;
         bool visible = false;
     };
+#endif
 
     inline constexpr U8 blockTiles[][6] = {
         [BLOCK_STONE] =    {TILE_STONE,      TILE_STONE,      TILE_STONE,    TILE_STONE,     TILE_STONE,      TILE_STONE},
@@ -129,5 +153,24 @@ namespace poyo {
     inline Map<U8, USVec2> tileUVMap;
 #endif
 }
+
+// Bits -> U(0<->Max Value) S(Min Value<->Max Value)
+// 0   -> U(0<->0)     S(0<->0)
+// 1   -> U(0<->1)     S(-1<->0)
+// 2   -> U(0<->3)     S(-2<->1)
+// 3   -> U(0<->7)     S(-4<->3)
+// 4   -> U(0<->15)    S(-8<->7)
+// 5   -> U(0<->31)    S(-16<->15)
+// 6   -> U(0<->63)    S(-32<->31)
+// 7   -> U(0<->127)   S(-64<->63)
+// 8   -> U(0<->255)   S(-128<->127)
+// 9   -> U(0<->511)   S(-256<->255)
+// 10  -> U(0<->1023)  S(-512<->511)
+// 11  -> U(0<->2047)  S(-1024<->1023)
+// 12  -> U(0<->4095)  S(-2048<->2047)
+// 13  -> U(0<->8191)  S(-4096<->4095)
+// 14  -> U(0<->16383) S(-8192<->8191)
+// 15  -> U(0<->32767) S(-16384<->16383)
+// 16  -> U(0<->65535) S(-32768<->32767)
 
 #endif

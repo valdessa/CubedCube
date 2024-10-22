@@ -87,38 +87,69 @@ void Chunk::renderDisplayList() const {
     GX_CallDispList(displayList, displayListSize);
 }
 
+bool Chunk::isSolid(const Cubito& cubito) const {
+    return cubito.type != BLOCK_AIR; //&& cubito.type != BLOCK_WATER; 
+}
+
 bool Chunk::isSolid(S16 x, S16 y, S16 z) const {
     const auto index = x + CHUNK_SIZE * (y + CHUNK_SIZE * z); //better
-    return cubitos_[index].type != BLOCK_AIR; //TODO: also with water
+    return cubitos_[index].type != BLOCK_AIR; //&& cubitos_[index].type != BLOCK_WATER; 
 }
 
 bool Chunk::isSolid(S16 x, S16 y, S16 z, const ChunkPosition& currentChunkPos) const {
-    if (x < 0 || x >= CHUNK_SIZE || y < 0 || y >= CHUNK_HEIGHT || z < 0 || z >= CHUNK_SIZE) {
-        //return false;
+    // Si la posición está fuera de los límites del chunk actual
+    if (x < 0 || x >= CHUNK_SIZE || z < 0 || z >= CHUNK_SIZE) {
         ChunkPosition neighborChunkPos = currentChunkPos;
-                
+        
+        // Ajusta la posición del chunk vecino en función de la coordenada fuera de los límites  
         if (x < 0) {
             neighborChunkPos.x--; x += CHUNK_SIZE; // Mira el chunk a la izquierda
         } else if (x >= CHUNK_SIZE) {
             neighborChunkPos.x++; x -= CHUNK_SIZE; // Mira el chunk a la derecha
         }
-
+        
         if (z < 0) {
             neighborChunkPos.z--; z += CHUNK_SIZE; // Mira el chunk de atrás
         } else if (z >= CHUNK_SIZE) {
             neighborChunkPos.z++; z -= CHUNK_SIZE; // Mira el chunk de adelante
         }
 
-        // Intenta obtener el chunk vecino del ChunkManager
+        // Verifica si el chunk vecino existe
         const Chunk* neighborChunk = world_->getChunk(neighborChunkPos.x, neighborChunkPos.z);
         if (neighborChunk) {
+            // Si existe, revisa el cubo en el chunk vecino
             return neighborChunk->isSolid(x, y, z); // Verifica el bloque en el chunk vecino
         }
         return false; // Si no hay un chunk vecino, tratamos la posición como no sólida
     }
-    
-    const auto index = x + CHUNK_SIZE * (y + CHUNK_SIZE * z); //better
-    return cubitos_[index].type != BLOCK_AIR; //TODO: also with water
+    // Si la posición está dentro del chunk actual, simplemente revisa el cubo en este chunk
+    return isSolid(x, y, z);
+}
+
+bool Chunk::isCompletelyOccluded(S16 x, S16 y, S16 z, const ChunkPosition& currentChunkPos) const {
+    if (y == 0) {
+        // Block at the bottom of the chunk: nothing below, only check sides and above
+        return isSolid(x + 1, y, z, currentChunkPos) &&  // Block to the right
+               isSolid(x - 1, y, z, currentChunkPos) &&  // Block to the left
+               isSolid(x, y + 1, z, currentChunkPos) &&  // Block above
+               isSolid(x, y, z + 1, currentChunkPos) &&  // Block in front
+               isSolid(x, y, z - 1, currentChunkPos);    // Block behind
+    } else if (y == CHUNK_HEIGHT - 1) {
+        // Block at the top of the chunk: nothing above, check sides and below
+        return isSolid(x + 1, y, z, currentChunkPos) &&  // Block to the right
+               isSolid(x - 1, y, z, currentChunkPos) &&  // Block to the left
+               isSolid(x, y - 1, z, currentChunkPos) &&  // Block below
+               isSolid(x, y, z + 1, currentChunkPos) &&  // Block in front
+               isSolid(x, y, z - 1, currentChunkPos);    // Block behind
+    } else {
+        // Block inside the chunk: check all sides, including above and below
+        return isSolid(x + 1, y, z, currentChunkPos) &&  // Block to the right
+               isSolid(x - 1, y, z, currentChunkPos) &&  // Block to the left
+               isSolid(x, y + 1, z, currentChunkPos) &&  // Block above
+               isSolid(x, y - 1, z, currentChunkPos) &&  // Block below
+               isSolid(x, y, z + 1, currentChunkPos) &&  // Block in front
+               isSolid(x, y, z - 1, currentChunkPos);    // Block behind
+    }
 }
 
 void Chunk::fillCubito(Cubito& cubito, U8 face, U8 x, U8 y, U8 z, U8 direction, S32 block) {
