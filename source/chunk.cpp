@@ -52,12 +52,13 @@ static inline int round_up(int number, int multiple) {
 }
 
 void Chunk::createDisplayList() {
-    auto blockToRender = validBlocks * 4 * 6;
+#ifndef OPTIMIZATION_OCCLUSION_CULLING_FACES
+    auto blocksToRender = validBlocks * 4 * 6;
     //The GX_DRAW_QUADS command takes up 3 bytes.
     //Each face is a quad with 4 vertexes.
     //Each vertex takes up three u16 for the position coordinate, one u8 for the color index, and two u16 for the texture coordinate.
     //Because of the write gathering pipe, an extra 63 bytes are needed.
-    size_t listSize = 3 + blockToRender * (3 * sizeof(s16) + 3 * sizeof(float) + 4 * sizeof(u8) + 2 * sizeof(u16)) + 63;
+    size_t listSize = 3 + blocksToRender * (3 * sizeof(s16) + 3 * sizeof(S8) + 4 * sizeof(u8) + 2 * sizeof(u16)) + 63;
     //The list size also must be a multiple of 32, so round up to the next multiple of 32.
     listSize = round_up(listSize, 32);
 
@@ -66,9 +67,69 @@ void Chunk::createDisplayList() {
     DCInvalidateRange(displayList, listSize);
     
     GX_BeginDispList(displayList, listSize); 
-    Renderer::RenderCubeVector2(cubitos_, blockToRender);
+    Renderer::RenderCubeVector2(cubitos_, blocksToRender);
     displayListSize = GX_EndDispList();
     assert(displayListSize != 0);
+#else
+    auto facesToRender = faces_.size() * 4;
+    size_t listSize = 3 + facesToRender * (3 * sizeof(s16) + 3 * sizeof(S8) + 4 * sizeof(u8) + 2 * sizeof(u16)) + 63;
+    //The list size also must be a multiple of 32, so round up to the next multiple of 32.
+    listSize = round_up(listSize, 32);
+    
+    displayList = memalign(32, listSize);
+    //Remove this block of memory from the CPU's cache because the write gather pipe is used to write the commands
+    DCInvalidateRange(displayList, listSize);
+    
+    GX_BeginDispList(displayList, listSize); 
+    Renderer::RenderFaceVector(faces_, facesToRender);
+    
+    displayListSize = GX_EndDispList();
+    assert(displayListSize != 0);
+    //todo: Clear the Vector!!
+    faces_.clear(); // Elimina los elementos pero no libera la capacidad
+    Vector<Pair<CubeFace, USVec3>>().swap(faces_); // Libera toda la memoria consumida
+#endif
+}
+
+U32 Chunk::occludeBlocks() {
+    validBlocks = 0;
+    
+    for(auto& cubito : cubitos_) {
+        if(!isSolid(cubito)) {
+            cubito.visible = false;
+            continue;
+        }
+        cubito.visible = !isCompletelyOccluded(cubito.x, cubito.y, cubito.z, offsetPosition_);
+        if(cubito.visible) validBlocks++;
+    }
+
+    return validBlocks;
+}
+
+U32 Chunk::occludeBlocksFaces() {
+    for(auto& cubito : cubitos_) {
+        if(cubito.visible) {
+            if (!isSolid(cubito.x + 1, cubito.y, cubito.z, offsetPosition_)) {
+                faces_.emplace_back(cubito.face[DIR_X_FRONT], USVec3(cubito.x, cubito.y, cubito.z));  // Frente
+            }
+            if (!isSolid(cubito.x - 1, cubito.y, cubito.z, offsetPosition_)) {
+                faces_.emplace_back(cubito.face[DIR_X_BACK], USVec3(cubito.x, cubito.y, cubito.z));   // Detrás
+            }
+            if (!isSolid(cubito.x, cubito.y + 1, cubito.z, offsetPosition_)) {
+                faces_.emplace_back(cubito.face[DIR_Y_FRONT], USVec3(cubito.x, cubito.y, cubito.z)); // Arriba
+            }
+            if (!isSolid(cubito.x, cubito.y - 1, cubito.z, offsetPosition_)) {
+                faces_.emplace_back(cubito.face[DIR_Y_BACK], USVec3(cubito.x, cubito.y, cubito.z));  // Abajo
+            }
+            if (!isSolid(cubito.x, cubito.y, cubito.z + 1, offsetPosition_)) {
+                faces_.emplace_back(cubito.face[DIR_Z_FRONT], USVec3(cubito.x, cubito.y, cubito.z)); // Izquierda
+            }
+            if (!isSolid(cubito.x, cubito.y, cubito.z - 1, offsetPosition_)) {
+                faces_.emplace_back(cubito.face[DIR_Z_BACK], USVec3(cubito.x, cubito.y, cubito.z)); // Derecha
+            }
+        }
+    }
+    return 0;
 }
 
 void Chunk::render() const {

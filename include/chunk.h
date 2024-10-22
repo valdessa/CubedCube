@@ -10,6 +10,9 @@ namespace poyo {
         void setCubito(const CubePosition& pos, BLOCK_TYPE block);
         void createDisplayList();
 
+        U32 occludeBlocks();
+        U32 occludeBlocksFaces();
+
         void render() const;
         void renderDisplayList() const;
 
@@ -30,6 +33,8 @@ namespace poyo {
 #else
         Vector<Vector<Vector<Cubito>>> cubitos_; //To Optimize
 #endif
+        
+    Vector<Pair<CubeFace, USVec3>> faces_;
         
      private:
         World* world_ = nullptr; 

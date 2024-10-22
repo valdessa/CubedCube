@@ -37,7 +37,11 @@ void World::generateLand(S16 radius) {
     }
 
 #ifdef OPTIMIZATION_OCCLUSION_PRECALCULATED
-    occludeChunks();
+    occludeChunkBlocks();
+#endif
+
+#ifdef OPTIMIZATION_OCCLUSION_CULLING_FACES
+    occludeChunkBlocksFaces();
 #endif
 
 #ifdef OPTIMIZATION_DISPLAY_LIST
@@ -179,17 +183,16 @@ Chunk* World::getChunk(S16 chunkX, S16 chunkZ) {
     return chunks_[it->second].get();
 }
 
-void World::occludeChunks() {
+void World::occludeChunkBlocks() {
     validBlocks_ = 0;
     for(auto& chunk : chunks_) {
-        for(auto& cubito : chunk->cubitos_) {
-            if(!chunk->isSolid(cubito)) {
-                cubito.visible = false;
-                continue;
-            }
-            cubito.visible = !chunk->isCompletelyOccluded(cubito.x, cubito.y, cubito.z, chunk->offsetPosition_);
-            if(cubito.visible) validBlocks_++;
-        }
+        validBlocks_ += chunk->occludeBlocks();
+    }
+}
+
+void World::occludeChunkBlocksFaces() const {
+    for(auto& chunk : chunks_) {
+        chunk->occludeBlocksFaces();
     }
 }
 

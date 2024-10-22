@@ -27,7 +27,8 @@ namespace poyo {
             return chunks_;
         }
         
-        void occludeChunks();
+        void occludeChunkBlocks();
+        void occludeChunkBlocksFaces() const;
 
         
         void renderChunksAround(int playerX, int playerZ);

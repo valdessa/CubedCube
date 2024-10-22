@@ -106,41 +106,14 @@ void renderChunk(const Chunk& chunk) {
 #ifdef OPTIMIZATION_VECTOR
     for (const auto& currentCubito : cubitos) {
         if(!currentCubito.visible) continue;
-#ifdef OPTIMIZATION_OCCLUSION_CULLING
+#ifdef OPTIMIZATION_OCCLUSION_CULLING && !OPTIMIZATION_OCCLUSION_CULLING_FACES
         if(!chunk.isCompletelyOccluded(currentCubito.x, currentCubito.y, currentCubito.z, chunk.offsetPosition_)) {
             nDrawCalls++;
             Renderer::RenderCube(currentCubito, cFVec3(chunk.worldPosition_.x, 0, chunk.worldPosition_.z));
         }
 #else
-        //nDrawCalls++;
-        //Renderer::RenderCube(currentCubito, cFVec3(chunk.worldPosition_.x, 0, chunk.worldPosition_.z));
-        cFVec3 position = cFVec3(static_cast<float>(currentCubito.x) + chunk.worldPosition_.x,
-                                 static_cast<float>(currentCubito.y)  + 0.0f,
-                                 static_cast<float>(currentCubito.z)  + chunk.worldPosition_.z);
-        GRRLIB_ObjectView(position.x, position.y, position.z,
-                          0, 0, 0,
-                          1.0f, 1.0f, 1.0f);
-
-        // Solo renderizamos las caras que no están ocluidas
-        if (!chunk.isSolid(currentCubito.x + 1, currentCubito.y, currentCubito.z, chunk.offsetPosition_)) {
-            Renderer::RenderFace(currentCubito.face[DIR_X_FRONT]); // Frente
-        }
-        if (!chunk.isSolid(currentCubito.x - 1, currentCubito.y, currentCubito.z, chunk.offsetPosition_)) {
-            Renderer::RenderFace(currentCubito.face[DIR_X_BACK]); // Detrás
-        }
-        if (!chunk.isSolid(currentCubito.x, currentCubito.y + 1, currentCubito.z, chunk.offsetPosition_)) {
-            Renderer::RenderFace(currentCubito.face[DIR_Y_FRONT]); // Arriba
-        }
-        if (!chunk.isSolid(currentCubito.x, currentCubito.y - 1, currentCubito.z, chunk.offsetPosition_)) {
-            Renderer::RenderFace(currentCubito.face[DIR_Y_BACK]);  // Abajo
-        }
-        if (!chunk.isSolid(currentCubito.x, currentCubito.y, currentCubito.z + 1, chunk.offsetPosition_)) {
-            Renderer::RenderFace(currentCubito.face[DIR_Z_FRONT]); // Izquierda
-        }
-        if (!chunk.isSolid(currentCubito.x, currentCubito.y, currentCubito.z - 1, chunk.offsetPosition_)) {
-            Renderer::RenderFace(currentCubito.face[DIR_Z_BACK]); // Derecha
-        }
-
+        nDrawCalls++;
+        Renderer::RenderCube(currentCubito, cFVec3(chunk.worldPosition_.x, 0, chunk.worldPosition_.z));
 #endif
     }
 #else
@@ -206,7 +179,7 @@ int main(int argc, char **argv) {
     
     //currentWorld.generateChunks(0, 0, numChunksX, numChunksZ);
     SYS_Report("N Blocks: %llu\n", 0);
-    currentWorld.generateLand(1);
+    currentWorld.generateLand(6);
     SYS_Report("N Blocks: %llu\n", currentWorld.validBlocks_);
     //SYS_Report("Start X Z: %zd %zd\n", startX, startZ);
     
@@ -270,11 +243,23 @@ int main(int argc, char **argv) {
         nDrawCalls = 0;
         currentTick.start();
 //         Renderer::PrepareToRender(true, true, true, true);
-         auto& chunkitos = currentWorld.getChunks();
+        auto& chunkitos = currentWorld.getChunks();
         for(auto& chunkito : chunkitos) {
 #ifdef OPTIMIZATION_BATCHING
             chunkito->render();
-#else
+#endif
+
+#ifdef OPTIMIZATION_OCCLUSION_CULLING_FACES
+            // for(auto& face : chunkito->faces_) {
+            //     auto& pos = face.second;
+            //     GRRLIB_ObjectView(pos.x + chunkito->worldPosition_.x, pos.y, pos.z + chunkito->worldPosition_.z,
+            //       0, 0, 0,
+            //       1.0f, 1.0f, 1.0f);
+            //     Renderer::RenderFace(face.first);
+            // }
+#endif
+
+#if !defined(OPTIMIZATION_BATCHING) && !defined(OPTIMIZATION_OCCLUSION_CULLING_FACES)
             renderChunk(*chunkito);
 #endif
         }
