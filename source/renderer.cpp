@@ -27,6 +27,14 @@ void Renderer::Initialize() {
     GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0); //Color     -> UChar
     GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_TEX0, GX_TEX_ST, GX_U16, 0);     //Textures  -> U16
 }
+static U32 nFacesRendered = 0;
+void Renderer::ResetDrawCalls() {
+    nFacesRendered = 0;
+}
+
+U32 Renderer::FacesDrawn() {
+    return nFacesRendered;
+}
 
 void Renderer::SetTextureCoordScaling(U8 unit, U16 scaleX, U16 scaleY) {
     GX_SetTexCoordScaleManually(unit, GX_TRUE, scaleX, scaleY); //GX_TEXCOORD0
@@ -71,6 +79,33 @@ void Renderer::PrepareToRender(bool pos, bool nrm, bool clr, bool tex) {
     if(tex)     GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_TEX0, GX_TEX_ST, GX_U16, 0);     //Textures  -> U16
 }
 
+void Renderer::RenderFace(const CubeFace& face) {
+    nFacesRendered++;
+    GX_Begin(GX_QUADS, GX_VTXFMT2, 4);
+    for (int j = 0; j < 4; j++) {
+
+        GX_Position3u16(face.x + cubeFaces[face.direction][j][0],
+                        face.y + cubeFaces[face.direction][j][1],
+                        face.z + cubeFaces[face.direction][j][2]);
+        //GX_Color1u32 old
+        //GX_Color1x8(255);
+        GX_Normal3s8(cubeNormals[face.direction][0], cubeNormals[face.direction][1], cubeNormals[face.direction][2]);
+        //GX_Normal3f32(cubeNormals[currentFace.direction][j], cubeNormals[currentFace.direction][j], cubeNormals[currentFace.direction][j]);
+        //GX_Color1u32(0xFFFFFFFF);
+        GX_Color4u8(255, 255, 255, 255);
+        //GX_TexCoord2f32 old
+
+        auto& UV = tileUVMap[face.tile];
+
+#ifdef OPTIMIZATION_MAPS
+        GX_TexCoord2u16(UV[0] + tileTexCoords[j][0], UV[1] + tileTexCoords[j][1]);
+#else
+        GX_TexCoord2u16(UV.x + tileTexCoords[j][0], UV.y + tileTexCoords[j][1]);
+#endif
+    }
+    GX_End();
+}
+
 void Renderer::RenderCube(const Cubito& cube, cFVec3& worldPos, cFVec3& angle) {
     cFVec3 position = cFVec3(static_cast<float>(cube.x) + worldPos.x,
                              static_cast<float>(cube.y)  + worldPos.y,
@@ -81,6 +116,7 @@ void Renderer::RenderCube(const Cubito& cube, cFVec3& worldPos, cFVec3& angle) {
 
     GX_Begin(GX_QUADS, GX_VTXFMT2, 24);
     for (auto& currentFace : cube.face) {
+        nFacesRendered++;
         for (int j = 0; j < 4; j++) {
 
             GX_Position3u16(currentFace.x + cubeFaces[currentFace.direction][j][0],

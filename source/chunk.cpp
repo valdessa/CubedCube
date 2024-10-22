@@ -97,32 +97,39 @@ bool Chunk::isSolid(S16 x, S16 y, S16 z) const {
 }
 
 bool Chunk::isSolid(S16 x, S16 y, S16 z, const ChunkPosition& currentChunkPos) const {
-    // Si la posición está fuera de los límites del chunk actual
+    // Treat everything below the chunk as solid
+    if (y < 0) return true;
+
+    // Check if the position is outside the X or Z boundaries of the current chunk
     if (x < 0 || x >= CHUNK_SIZE || z < 0 || z >= CHUNK_SIZE) {
         ChunkPosition neighborChunkPos = currentChunkPos;
         
-        // Ajusta la posición del chunk vecino en función de la coordenada fuera de los límites  
+        // Adjust X coordinates and check neighbor chunk
         if (x < 0) {
-            neighborChunkPos.x--; x += CHUNK_SIZE; // Mira el chunk a la izquierda
+            neighborChunkPos.x--; x += CHUNK_SIZE; // Look at the left chunk
         } else if (x >= CHUNK_SIZE) {
-            neighborChunkPos.x++; x -= CHUNK_SIZE; // Mira el chunk a la derecha
-        }
-        
-        if (z < 0) {
-            neighborChunkPos.z--; z += CHUNK_SIZE; // Mira el chunk de atrás
-        } else if (z >= CHUNK_SIZE) {
-            neighborChunkPos.z++; z -= CHUNK_SIZE; // Mira el chunk de adelante
+            neighborChunkPos.x++; x -= CHUNK_SIZE; // Look at the right chunk
         }
 
-        // Verifica si el chunk vecino existe
+        // Adjust Z coordinates and check neighbor chunk
+        if (z < 0) {
+            neighborChunkPos.z--; z += CHUNK_SIZE; // Look at the back chunk
+        } else if (z >= CHUNK_SIZE) {
+            neighborChunkPos.z++; z -= CHUNK_SIZE; // Look at the front chunk
+        }
+
+        // Check if the neighbor chunk exists
         const Chunk* neighborChunk = world_->getChunk(neighborChunkPos.x, neighborChunkPos.z);
         if (neighborChunk) {
-            // Si existe, revisa el cubo en el chunk vecino
-            return neighborChunk->isSolid(x, y, z); // Verifica el bloque en el chunk vecino
+            // If exists, check if the cube in that neighbor chunk is solid
+            return neighborChunk->isSolid(x, y, z);
         }
-        return false; // Si no hay un chunk vecino, tratamos la posición como no sólida
+
+        // If no neighbor chunk, treat the position as non-solid
+        return false;
     }
-    // Si la posición está dentro del chunk actual, simplemente revisa el cubo en este chunk
+
+    // If the position is within the current chunk's bounds, just check this chunk
     return isSolid(x, y, z);
 }
 

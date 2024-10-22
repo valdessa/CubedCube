@@ -92,7 +92,7 @@ namespace poyo {
     };
     struct Cubito {     //Size = 16 bytes
         CubeFace face[6];   // 6 CubeFace (12 bytes total, packed)
-        S8 x, y, z;         // 3 bytes (total 15 bits)
+        S8 x, y, z;         // 3 bytes (total 24 bits)
         U8 type : 7;        // 7 bits for the block type (0-127)
         U8 visible : 1;     // 1 bit for visibility (0-1)
 

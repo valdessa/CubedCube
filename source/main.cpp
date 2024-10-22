@@ -112,8 +112,35 @@ void renderChunk(const Chunk& chunk) {
             Renderer::RenderCube(currentCubito, cFVec3(chunk.worldPosition_.x, 0, chunk.worldPosition_.z));
         }
 #else
-        nDrawCalls++;
-        Renderer::RenderCube(currentCubito, cFVec3(chunk.worldPosition_.x, 0, chunk.worldPosition_.z));
+        //nDrawCalls++;
+        //Renderer::RenderCube(currentCubito, cFVec3(chunk.worldPosition_.x, 0, chunk.worldPosition_.z));
+        cFVec3 position = cFVec3(static_cast<float>(currentCubito.x) + chunk.worldPosition_.x,
+                                 static_cast<float>(currentCubito.y)  + 0.0f,
+                                 static_cast<float>(currentCubito.z)  + chunk.worldPosition_.z);
+        GRRLIB_ObjectView(position.x, position.y, position.z,
+                          0, 0, 0,
+                          1.0f, 1.0f, 1.0f);
+
+        // Solo renderizamos las caras que no están ocluidas
+        if (!chunk.isSolid(currentCubito.x + 1, currentCubito.y, currentCubito.z, chunk.offsetPosition_)) {
+            Renderer::RenderFace(currentCubito.face[DIR_X_FRONT]); // Frente
+        }
+        if (!chunk.isSolid(currentCubito.x - 1, currentCubito.y, currentCubito.z, chunk.offsetPosition_)) {
+            Renderer::RenderFace(currentCubito.face[DIR_X_BACK]); // Detrás
+        }
+        if (!chunk.isSolid(currentCubito.x, currentCubito.y + 1, currentCubito.z, chunk.offsetPosition_)) {
+            Renderer::RenderFace(currentCubito.face[DIR_Y_FRONT]); // Arriba
+        }
+        if (!chunk.isSolid(currentCubito.x, currentCubito.y - 1, currentCubito.z, chunk.offsetPosition_)) {
+            Renderer::RenderFace(currentCubito.face[DIR_Y_BACK]);  // Abajo
+        }
+        if (!chunk.isSolid(currentCubito.x, currentCubito.y, currentCubito.z + 1, chunk.offsetPosition_)) {
+            Renderer::RenderFace(currentCubito.face[DIR_Z_FRONT]); // Izquierda
+        }
+        if (!chunk.isSolid(currentCubito.x, currentCubito.y, currentCubito.z - 1, chunk.offsetPosition_)) {
+            Renderer::RenderFace(currentCubito.face[DIR_Z_BACK]); // Derecha
+        }
+
 #endif
     }
 #else
@@ -194,7 +221,8 @@ int main(int argc, char **argv) {
     while(1) {
         Engine::UpdateEngine();
         auto deltaTime = Engine::getDeltaTime();
-
+        Renderer::ResetDrawCalls();
+        
         if(options.lightning) {
             angle+=deltaTime;
             updatePosition(lightPos, 20, angle);
@@ -285,7 +313,9 @@ int main(int argc, char **argv) {
             text.render(USVec2{275, 20}, fmt::format("Camera Pitch [{:.4f}] Yaw [{:.4f}]", currentCam.getPitch(), currentCam.getYaw()).c_str());
             //Render Things
 
+            text.render(USVec2{400,  35}, fmt::format("Valid Blocks : {}", currentWorld.validBlocks_).c_str());
             text.render(USVec2{400,  50}, fmt::format("NDraw Calls : {}", nDrawCalls).c_str());
+            text.render(USVec2{400,  65}, fmt::format("NFaces Drawn : {}", Renderer::FacesDrawn()).c_str());
             // text.render(USVec2{400,  65}, fmt::format("Draw Cycles : {} ts", formatThousands(drawTicks)).c_str());
             // text.render(USVec2{400,  80}, fmt::format("Draw Time   : {} ms", Tick::TickToMs(drawTicks)).c_str());
             //text.render(USVec2{400,  95}, fmt::format("Helper      : {}", currentWorld.helperCounter).c_str());
