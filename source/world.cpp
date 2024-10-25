@@ -36,12 +36,13 @@ void World::generateLand(S16 radius) {
         }
     }
 
-#ifdef OPTIMIZATION_OCCLUSION_PRECALCULATED
-    occludeChunkBlocks();
-#endif
-
-#ifdef OPTIMIZATION_OCCLUSION_CULLING_FACES
-    occludeChunkBlocksFaces();
+#ifdef OPTIMIZATION_OCCLUSION
+    #if OPTIMIZATION_OCCLUSION == 3
+        occludeChunkBlocks();
+    #elif OPTIMIZATION_OCCLUSION == 4
+        occludeChunkBlocks();
+        occludeChunkBlocksFaces();
+    #endif
 #endif
 
 #ifdef OPTIMIZATION_DISPLAY_LIST

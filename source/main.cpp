@@ -101,35 +101,6 @@ void generateTree(Cubito cubes[], s16 baseX, s16 baseY, s16 baseZ) {
     }
 }
 
-void renderChunk(const Chunk& chunk) {
-    auto& cubitos = chunk.cubitos_;
-#ifdef OPTIMIZATION_VECTOR
-    for (const auto& currentCubito : cubitos) {
-        if(!currentCubito.visible) continue;
-#ifdef OPTIMIZATION_OCCLUSION_CULLING && !OPTIMIZATION_OCCLUSION_CULLING_FACES
-        if(!chunk.isCompletelyOccluded(currentCubito.x, currentCubito.y, currentCubito.z, chunk.offsetPosition_)) {
-            nDrawCalls++;
-            Renderer::RenderCube(currentCubito, cFVec3(chunk.worldPosition_.x, 0, chunk.worldPosition_.z));
-        }
-#else
-        nDrawCalls++;
-        Renderer::RenderCube(currentCubito, cFVec3(chunk.worldPosition_.x, 0, chunk.worldPosition_.z));
-#endif
-    }
-#else
-    for (size_t x = 0; x < cubitos.size(); ++x) {
-        for (size_t y = 0; y < cubitos[x].size(); ++y) {
-            for (size_t z = 0; z < cubitos[x][y].size(); ++z) {
-                const Cubito& currentCubito = cubitos[x][y][z];
-                if(currentCubito.type == BLOCK_AIR) continue;
-                nDrawCalls++;
-                Renderer::RenderCube(currentCubito, cFVec3(chunk.worldPosition_.x, 0, chunk.worldPosition_.z));
-            }
-        }
-    }
-#endif
-}
-
 void updatePosition(guVector& point, float radius, float angle) {
     // Actualiza las coordenadas X y Z para que el punto se mueva en un círculo
     point.x = radius * cos(angle); // Movimiento circular en el eje X
@@ -179,7 +150,7 @@ int main(int argc, char **argv) {
     
     //currentWorld.generateChunks(0, 0, numChunksX, numChunksZ);
     SYS_Report("N Blocks: %llu\n", 0);
-    currentWorld.generateLand(6);
+    currentWorld.generateLand(CHUNK_RADIUS);
     SYS_Report("N Blocks: %llu\n", currentWorld.validBlocks_);
     //SYS_Report("Start X Z: %zd %zd\n", startX, startZ);
     
@@ -242,26 +213,10 @@ int main(int argc, char **argv) {
 
         nDrawCalls = 0;
         currentTick.start();
-//         Renderer::PrepareToRender(true, true, true, true);
+        // Renderer::PrepareToRender(true, true, true, true);
         auto& chunkitos = currentWorld.getChunks();
         for(auto& chunkito : chunkitos) {
-#ifdef OPTIMIZATION_BATCHING
             chunkito->render();
-#endif
-
-#ifdef OPTIMIZATION_OCCLUSION_CULLING_FACES
-            // for(auto& face : chunkito->faces_) {
-            //     auto& pos = face.second;
-            //     GRRLIB_ObjectView(pos.x + chunkito->worldPosition_.x, pos.y, pos.z + chunkito->worldPosition_.z,
-            //       0, 0, 0,
-            //       1.0f, 1.0f, 1.0f);
-            //     Renderer::RenderFace(face.first);
-            // }
-#endif
-
-#if !defined(OPTIMIZATION_BATCHING) && !defined(OPTIMIZATION_OCCLUSION_CULLING_FACES)
-            renderChunk(*chunkito);
-#endif
         }
         
         //currentWorld.renderChunksAround(currentCam.getPosition().x, currentCam.getPosition().z);
@@ -299,7 +254,7 @@ int main(int argc, char **argv) {
             //Render Things
 
             text.render(USVec2{400,  35}, fmt::format("Valid Blocks : {}", currentWorld.validBlocks_).c_str());
-            text.render(USVec2{400,  50}, fmt::format("NDraw Calls : {}", nDrawCalls).c_str());
+            text.render(USVec2{400,  50}, fmt::format("NDraw Calls : {}", Renderer::DrawCalls()).c_str());
             text.render(USVec2{400,  65}, fmt::format("NFaces Drawn : {}", Renderer::FacesDrawn()).c_str());
             // text.render(USVec2{400,  65}, fmt::format("Draw Cycles : {} ts", formatThousands(drawTicks)).c_str());
             // text.render(USVec2{400,  80}, fmt::format("Draw Time   : {} ms", Tick::TickToMs(drawTicks)).c_str());

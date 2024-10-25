@@ -43,8 +43,11 @@ setCubito(const CubePosition& pos, BLOCK_TYPE block) {
     fillCubito(currentCubito, 3, 0, 0, 0, DIR_Y_BACK,  block);  // Bottom
     fillCubito(currentCubito, 4, 0, 0, 1, DIR_Z_FRONT, block);  // Left
     fillCubito(currentCubito, 5, 0, 0, 0, DIR_Z_BACK,  block);  // Right
-
-    if(block != BLOCK_AIR) validBlocks++;
+    
+    if(block != BLOCK_AIR) {
+        currentCubito.visible = true;
+        validBlocks++;
+    }
 }
 
 static inline int round_up(int number, int multiple) {
@@ -52,13 +55,19 @@ static inline int round_up(int number, int multiple) {
 }
 
 void Chunk::createDisplayList() {
-#ifndef OPTIMIZATION_OCCLUSION_CULLING_FACES
-    auto blocksToRender = validBlocks * 4 * 6;
+#ifdef OPTIMIZATION_OCCLUSION
+    int entitiesToRender = 0;
+    #if OPTIMIZATION_OCCLUSION == 4
+        entitiesToRender = faces_.size() * 4;
+    #else
+        entitiesToRender = validBlocks * 4 * 6;
+    #endif
+
     //The GX_DRAW_QUADS command takes up 3 bytes.
     //Each face is a quad with 4 vertexes.
     //Each vertex takes up three u16 for the position coordinate, one u8 for the color index, and two u16 for the texture coordinate.
     //Because of the write gathering pipe, an extra 63 bytes are needed.
-    size_t listSize = 3 + blocksToRender * (3 * sizeof(s16) + 3 * sizeof(S8) + 4 * sizeof(u8) + 2 * sizeof(u16)) + 63;
+    size_t listSize = 3 + entitiesToRender * (3 * sizeof(s16) + 3 * sizeof(S8) + 4 * sizeof(u8) + 2 * sizeof(u16)) + 63;
     //The list size also must be a multiple of 32, so round up to the next multiple of 32.
     listSize = round_up(listSize, 32);
 
@@ -66,23 +75,12 @@ void Chunk::createDisplayList() {
     //Remove this block of memory from the CPU's cache because the write gather pipe is used to write the commands
     DCInvalidateRange(displayList, listSize);
     
-    GX_BeginDispList(displayList, listSize); 
-    Renderer::RenderCubeVector2(cubitos_, blocksToRender);
-    displayListSize = GX_EndDispList();
-    assert(displayListSize != 0);
-#else
-    auto facesToRender = faces_.size() * 4;
-    size_t listSize = 3 + facesToRender * (3 * sizeof(s16) + 3 * sizeof(S8) + 4 * sizeof(u8) + 2 * sizeof(u16)) + 63;
-    //The list size also must be a multiple of 32, so round up to the next multiple of 32.
-    listSize = round_up(listSize, 32);
-    
-    displayList = memalign(32, listSize);
-    //Remove this block of memory from the CPU's cache because the write gather pipe is used to write the commands
-    DCInvalidateRange(displayList, listSize);
-    
-    GX_BeginDispList(displayList, listSize); 
-    Renderer::RenderFaceVector(faces_, facesToRender);
-    
+    GX_BeginDispList(displayList, listSize);
+    #if OPTIMIZATION_OCCLUSION == 4
+        Renderer::RenderFaceVector(faces_, entitiesToRender);
+    #else
+        Renderer::RenderCubeVector(cubitos_, entitiesToRender);
+    #endif
     displayListSize = GX_EndDispList();
     assert(displayListSize != 0);
     //todo: Clear the Vector!!
@@ -133,19 +131,83 @@ U32 Chunk::occludeBlocksFaces() {
 }
 
 void Chunk::render() const {
-#ifdef OPTIMIZATION_DISPLAY_LIST
-    renderDisplayList();
-#else
-    u16 blockToRender = validBlocks * 24;
-    Renderer::RenderCubeVector(cubitos_, blockToRender, cFVec3(worldPosition_.x, 0, worldPosition_.z));
-#endif
-}
 
-void Chunk::renderDisplayList() const {
-    GRRLIB_ObjectView(worldPosition_.x, 0, worldPosition_.z,
-                  0.0f, 0.0f, 0.0f,
-                  1.0f, 1.0f, 1.0f);
-    GX_CallDispList(displayList, displayListSize);
+//NO OPTIMIZATIONS:
+#if !defined(OPTIMIZATION_BATCHING) && !defined(OPTIMIZATION_DISPLAY_LIST)
+
+#ifdef OPTIMIZATION_VECTOR
+    for (const auto& cubito : cubitos_) {
+        if(!cubito.visible) continue;
+    #ifdef OPTIMIZATION_OCCLUSION
+        #if OPTIMIZATION_OCCLUSION == 0
+            Renderer::RenderCube(cubito, cFVec3(worldPosition_.x, 0, worldPosition_.z));
+        #elif  OPTIMIZATION_OCCLUSION == 1
+                if(!isCompletelyOccluded(cubito.x, cubito.y, cubito.z, offsetPosition_))
+                    Renderer::RenderCube(cubito, cFVec3(worldPosition_.x, 0, worldPosition_.z));
+        #elif OPTIMIZATION_OCCLUSION == 2
+            Renderer::ObjectView(worldPosition_.x, 0, worldPosition_.z);
+            if (!isSolid(cubito.x + 1, cubito.y, cubito.z, offsetPosition_)) {
+                Renderer::RenderBegin(4);
+                Renderer::RenderFace(cubito.face[DIR_X_FRONT], cubito.x, cubito.y, cubito.z);      //Front
+                Renderer::RenderEnd();
+            }
+            if (!isSolid(cubito.x - 1, cubito.y, cubito.z, offsetPosition_)) {
+                Renderer::RenderBegin(4);
+                Renderer::RenderFace(cubito.face[DIR_X_BACK], cubito.x, cubito.y, cubito.z);       //Back
+                Renderer::RenderEnd();
+            }
+            if (!isSolid(cubito.x, cubito.y + 1, cubito.z, offsetPosition_)) {
+                Renderer::RenderBegin(4);
+                Renderer::RenderFace(cubito.face[DIR_Y_FRONT], cubito.x, cubito.y, cubito.z);      //Top
+                Renderer::RenderEnd();
+            }
+            if (!isSolid(cubito.x, cubito.y - 1, cubito.z, offsetPosition_)) {
+                Renderer::RenderBegin(4);
+                Renderer::RenderFace(cubito.face[DIR_Y_BACK], cubito.x, cubito.y, cubito.z);       //Bottom
+                Renderer::RenderEnd();
+            }
+            if (!isSolid(cubito.x, cubito.y, cubito.z + 1, offsetPosition_)) {
+                Renderer::RenderBegin(4);
+                Renderer::RenderFace(cubito.face[DIR_Z_FRONT], cubito.x, cubito.y, cubito.z);      //Left 
+                Renderer::RenderEnd();
+            }
+            if (!isSolid(cubito.x, cubito.y, cubito.z - 1, offsetPosition_)) {                  
+                Renderer::RenderBegin(4);
+                Renderer::RenderFace(cubito.face[DIR_Z_BACK], cubito.x, cubito.y, cubito.z);      //Right
+                Renderer::RenderEnd();
+            }
+        #elif OPTIMIZATION_OCCLUSION == 3
+            Renderer::RenderCube(cubito, cFVec3(worldPosition_.x, 0, worldPosition_.z));
+        #endif
+    #endif
+    }
+#else
+    for (size_t x = 0; x < cubitos_.size(); ++x) {
+            for (size_t y = 0; y < cubitos_[x].size(); ++y) {
+                for (size_t z = 0; z < cubitos_[x][y].size(); ++z) {
+                    const Cubito& currentCubito = cubitos_[x][y][z];
+                    Renderer::RenderCube(currentCubito, cFVec3(worldPosition_.x, 0, worldPosition_.z));
+                }
+            }
+        }
+#endif
+    
+#endif
+
+//OPTIMIZATION -> ONLY BATCHING
+#if defined(OPTIMIZATION_BATCHING) && !defined(OPTIMIZATION_DISPLAY_LIST)
+    u16 blockToRender = validBlocks * 24;
+    Renderer::ObjectView(worldPosition_.x, 0, worldPosition_.z);
+    Renderer::RenderCubeVector(cubitos_, blockToRender);
+#endif
+
+//OPTIMIZATION -> DISPLAY LIST + BATCHING
+#if defined(OPTIMIZATION_BATCHING) && defined(OPTIMIZATION_DISPLAY_LIST)
+    Renderer::ObjectView(worldPosition_.x, 0, worldPosition_.z);
+    Renderer::CallDisplayList(displayList, displayListSize);
+#else
+
+#endif
 }
 
 bool Chunk::isSolid(const Cubito& cubito) const {

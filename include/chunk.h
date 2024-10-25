@@ -14,7 +14,6 @@ namespace poyo {
         U32 occludeBlocksFaces();
 
         void render() const;
-        void renderDisplayList() const;
 
         bool isSolid(const Cubito& cubito) const;
         bool isSolid(S16 x, S16 y, S16 z) const;

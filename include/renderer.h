@@ -18,16 +18,26 @@ namespace poyo {
         static void BindTexture(GXTexObj& obj, U8 unit);
 
         static void ResetDrawCalls();
+        static U32 DrawCalls();
         static U32 FacesDrawn();
+
+        static void ObjectView(f32 posx, f32 posy, f32 posz,
+                               f32 angx = 0, f32 angy = 0, f32 angz = 0,
+                               f32 scalx = 1, f32 scaly = 1, f32 scalz = 1);
         
         static void PrepareToRender(bool pos, bool nrm, bool clr, bool tex);
 
-        static void RenderFace(const CubeFace& face);
-        static void RenderCube(const Cubito& cube, cFVec3& worldPos = cFVec3(0), cFVec3& angle = cFVec3(0));
-        static void RenderCubeVector(const Vector<Cubito>& cubes, U16 validBlocks, cFVec3& worldPos = cFVec3(0));
-        static void RenderCubeVector2(const Vector<Cubito>& cubes, U16 validBlocks);
-        static void RenderFaceVector(const Vector<Pair<CubeFace, USVec3>>& faces, U16 validBlocks);
+        static void RenderBegin(U16 VertexCount);
+        static void RenderEnd();
+
+        static void RenderFace(const CubeFace& face);                   // No Batching
+        static void RenderFace(const CubeFace& face, S8 x, S8 y, S8 z); // Batching
+        static void RenderCube(const Cubito& cube, cFVec3& worldPos = cFVec3(0), cFVec3& angle = cFVec3(0)); // No Batching
+        static void RenderCubeVector(const Vector<Cubito>& cubes, U16 validBlocks);                 //Only for Batching
+        static void RenderFaceVector(const Vector<Pair<CubeFace, USVec3>>& faces, U16 validBlocks); //Only for Batching
         static void RenderBoundingBox(S16 originX, S16 originY, S16 originZ, U16 size, cUCVec3& color, bool RenderCross = false);
+
+        static void CallDisplayList(void* list, U32 size);
     };
 
     enum class BLEND_MODE {

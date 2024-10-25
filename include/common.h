@@ -15,25 +15,41 @@
 
 const int CHUNK_LOAD_RADIUS = 2; 
 
+constexpr poyo::U8 CHUNK_RADIUS = 6;
+
+/***** OCCLUSION CULLING OPTIMIZATIONS *****/                                              
+//0 -> NO OCCLUSION CULLING :(                          
+//1 -> OCCLUSION CULLING ONLY BLOCKS   (GAME LOOP)      
+//2 -> OCCLUSION CULLING BLOCK + FACES (GAME LOOP)     
+//3 -> OCCLUSION CULLING ONLY BLOCKS   (PRECALCULATED)  
+//4 -> OCCLUSION CULLING BLOCKS FACES  (PRECALCULATED) 
+
 #define OPTIMIZATION_VECTOR
 #define OPTIMIZATION_MAPS
-#define OPTIMIZATION_BATCHING
+#define OPTIMIZATION_OCCLUSION 4
+#define OPTIMIZATION_BATCHING       //TODO: IMPROVE THIS OPTION!!
 #define OPTIMIZATION_DISPLAY_LIST
-//#define OPTIMIZATION_OCCLUSION_CULLING
-#define OPTIMIZATION_OCCLUSION_PRECALCULATED      // Radius 4: 81 Chunks
-
-#define OPTIMIZATION_OCCLUSION_CULLING_FACES      // Radius 6: 169 Chunks
-
 #define OPTIMIZATION_STRUCTS
 
-#ifdef OPTIMIZATION_OCCLUSION_PRECALCULATED
-    #undef OPTIMIZATION_OCCLUSION_CULLING
-#endif
+/*  
+=============================================================== BENCHMARKING ==================================================================|
+                                                                                                                                               |
+    OCCLUSION TYPE                                 | DEFAULT                    | DISPLAY LIST              | DISPLAY LISTS + OPTIMIZE STRUCTS |  
+-----------------------------------------------------------------------------------------------------------------------------------------------|
+-> NO OCCLUSION CULLING :(                         | R. 1: 9   Chunks (16 fps)  | R. 1: 9  Chunks (60 fps)  | R. 1: 9   Chunks (60 fps)        |                
+-> OCCLUSION CULLING ONLY BLOCKS   (GAME LOOP)     | R. 1: 9   Chunks (30 fps)  | -                         | -                                |       
+-> OCCLUSION CULLING BLOCK + FACES (GAME LOOP)     | R. 1: 9   Chunks (30 fps)  | -                         | -                                |  
+-> OCCLUSION CULLING ONLY BLOCKS   (PRECALCULATED) | R. 4: 81  Chunks (12 fps)  | R. 3: 49  Chunks (60 fps) | R. 4: 81  Chunks (60 fps)        |                     
+-> OCCLUSION CULLING BLOCK + FACES (PRECALCULATED) | -                          | R. 4: 81  Chunks (60 fps) | R. 6: 169 Chunks (60 fps)        |                      
+                                                                                                                                               |
+===============================================================================================================================================|
+*/
 
-#ifdef OPTIMIZATION_OCCLUSION_CULLING_FACES
-    #undef OPTIMIZATION_OCCLUSION_CULLING
-    #define OPTIMIZATION_DISPLAY_LIST
-    #define OPTIMIZATION_OCCLUSION_PRECALCULATED
+
+#ifdef OPTIMIZATION_DISPLAY_LIST
+    #if OPTIMIZATION_OCCLUSION == 1 || OPTIMIZATION_OCCLUSION == 2
+        #error "OPTIMIZATION DISPLAY LIST CAN NOT BE USED WITH THIS OCCLUSION OPTION"
+    #endif
 #endif
 
 namespace poyo {

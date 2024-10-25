@@ -28,12 +28,24 @@ void Renderer::Initialize() {
     GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_TEX0, GX_TEX_ST, GX_U16, 0);     //Textures  -> U16
 }
 static U32 nFacesRendered = 0;
+static U32 nDrawCalls = 0;
 void Renderer::ResetDrawCalls() {
     nFacesRendered = 0;
+    nDrawCalls = 0;
+}
+
+U32 Renderer::DrawCalls() {
+    return nDrawCalls;
 }
 
 U32 Renderer::FacesDrawn() {
     return nFacesRendered;
+}
+
+void Renderer::ObjectView(f32 posx, f32 posy, f32 posz, f32 angx, f32 angy, f32 angz, f32 scalx, f32 scaly, f32 scalz) {
+    GRRLIB_ObjectView(posx, posy, posz,
+                      angx, angy, angz,
+                      scalx, scaly, scalz);
 }
 
 void Renderer::SetTextureCoordScaling(U8 unit, U16 scaleX, U16 scaleY) {
@@ -79,21 +91,47 @@ void Renderer::PrepareToRender(bool pos, bool nrm, bool clr, bool tex) {
     if(tex)     GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_TEX0, GX_TEX_ST, GX_U16, 0);     //Textures  -> U16
 }
 
+void Renderer::RenderBegin(U16 VertexCount) {
+    nDrawCalls++;
+    GX_Begin(GX_QUADS, GX_VTXFMT2, VertexCount);
+}
+
+void Renderer::RenderEnd() {
+    GX_End();
+}
+
 void Renderer::RenderFace(const CubeFace& face) {
     nFacesRendered++;
-    GX_Begin(GX_QUADS, GX_VTXFMT2, 4);
     for (int j = 0; j < 4; j++) {
-
         GX_Position3u16(face.x + cubeFaces[face.direction][j][0],
                         face.y + cubeFaces[face.direction][j][1],
                         face.z + cubeFaces[face.direction][j][2]);
-        //GX_Color1u32 old
-        //GX_Color1x8(255);
-        GX_Normal3s8(cubeNormals[face.direction][0], cubeNormals[face.direction][1], cubeNormals[face.direction][2]);
-        //GX_Normal3f32(cubeNormals[currentFace.direction][j], cubeNormals[currentFace.direction][j], cubeNormals[currentFace.direction][j]);
-        //GX_Color1u32(0xFFFFFFFF);
+        GX_Normal3s8(cubeNormals[face.direction][0],
+                     cubeNormals[face.direction][1],
+                     cubeNormals[face.direction][2]);
         GX_Color4u8(255, 255, 255, 255);
-        //GX_TexCoord2f32 old
+
+        auto& UV = tileUVMap[face.tile];
+
+#ifdef OPTIMIZATION_MAPS
+        GX_TexCoord2u16(UV[0] + tileTexCoords[j][0], UV[1] + tileTexCoords[j][1]);
+#else
+        GX_TexCoord2u16(UV.x + tileTexCoords[j][0], UV.y + tileTexCoords[j][1]);
+#endif
+    }
+    GX_End();
+}
+
+void Renderer::RenderFace(const CubeFace& face, S8 x, S8 y, S8 z) {
+    nFacesRendered++;
+    for (int j = 0; j < 4; j++) {
+        GX_Position3u16(face.x + cubeFaces[face.direction][j][0] + x,
+                        face.y + cubeFaces[face.direction][j][1] + y,
+                        face.z + cubeFaces[face.direction][j][2] + z);
+        GX_Normal3s8(cubeNormals[face.direction][0],
+                     cubeNormals[face.direction][1],
+                     cubeNormals[face.direction][2]);
+        GX_Color4u8(255, 255, 255, 255);
 
         auto& UV = tileUVMap[face.tile];
 
@@ -114,107 +152,36 @@ void Renderer::RenderCube(const Cubito& cube, cFVec3& worldPos, cFVec3& angle) {
                       angle.x, angle.y, angle.z,
                       1.0f, 1.0f, 1.0f);
 
-    GX_Begin(GX_QUADS, GX_VTXFMT2, 24);
+    RenderBegin(24);
     for (auto& currentFace : cube.face) {
-        nFacesRendered++;
-        for (int j = 0; j < 4; j++) {
-
-            GX_Position3u16(currentFace.x + cubeFaces[currentFace.direction][j][0],
-                            currentFace.y + cubeFaces[currentFace.direction][j][1],
-                            currentFace.z + cubeFaces[currentFace.direction][j][2]);
-            //GX_Color1u32 old
-            //GX_Color1x8(255);
-            GX_Normal3s8(cubeNormals[currentFace.direction][0], cubeNormals[currentFace.direction][1], cubeNormals[currentFace.direction][2]);
-            //GX_Normal3f32(cubeNormals[currentFace.direction][j], cubeNormals[currentFace.direction][j], cubeNormals[currentFace.direction][j]);
-            //GX_Color1u32(0xFFFFFFFF);
-            GX_Color4u8(255, 255, 255, 255);
-            //GX_TexCoord2f32 old
-
-            auto& UV = tileUVMap[currentFace.tile];
-
-#ifdef OPTIMIZATION_MAPS
-            GX_TexCoord2u16(UV[0] + tileTexCoords[j][0], UV[1] + tileTexCoords[j][1]);
-#else
-            GX_TexCoord2u16(UV.x + tileTexCoords[j][0], UV.y + tileTexCoords[j][1]);
-#endif
-        }
+        RenderFace(currentFace);
     }
-    GX_End();
+    RenderEnd();
 }
 
-void Renderer::RenderCubeVector(const Vector<Cubito>& cubes, U16 validBlocks, cFVec3& worldPos) {
-    GRRLIB_ObjectView(worldPos.x, worldPos.y, worldPos.z,
-                      0.0f, 0.0f, 0.0f,
-                      1.0f, 1.0f, 1.0f);
-    
-    GX_Begin(GX_QUADS, GX_VTXFMT2, validBlocks);
-    for(auto& cubito: cubes) {
-        if(cubito.type == BLOCK_AIR) continue; //TODO: FIX THIS WHEN CHANGING CUBE
-        for (auto& currentFace : cubito.face) {
-            for (int j = 0; j < 4; j++) {
-                GX_Position3u16(currentFace.x + cubeFaces[currentFace.direction][j][0] + cubito.x,
-                                currentFace.y + cubeFaces[currentFace.direction][j][1] + cubito.y,
-                                currentFace.z + cubeFaces[currentFace.direction][j][2] + cubito.z);
-                GX_Normal3s8(cubeNormals[currentFace.direction][0], cubeNormals[currentFace.direction][1], cubeNormals[currentFace.direction][2]);
-                GX_Color4u8(255, 255, 255, 255);
-                auto& UV = tileUVMap[currentFace.tile];
+void Renderer::RenderCubeVector(const Vector<Cubito>& cubes, U16 validBlocks) {
+    RenderBegin(validBlocks);
 
-#ifdef OPTIMIZATION_MAPS
-                GX_TexCoord2u16(UV[0] + tileTexCoords[j][0], UV[1] + tileTexCoords[j][1]);
-#else
-                GX_TexCoord2u16(UV.x + tileTexCoords[j][0], UV.y + tileTexCoords[j][1]);
-#endif
-            }
+    for(auto& cubito: cubes) {
+        if(!cubito.visible) continue;
+        for (auto& currentFace : cubito.face) {
+            RenderFace(currentFace, cubito.x, cubito.y, cubito.z);
         }
     }
 
-    GX_End();
-}
-
-void Renderer::RenderCubeVector2(const Vector<Cubito>& cubes, U16 validBlocks) {
-    GX_Begin(GX_QUADS, GX_VTXFMT2, validBlocks);
-    for(auto& cubito: cubes) {
-        if(!cubito.visible) continue; //TODO: FIX THIS WHEN CHANGING CUBE
-        for (auto& currentFace : cubito.face) {
-            for (int j = 0; j < 4; j++) {
-                GX_Position3u16(currentFace.x + cubeFaces[currentFace.direction][j][0] + cubito.x,
-                                currentFace.y + cubeFaces[currentFace.direction][j][1] + cubito.y,
-                                currentFace.z + cubeFaces[currentFace.direction][j][2] + cubito.z);
-                GX_Normal3s8(cubeNormals[currentFace.direction][0], cubeNormals[currentFace.direction][1], cubeNormals[currentFace.direction][2]);
-                GX_Color4u8(255, 255, 255, 255);
-                auto& UV = tileUVMap[currentFace.tile];
-
-#ifdef OPTIMIZATION_MAPS
-                GX_TexCoord2u16(UV[0] + tileTexCoords[j][0], UV[1] + tileTexCoords[j][1]);
-#else
-                GX_TexCoord2u16(UV.x + tileTexCoords[j][0], UV.y + tileTexCoords[j][1]);
-#endif
-            }
-        }
-    }
-
-    GX_End();
+    RenderEnd();
 }
 
 void Renderer::RenderFaceVector(const Vector<Pair<CubeFace, USVec3>>& faces, U16 validBlocks) {
     GX_Begin(GX_QUADS, GX_VTXFMT2, validBlocks);
     for (auto& currentFaceVec : faces) {
         auto& currentFace = currentFaceVec.first;
+#ifdef OPTIMIZATION_BATCHING
         auto& cubito = currentFaceVec.second;
-        for (int j = 0; j < 4; j++) {
-            GX_Position3u16(currentFace.x + cubeFaces[currentFace.direction][j][0] + cubito.x,
-                            currentFace.y + cubeFaces[currentFace.direction][j][1] + cubito.y,
-                            currentFace.z + cubeFaces[currentFace.direction][j][2] + cubito.z);
-            GX_Normal3s8(cubeNormals[currentFace.direction][0], cubeNormals[currentFace.direction][1], cubeNormals[currentFace.direction][2]);
-            GX_Color4u8(255, 255, 255, 255);
-            auto& UV = tileUVMap[currentFace.tile];
-
-#ifdef OPTIMIZATION_MAPS
-            GX_TexCoord2u16(UV[0] + tileTexCoords[j][0], UV[1] + tileTexCoords[j][1]);
+        RenderFace(currentFace, cubito.x, cubito.y, cubito.z);
 #else
-            GX_TexCoord2u16(UV.x + tileTexCoords[j][0], UV.y + tileTexCoords[j][1]);
+        RenderFace(currentFace);
 #endif
-        }
     }
 
     GX_End();
@@ -248,6 +215,11 @@ void Renderer::RenderBoundingBox(S16 originX, S16 originY, S16 originZ, U16 size
     }
     
     GX_End();
+}
+
+void Renderer::CallDisplayList(void* list, U32 size) {
+    nDrawCalls++;
+    GX_CallDispList(list, size);
 }
 
 u16 tileTexCoords[4][2] = {
@@ -301,3 +273,5 @@ U16 diagonals[12][2] = {
 // GX_Position2u16(0, 10);
 // GX_Color4u8(255, 0, 0, 255);
 // GX_End();
+
+//291
