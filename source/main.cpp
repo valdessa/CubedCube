@@ -4,7 +4,7 @@ GRRLIB (GX Version)
 
         Minimum Code To Use GRRLIB
 ============================================*/
-#include <grrlib.h>
+//#include <grrlib.h>
 #include <cstdlib>
 #include <ogc/pad.h>
 #include <math.h> // Para usar funciones trigonométricas
@@ -47,6 +47,7 @@ struct Options {
     bool boundingBox = false;
     bool lightning = false;
     bool debugUI = false;
+    bool VSYNC = true;
 };
 
 Options options;
@@ -115,21 +116,20 @@ int main(int argc, char **argv) {
     float angle = 0.0f;
     size_t used1 = Memory::getTotalMemoryUsed();
     // Initialise the Graphics & Video subsystem
-    GRRLIB_Init();
+    //-----GRRLIB_Init();
+    Renderer::InitializeGX();
    
     // Initialise the GameCube controllers
     PAD_Init();
 
-    GRRLIB_SetAntiAliasing(true);
-    
-    //GRRLIB_ttfFont *myFont = GRRLIB_LoadTTF(Karma_ttf, Karma_ttf_size);
+    //GRRLIB_SetAntiAliasing(true);
 
     loadResources();
 
     // Set the background color (Green in this case)
-    GRRLIB_SetBackgroundColour(0x80, 0x80, 0x80, 0xFF);
-    //GRRLIB_Camera3dSettings(0.0f,0.0f,13.0f, 0,1,0, 0,0,0); //view matrix
-    GRRLIB_SetLightAmbient(0x000000FF); //0x333333FF
+    //-----GRRLIB_SetBackgroundColour(0x80, 0x80, 0x80, 0xFF);
+    Renderer::SetBackgroundColour(0x80, 0x80, 0x80, 0xFF);
+    //-----GRRLIB_SetLightAmbient(0x000000FF); //0x333333FF
 
     Renderer::Initialize();
 
@@ -160,6 +160,7 @@ int main(int argc, char **argv) {
     
     Cubito deleteMe;
     generateCube(deleteMe, 0,  10, 0, BLOCK_LEAF2);
+    //Start from the first GX command after VSync, and end after GX_DrawDone().
     
     // Loop forever
     while(1) {
@@ -173,7 +174,8 @@ int main(int argc, char **argv) {
         }
 
         
-        GRRLIB_2dMode();
+        //-----GRRLIB_2dMode();
+        Renderer::Set2DMode();
         PAD_ScanPads(); // Scan the GameCube controllers
 
         // If [START/PAUSE] was pressed on the first GameCube controller, break out of the loop
@@ -181,39 +183,36 @@ int main(int argc, char **argv) {
         if(PAD_ButtonsDown(0) & PAD_TRIGGER_Z) currentCam.setPosition(FVec3(0));
         if(PAD_ButtonsDown(0) & PAD_BUTTON_UP) options.debugUI = !options.debugUI;;
         if(PAD_ButtonsDown(0) & PAD_BUTTON_RIGHT) options.boundingBox = !options.boundingBox;;
-        if(PAD_ButtonsDown(0) & PAD_BUTTON_LEFT) options.lightning = !options.lightning;;
+        if(PAD_ButtonsDown(0) & PAD_BUTTON_LEFT) options.lightning = !options.lightning;
+        if(PAD_ButtonsDown(0) & PAD_BUTTON_DOWN) options.VSYNC = !options.VSYNC;
         
         currentCam.updateCamera(deltaTime); //deltaTime
-        
-        GRRLIB_3dMode(0.1f, 1000.0f, 45.0f, false, true); // Configura el modo 3D //Projection
-        GRRLIB_SetLightOff();
-        GRRLIB_ObjectView(lightPos.x, lightPos.y, lightPos.z, 0,0,0,1,1,1);
-        GRRLIB_DrawSphere(1, 20, 20, true, 0xFFFF00FF);
-        if(options.lightning) {
-            GRRLIB_SetLightDiff(1, lightPos,20.0f,1.0f,0xFFFFFFFF);
-        }
-
-        GRRLIB_ObjectView(1.0f,20,0, 0,0,0,1,1,1);
-        GRRLIB_DrawCube(1, true, 0xFFFFFFFF);
-        GRRLIB_ObjectView(0.0f,20,0, 0,0,0,1,1,1);
-        GRRLIB_DrawCube(1, true, 0xFFFFFFFF);
+        //-----
+        // GRRLIB_3dMode(0.1f, 1000.0f, 45.0f, false, true); // Configura el modo 3D //Projection
+        Renderer::Set3DMode(currentCam); // Configura el modo 3D //Projection
+        // GRRLIB_SetLightOff();
+        // GRRLIB_ObjectView(lightPos.x, lightPos.y, lightPos.z, 0,0,0,1,1,1);
+        // GRRLIB_DrawSphere(1, 20, 20, true, 0xFFFF00FF);
+        // if(options.lightning) {
+        //     GRRLIB_SetLightDiff(1, lightPos,20.0f,1.0f,0xFFFFFFFF);
+        // }
+        //
+        // GRRLIB_ObjectView(1.0f,20,0, 0,0,0,1,1,1);
+        // GRRLIB_DrawCube(1, true, 0xFFFFFFFF);
+        // GRRLIB_ObjectView(0.0f,20,0, 0,0,0,1,1,1);
+        // GRRLIB_DrawCube(1, true, 0xFFFFFFFF);
 
         // Limpiar pantalla y preparar para dibujo en 3D
-        GRRLIB_3dMode(0.1f, 1000.0f, 45.0f, 1, 1); // Configura el modo 3D //Projection
+        //GRRLIB_3dMode(0.1f, 1000.0f, 45.0f, 1, 1); // Configura el modo 3D //Projection
         
         Renderer::BindTexture(blocksTexture, 0);
         Renderer::SetTextureCoordScaling(0, TILE_SIZE, TILE_SIZE);
         Renderer::DisableBlend();
         
-        
-        // for (int i = 0; i < 72; i++) {
-        //     Renderer::RenderCube(Tree1[i], cFVec3(0, 10, 0));
-        // }
-        // Renderer::RenderCube(deleteMe);
 
         nDrawCalls = 0;
         currentTick.start();
-        // Renderer::PrepareToRender(true, true, true, true);
+        Renderer::PrepareToRender(true, true, true, true);
         auto& chunkitos = currentWorld.getChunks();
         for(auto& chunkito : chunkitos) {
             chunkito->render();
@@ -222,7 +221,7 @@ int main(int argc, char **argv) {
         //currentWorld.renderChunksAround(currentCam.getPosition().x, currentCam.getPosition().z);
         
         if(options.boundingBox) {
-            GRRLIB_SetLightOff();
+            //-----GRRLIB_SetLightOff();
             Renderer::PrepareToRender(true, false, true, false);
             for(const auto& chunkito : chunkitos) {
                 Renderer::RenderBoundingBox(chunkito->worldPosition_.x, 0, chunkito->worldPosition_.z, CHUNK_SIZE, UCVec3{0, 255, 255}, true);
@@ -236,7 +235,8 @@ int main(int argc, char **argv) {
         
         auto camPos = currentCam.getPosition();
         // Switch to 2D Mode to display text
-        GRRLIB_2dMode();
+        //-----GRRLIB_2dMode();
+        Renderer::Set2DMode();
         if(options.debugUI) {
             text.beginRender();
             text.render(USVec2{5,   5}, fmt::format("Ticks (CPU) : {}", gettick()).c_str());
@@ -260,16 +260,19 @@ int main(int argc, char **argv) {
             // text.render(USVec2{400,  80}, fmt::format("Draw Time   : {} ms", Tick::TickToMs(drawTicks)).c_str());
             //text.render(USVec2{400,  95}, fmt::format("Helper      : {}", currentWorld.helperCounter).c_str());
             //text.render(USVec2{400, 110}, fmt::format("N Blocks    : {}", currentChunk.validBlocks).c_str());
+            text.render(USVec2{400, 110}, fmt::format("Video Mode    : {}", VIDEO_GetVideoScanMode()).c_str());
+            text.render(USVec2{400, 125}, fmt::format("VSYNC    : {}", options.VSYNC ? "YES" : "NOP").c_str());
         }
 
 
         //GRRLIB_PrintfTTF(50, 50, myFont, "MINECRAFT", 16, 0x000000FF);
 
         // Renderizar todo a la pantalla
-        GRRLIB_Render(); // Render the frame buffer to the TV
+        //-----GRRLIB_Render(); // Render the frame buffer to the TV
+        Renderer::RenderGX(options.VSYNC);
     }
 
-    GRRLIB_Exit(); // Be a good boy, clear the memory allocated by GRRLIB
+    //-----GRRLIB_Exit(); // Be a good boy, clear the memory allocated by GRRLIB
 
     exit(0); // Use exit() to exit a program, do not use 'return' from main()
 }

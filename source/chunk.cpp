@@ -2,11 +2,15 @@
 
 #include <chunk.h>
 
-#include <grrlib.h>
+//#include <grrlib.h>
 #include <ogc/gx.h>
+#include <ogc/cache.h>
 
-#include "renderer.h"
+#include <renderer.h>
 #include <world.h>
+
+//memalign:
+#include <malloc.h> 
 
 using namespace poyo;
 

@@ -3,14 +3,22 @@
 
 namespace poyo {
     enum class BLEND_MODE;
+    enum class VIDEO_MODE;
     class Renderer {
      public:
         Renderer() = delete;
         ~Renderer() = delete;
 
+        static int InitializeGX();
         static void Initialize();
+
+        static void Set3DMode(class Camera& cam);
+        static void Set2DMode();
         
         static void SetTextureCoordScaling(U8 unit, U16 scaleX, U16 scaleY);
+        static void SetBackgroundColour(U8 r, U8 g, U8 b, U8 a);
+
+        static void SetCameraSettings(cFVec3& position, cFVec3& up, cFVec3& look);
 
         static void EnableBlend(BLEND_MODE mode);
         static void DisableBlend();
@@ -20,6 +28,7 @@ namespace poyo {
         static void ResetDrawCalls();
         static U32 DrawCalls();
         static U32 FacesDrawn();
+        static VIDEO_MODE VideoMode();
 
         static void ObjectView(f32 posx, f32 posy, f32 posz,
                                f32 angx = 0, f32 angy = 0, f32 angz = 0,
@@ -38,6 +47,8 @@ namespace poyo {
         static void RenderBoundingBox(S16 originX, S16 originY, S16 originZ, U16 size, cUCVec3& color, bool RenderCross = false);
 
         static void CallDisplayList(void* list, U32 size);
+
+        static void RenderGX(bool VSYNC);
     };
 
     enum class BLEND_MODE {
@@ -47,6 +58,14 @@ namespace poyo {
         MULTI  = 3,    /**< Multiply Blending. */
         INV    = 4,    /**< Invert Color Blending. */ 
     };
+
+    enum class VIDEO_MODE {
+        INTERLACE     = 0,		/*!< Video mode INTERLACED. */
+        NON_INTERLACE = 1,		/*!< Video mode NON INTERLACED */
+        PROGRESSIVE   = 2,		/*!< Video mode PROGRESSIVE. Special mode for higher quality */
+        VIDEO_ERROR   = 3		/*!< Video mode PROGRESSIVE. Special mode for higher quality */
+    };
+    
 }
 
 #endif

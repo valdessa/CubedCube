@@ -1,7 +1,10 @@
-#include <grrlib.h>
-#include <typedefs.h>
+#include <common.h>
+#include <ogc/gx.h>
+#include <renderer.h>
 
 #include <camera.h>
+
+#include <ogc/pad.h>
 
 
 using namespace poyo;
@@ -78,10 +81,12 @@ void Camera::updateCamera(float deltaTime) {
 
     // Update camera settings for rendering
     auto center = position_ + forward_;
-    GRRLIB_Camera3dSettings(
-        position_.x, position_.y, position_.z,
-        up_.x, up_.y, up_.z,
-        center.x, center.y, center.z); // View matrix
+    // GRRLIB_Camera3dSettings(
+    //     position_.x, position_.y, position_.z,
+    //     up_.x, up_.y, up_.z,
+    //     center.x, center.y, center.z); // View matrix
+
+    Renderer::SetCameraSettings(position_, up_, center);
 }
 
 void Camera::setPosition(cFVec3& pos) {
