@@ -1,14 +1,17 @@
 #include <common.h>
-#include <ogc/system.h>
 
 namespace std {
+    // Custom hash function for std::pair<short, short>
     template<>
     struct hash<std::pair<short, short>> {
+        // Combines the hashes of both elements in the pair
         std::size_t operator()(const std::pair<short, short>& p) const noexcept {
-            // Combina los hashes de ambos elementos del pair
+            // Hash each element of the pair
             std::size_t h1 = std::hash<short>{}(p.first);
             std::size_t h2 = std::hash<short>{}(p.second);
-            return h1 ^ (h2 << 1); // Combina los hashes de forma simple
+
+            // Combine the two hashes using XOR and bit-shifting
+            return h1 ^ (h2 << 1); // Combined hash value
         }
     };
 }
@@ -26,13 +29,16 @@ World::World() {
 }
 
 World::~World() {
+    //todo: destroy display lists
 }
 
 void World::generateLand(S16 radius) {
     for (int chunkX = -radius; chunkX <= radius; ++chunkX) {
         for (int chunkZ = -radius; chunkZ <= radius; ++chunkZ) {
 
-            validBlocks_ += getOrCreateChunkForLand(chunkX, chunkZ).validBlocks;
+            validBlocks_ += getOrCreateChunkForLand(
+                static_cast<S16>(chunkX),
+                static_cast<S16>(chunkZ)).validBlocks;
         }
     }
 
@@ -53,52 +59,54 @@ void World::generateLand(S16 radius) {
 }
 
 void World::generateLandChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
+    // Set the chunk's offset and world position
     chunk.offsetPosition_.x = chunkX;
     chunk.offsetPosition_.z = chunkZ;
-    chunk.worldPosition_.x = chunkX * CHUNK_SIZE;
-    chunk.worldPosition_.z = chunkZ * CHUNK_SIZE;
+    chunk.worldPosition_.x = static_cast<S16>(chunkX * CHUNK_SIZE);
+    chunk.worldPosition_.z = static_cast<S16>(chunkZ * CHUNK_SIZE);
     
     for (int x = 0; x < CHUNK_SIZE; ++x) {
         for (int z = 0; z < CHUNK_SIZE; ++z) {
-            // Calculamos la posición global en el mundo
+            // Calculate the global position in the world
             int worldX = x + (chunkX * CHUNK_SIZE);
             int worldZ = z + (chunkZ * CHUNK_SIZE);
 
-            // Generamos una altura basada en ruido para la posición (x, z)
-            float height = noiseLite_.GetNoise((float)worldX, (float)worldZ);
-            int blockHeight = (int)((height + 1) * (CHUNK_HEIGHT / 2));
+            // Generate a height based on noise for the position (x, z)
+            float height = noiseLite_.GetNoise(static_cast<float>(worldX), static_cast<float>(worldZ));
+            int blockHeight = static_cast<int>((height + 1) * (CHUNK_HEIGHT / 2));
 
-            // Asignamos bloques según la altura generada
+            // Assign blocks based on the generated height
             for (int y = 0; y < CHUNK_HEIGHT; ++y) {
                 CubePosition pos(x, y, z);
                 if (y > blockHeight) {
-                    chunk.setCubito(pos, BLOCK_AIR); // Espacio vacío
+                    chunk.setCubito(pos, BLOCK_AIR);    // Air
                 } else if (y == blockHeight) {
-                    chunk.setCubito(pos, BLOCK_GRASS);  // Césped en la cima
+                    chunk.setCubito(pos, BLOCK_GRASS);  // Grass at the top
                 } else if (y > blockHeight - DIRT_LEVEL) {
-                    chunk.setCubito(pos, BLOCK_DIRT);   // Tierra debajo del césped
+                    chunk.setCubito(pos, BLOCK_DIRT);   // Dirt below the grass
                 } else if (y > blockHeight - STONE_LEVEL) {
-                    chunk.setCubito(pos, BLOCK_STONE);  // Roca debajo de la tierra
+                    chunk.setCubito(pos, BLOCK_STONE);  // Stone below the dirt
                 } else {
-                    chunk.setCubito(pos, BLOCK_STONE); // Todo lo demás es roca
+                    chunk.setCubito(pos, BLOCK_STONE); // Todo: all the blocks
                 }
             }
         }
     }
 
     for(int i = 0; i < MAX_TREES; i++) {
-        // Generamos una posición aleatoria dentro del chunk
+        // Generate a random position within the chunk
         int x = rand() % CHUNK_SIZE;
         int z = rand() % CHUNK_SIZE;
 
-        // Calculamos la posición global en el mundo
+        // Calculate the global position in the world
         int worldX = x + (chunkX * CHUNK_SIZE);
         int worldZ = z + (chunkZ * CHUNK_SIZE);
-        int randY = getGroundHeight(worldX, worldZ, chunk); // Obtén la altura del terreno en (randX, randZ)
+        // Get the terrain height at (worldX, worldZ)
+        int randY = getGroundHeight(worldX, worldZ); 
 
-        // Verificar si podemos colocar un árbol en esa posición
+        // Check if we can place a tree at this position
         if (shouldPlaceTree(x, randY + 1, z, chunk)) {
-            // Colocar el árbol si es posible
+            // Place the tree if possible
             placeTree(chunk, x, randY + 1, z);
         }
     }
@@ -110,7 +118,7 @@ Chunk& World::getOrCreateChunkForLand(S16 chunkX, S16 chunkZ) {
     if (it == positionMap_.end()) {
         auto& currentChunk = chunks_.emplace_back(MUnique<Chunk>(this));
         generateLandChunk(*currentChunk, chunkX, chunkZ);
-        positionMap_[chunkKey] = chunks_.size() - 1; // index of the new chunk
+        positionMap_[chunkKey] = static_cast<S16>(chunks_.size()) - 1; // index of the new chunk
         return *currentChunk;
     }
     return *chunks_[it->second];
@@ -183,91 +191,15 @@ void World::placeTree(Chunk& chunk, int x, int y, int z) {
     nTrees_++;
 }
 
-int World::getGroundHeight(int worldX, int worldZ, const Chunk& chunk) const {
+int World::getGroundHeight(int worldX, int worldZ) const {
     // Calculate the height at the given world coordinates (worldX, worldZ) using noise
     float height = noiseLite_.GetNoise(static_cast<float>(worldX), static_cast<float>(worldZ));
     
     // Map the noise-based height to a block height within the chunk
     // The formula adjusts the range to fit within the chunk's height (CHUNK_HEIGHT)
-    int blockHeight = (int)((height + 1) * (CHUNK_HEIGHT / 2));
+    int blockHeight = static_cast<int>((height + 1) * (CHUNK_HEIGHT / 2));
     
     return blockHeight;
-}
-
-void World::generateChunks(S16 middleX, S16 middleZ, S16 numChunksX, S16 numChunksZ) {
-
-    S16 halfChunk = CHUNK_SIZE / 2;
-    S16 offsetX = halfChunk * numChunksX;
-    S16 offsetZ = halfChunk * numChunksZ;
-    
-    // Recorremos la región de terreno especificada
-    for (S16 chunkX = middleX; chunkX < middleX + numChunksX; ++chunkX) {
-        for (S16 chunkZ = middleZ; chunkZ < middleZ + numChunksZ; ++chunkZ) {
-
-            auto worldX = chunkX * CHUNK_SIZE - offsetX;
-            auto worldZ = chunkZ * CHUNK_SIZE - offsetZ;
-            
-            // Genera o recupera el chunk de la posición actual
-            validBlocks_ += getOrCreateChunk(worldX, worldZ).validBlocks;
-        }
-    }
-}
-
-void World::generateChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
-    chunk.worldPosition_.x = chunkX;
-    chunk.worldPosition_.z = chunkZ;
-    for (S16 x = 0; x < CHUNK_SIZE; ++x) {
-        for (S16 z = 0; z < CHUNK_SIZE; ++z) {
-            S32 worldX = chunkX * CHUNK_SIZE + x;
-            S32 worldZ = chunkZ * CHUNK_SIZE + z;
-
-            //float height = getHeightAt(worldX, worldZ);
-            int height = static_cast<int>(round(getHeightAt(worldX, worldZ)));
-
-            for (int y = 0; y < CHUNK_SIZE; ++y) {
-                CubePosition pos = CubePosition{x, y, z};
-                if (y < height) {
-                    // Determinar tipo de bloque según la altura
-                    if (y < height - STONE_LEVEL) {
-                        chunk.setCubito(pos, BLOCK_STONE); // Piedra en capas profundas
-                    } else if (y < height - GRASS_LEVEL) {
-                        chunk.setCubito(pos, BLOCK_DIRT);  // Tierra en las capas superiores
-                    } else if (y == height - GRASS_LEVEL) {
-                        chunk.setCubito(pos, BLOCK_GRASS); // Bloque en la superficie -> césped
-                    } else {
-                        helperCounter++;
-                        chunk.setCubito(pos, BLOCK_AIR);
-                    }
-                } else {
-                    chunk.setCubito(pos, BLOCK_AIR); // Aire por encima
-                }
-            }
-        }
-    }
-}
-
-void World::generateSolidChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
-    chunk.worldPosition_.x = chunkX;
-    chunk.worldPosition_.z = chunkZ;
-    for (S16 x = 0; x < CHUNK_SIZE; ++x) {
-        for(S16 y = 0; y < CHUNK_SIZE; y++) {
-            for (S16 z = 0; z < CHUNK_SIZE; ++z) {
-                S32 worldX = chunkX * CHUNK_SIZE + x;
-                S32 worldZ = chunkZ * CHUNK_SIZE + z;
-                CubePosition pos = CubePosition{x, y, z};
-                // Determinar tipo de bloque según la altura
-                if (y < STONE_LEVEL) {
-                    chunk.setCubito(pos, BLOCK_STONE); // Piedra en capas profundas
-                } else if (y < GRASS_LEVEL) {
-                    chunk.setCubito(pos, BLOCK_DIRT);  // Tierra en las capas superiores
-                } else if (y == GRASS_LEVEL) {
-                    chunk.setCubito(pos, BLOCK_GRASS); // Bloque en la superficie -> césped
-                } else {
-                    chunk.setCubito(pos, BLOCK_SAND);
-                }
-            } 
-        }
-    }
 }
 
 Chunk* World::getChunk(S16 chunkX, S16 chunkZ) {
@@ -293,37 +225,17 @@ void World::occludeChunkBlocksFaces() const {
 }
 
 void World::renderChunksAround(int playerX, int playerZ) {
-    int chunkX = playerX / CHUNK_SIZE; // Divide para obtener el índice del chunk en X
-    int chunkZ = playerZ / CHUNK_SIZE; // Divide para obtener el índice del chunk en Z
+    int chunkX = playerX / CHUNK_SIZE; 
+    int chunkZ = playerZ / CHUNK_SIZE; 
 
     int counter = 0;
     for (int x = -CHUNK_LOAD_RADIUS; x <= CHUNK_LOAD_RADIUS; ++x) {
         for (int z = -CHUNK_LOAD_RADIUS; z <= CHUNK_LOAD_RADIUS; ++z) {
-            auto currentChunk = getChunk(chunkX + x, chunkZ + z);
-            if(currentChunk) {
+            if(auto currentChunk = getChunk(chunkX + x, chunkZ + z)) {
                 currentChunk->render();
                 counter++;
             }
         }
     }
     //SYS_Report("N Chunks: %d\n", counter);
-}
-
-// Chunk& World::getOrCreateChunk(S16 chunkX, S16 chunkZ) {
-//     // Cargar o crear el chunk si no existe en esa posición
-//     const auto chunkKey = std::make_pair(chunkX, chunkZ);
-//     if (positionMap_.find(chunkKey) == positionMap_.end()) {
-//         // Si no existe, lo generamos
-//         auto& NewChunk = positionMap_.emplace(chunkKey, Chunk()).first->second;
-//         generateChunk(NewChunk, chunkX, chunkZ);
-//         return NewChunk;
-//     }
-//     return positionMap_[chunkKey];
-// }
-
-float World::getHeightAt(S32 x, S32 z) {
-    // Una simple función de terreno ondulado usando senos
-    //float height = 5.0f * sinf(x * 0.1f) + 5.0f * cosf(z * 0.1f);
-    float height = 5.0f * noise_.perlin(x * 0.2f, z * 0.2f);
-    return std::max(static_cast<float>(MIN_HEIGHT), height + 10.0f);
 }

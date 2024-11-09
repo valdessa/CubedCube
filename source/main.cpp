@@ -115,6 +115,7 @@ void updatePosition(guVector& point, float radius, float angle) {
 //Compilar con O3
 
 int main(int argc, char **argv) {
+    //srand(time(nullptr));
     float angle = 0.0f;
     size_t used1 = Memory::getTotalMemoryUsed();
     // Initialise the Graphics & Video subsystem
