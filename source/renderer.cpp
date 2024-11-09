@@ -323,7 +323,24 @@ void Renderer::BindTexture(GXTexObj& obj, U8 unit) {
     GX_LoadTexObj(&obj, unit); //GX_TEXMAP0
 }
 
-void Renderer::PrepareToRender(bool pos, bool nrm, bool clr, bool tex) {
+void Renderer::PrepareToRenderInVX0(bool pos, bool nrm, bool clr, bool tex) {
+    GX_ClearVtxDesc();
+    
+    if(pos)     GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
+    if(nrm)     GX_SetVtxDesc(GX_VA_NRM, GX_DIRECT); 
+    if(clr)     GX_SetVtxDesc(GX_VA_CLR0, GX_DIRECT);
+    if(tex)     GX_SetVtxDesc(GX_VA_TEX0, GX_DIRECT);
+
+    if(pos)     GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);     //Positions -> F32
+    if(nrm)     GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_NRM, GX_NRM_XYZ, GX_F32, 0);     //Normals   -> F32
+    if(clr)     GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0); //Color     -> UChar
+    if(tex)     GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_U16, 0);     //Textures  -> U16
+    
+    tex ? GX_SetTevOp(GX_TEVSTAGE0, GX_MODULATE) : GX_SetTevOp(GX_TEVSTAGE0, GX_PASSCLR);
+}
+
+
+void Renderer::PrepareToRenderInVX2(bool pos, bool nrm, bool clr, bool tex) {
     GX_ClearVtxDesc();
     
     if(pos)     GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
@@ -464,6 +481,38 @@ void Renderer::RenderBoundingBox(S16 originX, S16 originY, S16 originZ, U16 size
     }
     
     GX_End();
+}
+
+void Renderer::RenderSphere(f32 r, int lats, int longs, bool filled, u32 col) {
+    const f32 dtheta = 2 * M_PI / longs;
+
+    for(int i = 0; i <= lats; i++) {
+        const f32 lat0 = M_PI * (-0.5f + (f32) (i - 1) / lats);
+        const f32 z0  = sinf(lat0);
+        const f32 zr0 = cosf(lat0);
+
+        const f32 lat1 = M_PI * (-0.5f + (f32) i / lats);
+        const f32 z1 = sinf(lat1);
+        const f32 zr1 = cosf(lat1);
+
+        GX_Begin((filled == true) ? GX_TRIANGLESTRIP : GX_LINESTRIP,
+             GX_VTXFMT0, 2 * (longs + 1));
+
+        for(int j = 0; j <= longs; j++) {
+            const f32 lng = dtheta * (f32) (j - 1);
+            const f32 x = cosf(lng);
+            const f32 y = sinf(lng);
+
+            GX_Position3f32(x * zr0 * r, y * zr0 * r, z0 * r);
+            GX_Normal3f32(x * zr0 * r, y * zr0 * r, z0 * r);
+            GX_Color1u32(col);
+            GX_Position3f32(x * zr1 * r, y * zr1 * r, z1 * r);
+            GX_Normal3f32(x * zr1 * r, y * zr1 * r, z1 * r);
+            GX_Color1u32(col);
+        }
+        
+        GX_End();
+    }
 }
 
 void Renderer::CallDisplayList(void* list, U32 size) {

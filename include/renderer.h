@@ -34,7 +34,8 @@ namespace poyo {
                                f32 angx = 0, f32 angy = 0, f32 angz = 0,
                                f32 scalx = 1, f32 scaly = 1, f32 scalz = 1);
         
-        static void PrepareToRender(bool pos, bool nrm, bool clr, bool tex);
+        static void PrepareToRenderInVX0(bool pos, bool nrm, bool clr, bool tex);
+        static void PrepareToRenderInVX2(bool pos, bool nrm, bool clr, bool tex);
 
         static void RenderBegin(U16 VertexCount);
         static void RenderEnd();
@@ -45,6 +46,8 @@ namespace poyo {
         static void RenderCubeVector(const Vector<Cubito>& cubes, U16 validBlocks);                 //Only for Batching
         static void RenderFaceVector(const Vector<Pair<CubeFace, USVec3>>& faces, U16 validBlocks); //Only for Batching
         static void RenderBoundingBox(S16 originX, S16 originY, S16 originZ, U16 size, cUCVec3& color, bool RenderCross = false);
+
+        static void RenderSphere(f32 r, int lats, int longs, bool filled, u32 col);
 
         static void CallDisplayList(void* list, U32 size);
 

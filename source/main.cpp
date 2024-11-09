@@ -52,56 +52,6 @@ struct Options {
 
 Options options;
 
-void fillCube(Cubito& cube, u16 face, s16 x, s16 y, s16 z, u8 direction, int block) {
-    cube.face[face].x = x;
-    cube.face[face].y = y;
-    cube.face[face].z = z;
-    cube.face[face].direction = direction;
-    cube.face[face].tile = blockTiles[block][direction];
-}
-
-void generateCube(Cubito& cube, s16 x, s16 y, s16 z, int block) {
-    cube.x = x;
-    cube.y = y;
-    cube.z = z;
-    fillCube(cube, 0, 1, 0, 0, DIR_X_FRONT, block);  // Frente
-    fillCube(cube, 1, 0, 0, 0, DIR_X_BACK,  block);  // Detrás
-    fillCube(cube, 2, 0, 1, 0, DIR_Y_FRONT, block);  // Arriba
-    fillCube(cube, 3, 0, 0, 0, DIR_Y_BACK,  block);  // Abajo well
-    fillCube(cube, 4, 0, 0, 1, DIR_Z_FRONT, block);  // Izquierda
-    fillCube(cube, 5, 0, 0, 0, DIR_Z_BACK,  block);  // Derecha
-}
-
-void generateTree(Cubito cubes[], s16 baseX, s16 baseY, s16 baseZ) {
-    // Generar las hojas en las coordenadas superiores
-    int cubeIndex = 0;
-    for (s16 i = -1; i <= 1; i++) {
-        for (s16 j = -1; j <= 1; j++) {
-            // Nivel de hojas en y + 3
-            generateCube(cubes[cubeIndex++], baseX + i, baseY + 3, baseZ + j, BLOCK_LEAF2);
-
-            // Nivel de hojas en y + 6
-            generateCube(cubes[cubeIndex++], baseX + i, baseY + 6, baseZ + j, BLOCK_LEAF2);
-        }
-    }
-
-    // Generar las hojas en los niveles intermedios (y + 4 y y + 5)
-    for (s16 i = -2; i <= 2; i++) {
-        for (s16 j = -2; j <= 2; j++) {
-            // Nivel de hojas en y + 4
-            generateCube(cubes[cubeIndex++], baseX + i, baseY + 4, baseZ + j, BLOCK_LEAF2);
-
-            // Nivel de hojas en y + 5
-            generateCube(cubes[cubeIndex++], baseX + i, baseY + 5, baseZ + j, BLOCK_LEAF2);
-        }
-    }
-
-    // Generar el tronco del árbol
-    for (s16 i = 0; i < 4; i++) {
-        generateCube(cubes[cubeIndex++], baseX, baseY + i, baseZ, BLOCK_TREE);
-    }
-}
-
 void updatePosition(guVector& point, float radius, float angle) {
     // Actualiza las coordenadas X y Z para que el punto se mueva en un círculo
     point.x = radius * cos(angle); // Movimiento circular en el eje X
@@ -135,10 +85,6 @@ int main(int argc, char **argv) {
     //-----GRRLIB_SetLightAmbient(0x000000FF); //0x333333FF
 
     Renderer::Initialize();
-
-    Cubito Tree1[72];
-
-    generateTree(Tree1, 0, 1, 0);
     
     TextRenderer text;
     float CameraSpeed = 15.0f;
@@ -162,8 +108,6 @@ int main(int argc, char **argv) {
 
     Tick currentTick;
     
-    Cubito deleteMe;
-    generateCube(deleteMe, 0,  10, 0, BLOCK_LEAF2);
     //Start from the first GX command after VSync, and end after GX_DrawDone().
     // GX_SetDrawDone();
     // Loop forever
@@ -199,6 +143,11 @@ int main(int argc, char **argv) {
         // GRRLIB_SetLightOff();
         // GRRLIB_ObjectView(lightPos.x, lightPos.y, lightPos.z, 0,0,0,1,1,1);
         // GRRLIB_DrawSphere(1, 20, 20, true, 0xFFFF00FF);
+        
+        Renderer::PrepareToRenderInVX0(true, true, true, false);
+        Renderer::ObjectView(lightPos.x, lightPos.y, lightPos.z);
+        Renderer::RenderSphere(1, 20, 20, true, 0xFFFF00FF);
+        
         // if(options.lightning) {
         //     GRRLIB_SetLightDiff(1, lightPos,20.0f,1.0f,0xFFFFFFFF);
         // }
@@ -218,7 +167,7 @@ int main(int argc, char **argv) {
 
         nDrawCalls = 0;
         currentTick.start();
-        Renderer::PrepareToRender(true, true, true, true);
+        Renderer::PrepareToRenderInVX2(true, true, true, true);
         auto& chunkitos = currentWorld.getChunks();
         for(auto& chunkito : chunkitos) {
             chunkito->render();
@@ -228,7 +177,7 @@ int main(int argc, char **argv) {
         
         if(options.boundingBox) {
             //-----GRRLIB_SetLightOff();
-            Renderer::PrepareToRender(true, false, true, false);
+            Renderer::PrepareToRenderInVX2(true, false, true, false);
             for(const auto& chunkito : chunkitos) {
                 Renderer::RenderBoundingBox(chunkito->worldPosition_.x, 0, chunkito->worldPosition_.z, CHUNK_SIZE, UCVec3{0, 255, 255}, true);
             } 
@@ -239,7 +188,7 @@ int main(int argc, char **argv) {
         currentTick.reset();
 
         
-        auto camPos = currentCam.getPosition();
+        auto& camPos = currentCam.getPosition();
         // Switch to 2D Mode to display text
         //-----GRRLIB_2dMode();
         if(options.debugUI) {
