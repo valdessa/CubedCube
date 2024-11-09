@@ -38,6 +38,13 @@ size_t Memory::getTotalMemoryUsed() {
     return (uintptr_t)SYS_GetArena1Lo() - info.arena + info.uordblks - 0x80000000;
 }
 
+size_t Memory::getTotalMemoryFree() {
+    updateInfo();
+
+    size_t freeMemoryInArena = SYS_GetArena1Size();
+    return freeMemoryInArena + info.fordblks;
+}
+
 // struct mallinfo2 {
 //     size_t arena;     /* Non-mmapped space allocated (bytes) */
 //     size_t ordblks;   /* Number of free chunks */

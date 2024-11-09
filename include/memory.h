@@ -16,6 +16,7 @@ namespace poyo {
 
         // Custom method to calculate total memory used, including arenas
         static size_t getTotalMemoryUsed();
+        static size_t getTotalMemoryFree();
     };
 }
 

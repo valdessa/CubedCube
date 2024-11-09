@@ -25,8 +25,12 @@ Chunk::Chunk() : cubitos_(CHUNK_SIZE, Vector<Vector<Cubito>>(CHUNK_HEIGHT, Vecto
 #endif
 
 Chunk::~Chunk() {
-    
+    if(displayList != nullptr) {
+        DCFlushRange(displayList, displayListSize);
+        free(displayList);
+    }
 }
+
 
 void Chunk::
 setCubito(const CubePosition& pos, BLOCK_TYPE block) {

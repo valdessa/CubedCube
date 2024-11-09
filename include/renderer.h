@@ -12,6 +12,8 @@ namespace poyo {
         static int InitializeGX();
         static void Initialize();
 
+        static void Exit();
+
         static void Set3DMode(class Camera& cam);
         static void Set2DMode();
         
@@ -25,10 +27,15 @@ namespace poyo {
 
         static void BindTexture(GXTexObj& obj, U8 unit);
 
+        static void SetLightOff();
+        static void SetLightAmbient(U8 r, U8 g, U8 b, U8 a);
+        static void SetLightDiffuse(U8 ID, cFVec3& pos, float distattn = 1.0f, float brightness = 1.0f, cUCVec4& color = UCVec4(255));
+
         static void ResetDrawCalls();
         static U32 DrawCalls();
         static U32 FacesDrawn();
         static VIDEO_MODE VideoMode();
+        static const Mtx& ViewMatrix(); 
 
         static void ObjectView(f32 posx, f32 posy, f32 posz,
                                f32 angx = 0, f32 angy = 0, f32 angz = 0,

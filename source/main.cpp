@@ -41,7 +41,6 @@ using namespace poyo;
 #define TILE_SIZE 128
 
 static u16 nDrawCalls = 0;
-guVector lightPos{0, 10, 0};
 
 struct Options {
     bool boundingBox = false;
@@ -50,9 +49,7 @@ struct Options {
     bool VSYNC = true;
 };
 
-Options options;
-
-void updatePosition(guVector& point, float radius, float angle) {
+void updatePosition(FVec3& point, float radius, float angle) {
     // Actualiza las coordenadas X y Z para que el punto se mueva en un círculo
     point.x = radius * cos(angle); // Movimiento circular en el eje X
     point.z = radius * sin(angle); // Movimiento circular en el eje Z
@@ -65,48 +62,47 @@ void updatePosition(guVector& point, float radius, float angle) {
 //Compilar con O3
 
 int main(int argc, char **argv) {
+    // size_t MemoryUsedAtbeginning = (uintptr_t)SYS_GetArena1Lo() - (uintptr_t)SYS_GetArena1Hi;
+    // MemoryUsedAtbeginning += SYS_GetArena1Size();
+    Options options;
     //srand(time(nullptr));
     float angle = 0.0f;
-    size_t used1 = Memory::getTotalMemoryUsed();
+    size_t MemoryUsedBySystem = Memory::getTotalMemoryUsed();
+    
     // Initialise the Graphics & Video subsystem
-    //-----GRRLIB_Init();
     Renderer::InitializeGX();
+
+    MemoryUsedBySystem = Memory::getTotalMemoryUsed() - MemoryUsedBySystem;
    
     // Initialise the GameCube controllers
     PAD_Init();
 
-    //GRRLIB_SetAntiAliasing(true);
-
     loadResources();
 
     // Set the background color (Green in this case)
-    //-----GRRLIB_SetBackgroundColour(0x80, 0x80, 0x80, 0xFF);
     Renderer::SetBackgroundColour(0x80, 0x80, 0x80, 0xFF);
-    //-----GRRLIB_SetLightAmbient(0x000000FF); //0x333333FF
+    Renderer::SetLightAmbient(0, 0, 0, 255);
 
     Renderer::Initialize();
     
     TextRenderer text;
     float CameraSpeed = 15.0f;
     Camera currentCam(FVec3{0.0f, 30.0f, 50.0f}, -20, -90, CameraSpeed);
-    
-    size_t used2 = Memory::getTotalMemoryUsed();
+
+
+    auto MemoryUsedByVoxel = Memory::getTotalMemoryUsed();
     
     World currentWorld;
-
-    // Definir el número de chunks a generar en ambas direcciones
-    //S16 numChunksX = 2; // Número de chunks a generar en la dirección X
-    //S16 numChunksZ = 2; // Número de chunks a generar en la dirección Z
     
-    //currentWorld.generateChunks(0, 0, numChunksX, numChunksZ);
     SYS_Report("N Blocks: %llu\n", 0);
     currentWorld.generateLand(CHUNK_RADIUS);
     SYS_Report("N Blocks: %llu\n", currentWorld.validBlocks_);
     //SYS_Report("Start X Z: %zd %zd\n", startX, startZ);
     
-    size_t used3 = Memory::getTotalMemoryUsed();
+    MemoryUsedByVoxel = Memory::getTotalMemoryUsed() - MemoryUsedByVoxel;
 
     Tick currentTick;
+    FVec3 lightPos{0, 25, 0};
     
     //Start from the first GX command after VSync, and end after GX_DrawDone().
     // GX_SetDrawDone();
@@ -120,9 +116,7 @@ int main(int argc, char **argv) {
             angle+=deltaTime;
             updatePosition(lightPos, 20, angle);
         }
-
         
-        //-----GRRLIB_2dMode();
         Renderer::Set2DMode();
         PAD_ScanPads(); // Scan the GameCube controllers
 
@@ -138,27 +132,14 @@ int main(int argc, char **argv) {
         
         currentCam.updateCamera(deltaTime); //deltaTime
         //-----
-        // GRRLIB_3dMode(0.1f, 1000.0f, 45.0f, false, true); // Configura el modo 3D //Projection
         Renderer::Set3DMode(currentCam); // Configura el modo 3D //Projection
-        // GRRLIB_SetLightOff();
-        // GRRLIB_ObjectView(lightPos.x, lightPos.y, lightPos.z, 0,0,0,1,1,1);
-        // GRRLIB_DrawSphere(1, 20, 20, true, 0xFFFF00FF);
-        
         Renderer::PrepareToRenderInVX0(true, true, true, false);
         Renderer::ObjectView(lightPos.x, lightPos.y, lightPos.z);
         Renderer::RenderSphere(1, 20, 20, true, 0xFFFF00FF);
-        
-        // if(options.lightning) {
-        //     GRRLIB_SetLightDiff(1, lightPos,20.0f,1.0f,0xFFFFFFFF);
-        // }
-        //
-        // GRRLIB_ObjectView(1.0f,20,0, 0,0,0,1,1,1);
-        // GRRLIB_DrawCube(1, true, 0xFFFFFFFF);
-        // GRRLIB_ObjectView(0.0f,20,0, 0,0,0,1,1,1);
-        // GRRLIB_DrawCube(1, true, 0xFFFFFFFF);
 
-        // Limpiar pantalla y preparar para dibujo en 3D
-        //GRRLIB_3dMode(0.1f, 1000.0f, 45.0f, 1, 1); // Configura el modo 3D //Projection
+        if(options.lightning) {
+            Renderer::SetLightDiffuse(0, lightPos, 20, 1);
+        }
         
         Renderer::BindTexture(blocksTexture, 0);
         Renderer::SetTextureCoordScaling(0, TILE_SIZE, TILE_SIZE);
@@ -174,6 +155,8 @@ int main(int argc, char **argv) {
         }
         
         //currentWorld.renderChunksAround(currentCam.getPosition().x, currentCam.getPosition().z);
+
+        if(options.lightning) Renderer::SetLightOff();
         
         if(options.boundingBox) {
             //-----GRRLIB_SetLightOff();
@@ -190,44 +173,51 @@ int main(int argc, char **argv) {
         
         auto& camPos = currentCam.getPosition();
         // Switch to 2D Mode to display text
-        //-----GRRLIB_2dMode();
         if(options.debugUI) {
             Renderer::Set2DMode();
             text.beginRender();
+            //Timings
             text.render(USVec2{5,   5}, fmt::format("Ticks (CPU) : {}", gettick()).c_str());
             text.render(USVec2{5,  20}, fmt::format("Time        : {}", gettime()).c_str());
             text.render(USVec2{5,  35}, fmt::format("Current Time: {}", Engine::getCurrentTime()).c_str());
             text.render(USVec2{5,  50}, fmt::format("Last Time   : {}", Engine::getLastTime()).c_str());
             text.render(USVec2{5,  65}, fmt::format("Delta Time  : {:.3f} s", deltaTime).c_str());
-            text.render(USVec2{5,  80}, fmt::format("Mem1  : {}", used1).c_str());
-            text.render(USVec2{5,  95}, fmt::format("Mem2  : {}", used2).c_str());
-            text.render(USVec2{5,  110}, fmt::format("Mem3  : {}", used3).c_str());
-            text.render(USVec2{5,  125}, fmt::format("Mem  : {:.2f} KB", convertBytesToKilobytes(used3 - used2)).c_str());
-            text.render(USVec2{5,  140}, fmt::format("Free Memory  : {:.2f} KB", convertBytesToKilobytes(SYS_GetArena1Size())).c_str());
+            
+            //Memory Things
+            text.render(USVec2{5,  110}, fmt::format("Memory (System)   : {:.2f} KB", convertBytesToKilobytes(MemoryUsedBySystem)).c_str());
+            text.render(USVec2{5,  125}, fmt::format("Memory (Voxel)    : {:.2f} KB", convertBytesToKilobytes(MemoryUsedByVoxel)).c_str());
+            text.render(USVec2{5,  140}, fmt::format("Total Used Memory : {:.2f} KB", convertBytesToKilobytes(Memory::getTotalMemoryUsed())).c_str());
+            text.render(USVec2{5,  155}, fmt::format("Total Free Memory : {:.2f} KB", convertBytesToKilobytes(Memory::getTotalMemoryFree())).c_str());
+
+            //Camera Things
             text.render(USVec2{275,  5}, fmt::format("Camera X [{:.4f}] Y [{:.4f}] Z [{:.4f}]", camPos.x, camPos.y, camPos.z).c_str());
             text.render(USVec2{275, 20}, fmt::format("Camera Pitch [{:.4f}] Yaw [{:.4f}]", currentCam.getPitch(), currentCam.getYaw()).c_str());
-            //Render Things
 
-            text.render(USVec2{400,  35}, fmt::format("Valid Blocks : {}", currentWorld.validBlocks_).c_str());
-            text.render(USVec2{400,  50}, fmt::format("NDraw Calls : {}", Renderer::DrawCalls()).c_str());
-            text.render(USVec2{400,  65}, fmt::format("NFaces Drawn : {}", Renderer::FacesDrawn()).c_str());
+            //Render Things
+            text.render(USVec2{275,  50}, fmt::format("Valid Blocks : {}", currentWorld.validBlocks_).c_str());
+            text.render(USVec2{275,  65}, fmt::format("NDraw Calls  : {}", Renderer::DrawCalls()).c_str());
+            text.render(USVec2{275,  80}, fmt::format("NFaces Drawn : {}", Renderer::FacesDrawn()).c_str());
+
+            text.render(USVec2{450, 50}, fmt::format("Video Mode : {}", std::array{"INTERLACE", "NON INTERLACE", "PROGRESSIVE"}[static_cast<int>(Renderer::VideoMode())]).c_str());
+            text.render(USVec2{450, 65}, fmt::format("VSYNC      : {}", options.VSYNC ? "YES" : "NOP").c_str());
+            text.render(USVec2{450, 80}, fmt::format("NTrees     : {}", currentWorld.nTrees_).c_str());
+            
+
             // text.render(USVec2{400,  65}, fmt::format("Draw Cycles : {} ts", formatThousands(drawTicks)).c_str());
             // text.render(USVec2{400,  80}, fmt::format("Draw Time   : {} ms", Tick::TickToMs(drawTicks)).c_str());
             //text.render(USVec2{400,  95}, fmt::format("Helper      : {}", currentWorld.helperCounter).c_str());
             //text.render(USVec2{400, 110}, fmt::format("N Blocks    : {}", currentChunk.validBlocks).c_str());
-            text.render(USVec2{400, 110}, fmt::format("Video Mode    : {}", VIDEO_GetVideoScanMode()).c_str());
-            text.render(USVec2{400, 125}, fmt::format("VSYNC    : {}", options.VSYNC ? "YES" : "NOP").c_str());
+
+
         }
-
-
+        
         //GRRLIB_PrintfTTF(50, 50, myFont, "MINECRAFT", 16, 0x000000FF);
 
         // Renderizar todo a la pantalla
-        //-----GRRLIB_Render(); // Render the frame buffer to the TV
-        Renderer::RenderGX(options.VSYNC);
+        Renderer::RenderGX(options.VSYNC); // Render the frame buffer to the TV
     }
 
-    //-----GRRLIB_Exit(); // Be a good boy, clear the memory allocated by GRRLIB
+    Renderer::Exit();
 
     exit(0); // Use exit() to exit a program, do not use 'return' from main()
 }

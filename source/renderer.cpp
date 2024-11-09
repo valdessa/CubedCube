@@ -31,9 +31,12 @@ static Mtx                 GXmodelView2D;
 static guVector AxisX = {1.0f, 0.0f, 0.0f}; 
 static guVector AxisY = {0.0f, 1.0f, 0.0f}; 
 static guVector AxisZ = {0.0f, 0.0f, 1.0f}; 
-static Mtx      ViewMatrix;
+static Mtx      viewMatrix;
 
 static  guVector camPos, camUp, camLook;
+
+//Light Things:
+static int lights = 0;
 
 int Renderer::InitializeGX() {
     Mtx44 perspective;
@@ -153,10 +156,29 @@ void Renderer::Initialize() {
     GX_SetDrawDoneCallback(drawDoneCallback);
 }
 
+void Renderer::Exit() {
+    GX_DrawDone();
+    GX_AbortFrame();
+
+    // Free up memory allocated for frame buffers & FIFOs
+    if (frameBuffers[0] != nullptr) {
+        free(MEM_K1_TO_K0(frameBuffers[0]));
+        frameBuffers[0] = nullptr;
+    }
+    if (frameBuffers[1] != nullptr) {
+        free(MEM_K1_TO_K0(frameBuffers[1]));
+        frameBuffers[1] = nullptr;
+    }
+    if (gpFifo != nullptr) {
+        free(gpFifo);
+        gpFifo = nullptr;
+    }
+}
+
 void Renderer::Set3DMode(Camera& cam) {
     Mtx44 projectionMtx;
     //
-    guLookAt(ViewMatrix, &camPos, &camUp, &camLook);
+    guLookAt(viewMatrix, &camPos, &camUp, &camLook);
     guPerspective(projectionMtx, 60, (float)gDisplayWidth / (float)gDisplayHeight, 0.1f, 300.0f);
     GX_LoadProjectionMtx(projectionMtx, GX_PERSPECTIVE);
 
@@ -235,6 +257,10 @@ VIDEO_MODE Renderer::VideoMode() {
     return VIDEO_MODE::VIDEO_ERROR;
 }
 
+const Mtx& Renderer::ViewMatrix() {
+    return viewMatrix;
+}
+
 void Renderer::ObjectView(f32 posx, f32 posy, f32 posz, f32 angx, f32 angy, f32 angz, f32 scalx, f32 scaly, f32 scalz) {
     Mtx ObjTransformationMtx;
     Mtx m;
@@ -268,7 +294,7 @@ void Renderer::ObjectView(f32 posx, f32 posy, f32 posz, f32 angx, f32 angy, f32 
         guMtxConcat(m, ObjTransformationMtx, ObjTransformationMtx);
     }
 
-    guMtxConcat(ViewMatrix, ObjTransformationMtx, mv);
+    guMtxConcat(viewMatrix, ObjTransformationMtx, mv);
     GX_LoadPosMtxImm(mv, GX_PNMTX0);
 
     guMtxInverse(mv, mvi);
@@ -321,6 +347,40 @@ void Renderer::DisableBlend() {
 
 void Renderer::BindTexture(GXTexObj& obj, U8 unit) {
     GX_LoadTexObj(&obj, unit); //GX_TEXMAP0
+}
+
+void Renderer::SetLightOff() {
+    GX_SetNumTevStages(1);
+
+    GX_SetTevOp  (GX_TEVSTAGE0, GX_PASSCLR);
+
+    GX_SetNumChans(1);
+    GX_SetChanCtrl(GX_COLOR0A0, GX_DISABLE, GX_SRC_VTX, GX_SRC_VTX, 0, GX_DF_NONE, GX_AF_NONE);
+    GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR0A0);
+
+    lights = 0;
+}
+
+void Renderer::SetLightAmbient(U8 r, U8 g, U8 b, U8 a) {
+    GX_SetChanAmbColor(GX_COLOR0A0, GXColor{r, g, b, a});
+}
+
+void Renderer::SetLightDiffuse(U8 ID, cFVec3& pos, float distattn, float brightness, cUCVec4& color) {
+    GXLightObj MyLight;
+    guVector lpos = {pos.x, pos.y, pos.z};
+
+    lights |= (1<<ID);
+
+    guVecMultiply(viewMatrix, &lpos, &lpos);
+    GX_InitLightPos(&MyLight, lpos.x, lpos.y, lpos.z);
+    GX_InitLightColor(&MyLight, (GXColor) { color.x, color.y, color.z, color.w});
+    GX_InitLightSpot(&MyLight, 0.0f, GX_SP_OFF);
+    GX_InitLightDistAttn(&MyLight, distattn, brightness, GX_DA_MEDIUM); // DistAttn = 20.0  &  Brightness=1.0f (full)
+    GX_LoadLightObj(&MyLight, (1<<ID));
+
+    // Turn light ON
+    GX_SetNumChans(1);
+    GX_SetChanCtrl(GX_COLOR0A0, GX_ENABLE, GX_SRC_REG, GX_SRC_VTX, lights, GX_DF_CLAMP, GX_AF_SPOT);
 }
 
 void Renderer::PrepareToRenderInVX0(bool pos, bool nrm, bool clr, bool tex) {
