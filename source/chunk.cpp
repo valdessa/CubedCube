@@ -73,8 +73,11 @@ void Chunk::createDisplayList() {
     //Because of the write gathering pipe, an extra 63 bytes are needed.
     size_t listSize = 3 + entitiesToRender * (3 * sizeof(s16) + 3 * sizeof(S8) + 4 * sizeof(u8) + 2 * sizeof(u16)) + 63;
     //The list size also must be a multiple of 32, so round up to the next multiple of 32.
-    listSize = round_up(listSize, 32);
 
+    //2 Options to Round Up:
+    //listSize = round_up(listSize, 32);
+    listSize = (listSize + 31) & ~31;
+    
     displayList = memalign(32, listSize);
     //Remove this block of memory from the CPU's cache because the write gather pipe is used to write the commands
     DCInvalidateRange(displayList, listSize);

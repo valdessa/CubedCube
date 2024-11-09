@@ -19,6 +19,7 @@ namespace poyo {
 		void updateCamera(float deltaTime);
 
 		void setPosition(cFVec3& pos);
+		void setSpeed(cfloat& speed);
 
 		cFVec3& getPosition() const;
 		cfloat& getPitch() const;

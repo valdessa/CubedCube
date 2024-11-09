@@ -112,6 +112,8 @@ void updatePosition(guVector& point, float radius, float angle) {
 //Lesson 9 una luz toh guapa
 //lesson 10 tiene movimiento bien
 //display list en CavEX
+//Compilar con O3
+
 int main(int argc, char **argv) {
     float angle = 0.0f;
     size_t used1 = Memory::getTotalMemoryUsed();
@@ -138,7 +140,8 @@ int main(int argc, char **argv) {
     generateTree(Tree1, 0, 1, 0);
     
     TextRenderer text;
-    Camera currentCam(FVec3{0.0f, 30.0f, 50.0f}, -20, -90, 15.0f);
+    float CameraSpeed = 15.0f;
+    Camera currentCam(FVec3{0.0f, 30.0f, 50.0f}, -20, -90, CameraSpeed);
     
     size_t used2 = Memory::getTotalMemoryUsed();
     
@@ -161,7 +164,7 @@ int main(int argc, char **argv) {
     Cubito deleteMe;
     generateCube(deleteMe, 0,  10, 0, BLOCK_LEAF2);
     //Start from the first GX command after VSync, and end after GX_DrawDone().
-    
+    // GX_SetDrawDone();
     // Loop forever
     while(1) {
         Engine::UpdateEngine();
@@ -185,6 +188,8 @@ int main(int argc, char **argv) {
         if(PAD_ButtonsDown(0) & PAD_BUTTON_RIGHT) options.boundingBox = !options.boundingBox;;
         if(PAD_ButtonsDown(0) & PAD_BUTTON_LEFT) options.lightning = !options.lightning;
         if(PAD_ButtonsDown(0) & PAD_BUTTON_DOWN) options.VSYNC = !options.VSYNC;
+        if(PAD_ButtonsDown(0) & PAD_TRIGGER_R) currentCam.setSpeed(CameraSpeed * 5.0f);
+        if(PAD_ButtonsUp(0) & PAD_TRIGGER_R) currentCam.setSpeed(CameraSpeed);
         
         currentCam.updateCamera(deltaTime); //deltaTime
         //-----
@@ -236,8 +241,8 @@ int main(int argc, char **argv) {
         auto camPos = currentCam.getPosition();
         // Switch to 2D Mode to display text
         //-----GRRLIB_2dMode();
-        Renderer::Set2DMode();
         if(options.debugUI) {
+            Renderer::Set2DMode();
             text.beginRender();
             text.render(USVec2{5,   5}, fmt::format("Ticks (CPU) : {}", gettick()).c_str());
             text.render(USVec2{5,  20}, fmt::format("Time        : {}", gettime()).c_str());

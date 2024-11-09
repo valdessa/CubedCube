@@ -26,6 +26,7 @@ INCLUDES	:=  include deps/glm deps/ deps/fmt
 # options for code generation
 #---------------------------------------------------------------------------------
 
+#CFLAGS = -O3 -flto -DNDEBUG -s $(MACHDEP) $(INCLUDE)
 CFLAGS	= -g -O2 -Wall -Wno-unused-value $(MACHDEP) $(INCLUDE)
 CXXFLAGS	=	$(CFLAGS) #CXXFLAGS	= -std=c++20 $(CFLAGS)  # Agrega -std=c++20 para C++20
 

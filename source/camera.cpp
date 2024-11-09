@@ -93,6 +93,10 @@ void Camera::setPosition(cFVec3& pos) {
     position_ = pos;
 }
 
+void Camera::setSpeed(cfloat& speed) {
+    speed_ = speed;
+}
+
 cFVec3& Camera::getPosition() const {
     return position_;
 }

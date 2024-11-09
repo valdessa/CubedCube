@@ -14,6 +14,16 @@ namespace poyo {
         void generateLand(S16 Radius = 1);
         void generateLandChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) const;
         Chunk& getOrCreateChunkForLand(S16 chunkX, S16 chunkZ);
+
+        bool shouldPlaceTree(int localX, int localY, int localZ, Chunk& chunk) const;
+        void placeTree(Chunk& chunk, int x, int y, int z) const;
+
+        int getGroundHeight(int worldX, int worldZ, const Chunk& chunk) const;
+
+        bool isValidPosition(const CubePosition& pos) const {
+            return pos.x >= 0 && pos.x < CHUNK_SIZE && pos.y >= 0 && pos.y < CHUNK_HEIGHT && pos.z >= 0 && pos.z < CHUNK_SIZE;
+        }
+
         
         void generateChunks(S16 middleX, S16 middleZ, S16 numChunksX, S16 numChunksZ);
 

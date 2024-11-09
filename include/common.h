@@ -13,7 +13,9 @@
 #define STONE_LEVEL 4        // Capas de roca bajo la tierra
 #define GRASS_LEVEL (WATER_LEVEL + DIRT_LEVEL) // Capa de césped
 
-const int CHUNK_LOAD_RADIUS = 2; 
+#define MAX_TREES 2
+
+const int CHUNK_LOAD_RADIUS = 2;
 
 constexpr poyo::U8 CHUNK_RADIUS = 6;
 

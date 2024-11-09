@@ -85,6 +85,23 @@ void World::generateLandChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) const {
             }
         }
     }
+
+    for(int i = 0; i < MAX_TREES; i++) {
+        // Generamos una posición aleatoria dentro del chunk
+        int x = rand() % CHUNK_SIZE;
+        int z = rand() % CHUNK_SIZE;
+
+        // Calculamos la posición global en el mundo
+        int worldX = x + (chunkX * CHUNK_SIZE);
+        int worldZ = z + (chunkZ * CHUNK_SIZE);
+        int randY = getGroundHeight(worldX, worldZ, chunk); // Obtén la altura del terreno en (randX, randZ)
+
+        // Verificar si podemos colocar un árbol en esa posición
+        if (shouldPlaceTree(x, randY + 1, z, chunk)) {
+            // Colocar el árbol si es posible
+            placeTree(chunk, x, randY, z);
+        }
+    }
 }
 
 Chunk& World::getOrCreateChunkForLand(S16 chunkX, S16 chunkZ) {
@@ -97,6 +114,88 @@ Chunk& World::getOrCreateChunkForLand(S16 chunkX, S16 chunkZ) {
         return *currentChunk;
     }
     return *chunks_[it->second];
+}
+
+bool World::shouldPlaceTree(int localX, int localY, int localZ, Chunk& chunk) const {
+    // Verificar que el árbol no se salga de los límites del chunk en los ejes X y Z
+    // El árbol ocupa un área de 5x5 en su base (de -2 a 2 en ambos ejes X y Z)
+    int minX = localX - 2;
+    int maxX = localX + 2;
+    int minZ = localZ - 2;
+    int maxZ = localZ + 2;
+
+    // Asegurarse de que la base del árbol está completamente dentro del chunk
+    if (minX < 0 || maxX >= CHUNK_SIZE || minZ < 0 || maxZ >= CHUNK_SIZE) {
+        return false;  // El árbol se sale de los límites del chunk
+    }
+
+    // Verificar que hay suficiente espacio en el eje Y para el árbol completo (altura total de 7 bloques)
+    if (localY + 6 >= CHUNK_HEIGHT) {
+        return false;  // No hay suficiente altura en el chunk para colocar el árbol completo
+    }
+
+    // Verificar que las posiciones para las hojas están libres (debe estar en aire)
+    for (int dx = -2; dx <= 2; dx++) {
+        for (int dz = -2; dz <= 2; dz++) {
+            // Niveles de hojas
+            if (chunk.getCubito(CubePosition{localX + dx, localY + 3, localZ + dz}).type != BLOCK_AIR ||
+                chunk.getCubito(CubePosition{localX + dx, localY + 6, localZ + dz}).type != BLOCK_AIR) {
+                return false;  // Bloque ocupado, no se puede colocar el árbol
+            }
+        }
+    }
+
+    for (int dx = -1; dx <= 1; dx++) {
+        for (int dz = -1; dz <= 1; dz++) {
+            // Hojas más compactas en los niveles 4 y 5
+            if (chunk.getCubito(CubePosition{localX + dx, localY + 4, localZ + dz}).type != BLOCK_AIR ||
+                chunk.getCubito(CubePosition{localX + dx, localY + 5, localZ + dz}).type != BLOCK_AIR) {
+                return false;  // Bloque ocupado, no se puede colocar el árbol
+            }
+        }
+    }
+
+    // Verificar que los bloques del tronco estén libres (debe estar en aire)
+    for (int i = 0; i < 4; i++) {
+        if (chunk.getCubito(CubePosition{localX, localY + i, localZ}).type != BLOCK_AIR) {
+           return false;  // Bloque ocupado, no se puede colocar el tronco
+        }
+    }
+
+    // Todo está despejado, se puede colocar el árbol
+    return true;
+}
+
+
+void World::placeTree(Chunk& chunk, int x, int y, int z) const {
+    // Colocar tronco
+    for (int i = 1; i <= 4; ++i) {
+        CubePosition trunkPos(x, y + i, z);
+        //if (isValidPosition(trunkPos))
+            chunk.setCubito(trunkPos, BLOCK_TREE);
+    }
+
+    // Colocar hojas (capa superior del tronco)
+    for (int dx = -1; dx <= 1; ++dx) {
+        for (int dz = -1; dz <= 1; ++dz) {
+            for (int dy = 0; dy <= 1; ++dy) { // 2 capas de hojas
+                CubePosition leafPos(x + dx, y + 4 + dy, z + dz);
+                //if (isValidPosition(leafPos))
+                    chunk.setCubito(leafPos, BLOCK_LEAF);
+            }
+        }
+    }
+}
+
+int World::getGroundHeight(int worldX, int worldZ, const Chunk& chunk) const {
+    // Calcula la altura usando el ruido
+    float height = noiseLite_.GetNoise((float)worldX, (float)worldZ);
+    
+    // Mapear la altura al rango de bloques en el chunk
+    int blockHeight = (int)((height + 1) * (CHUNK_HEIGHT / 2));
+
+    // Asegurarse de que no se sale del rango del chunk
+    return blockHeight;
 }
 
 void World::generateChunks(S16 middleX, S16 middleZ, S16 numChunksX, S16 numChunksZ) {

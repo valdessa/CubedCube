@@ -9,9 +9,6 @@
 #include <malloc.h> 
 #include <string.h>
 
-//#include <grrlib.h>
-
-
 using namespace poyo;
 
 extern U16 vertices[8][3];
@@ -24,11 +21,19 @@ GXRModeObj* videoMode = nullptr;
 void* frameBuffers[2] = {nullptr, nullptr};
 u32 currentFrameBuffer = 0;
 void* gpFifo = nullptr;
-#define DEFAULT_FIFO_SIZE (256 * 1024) /**< GX fifo buffer size. */
+constexpr U32 DEFAULT_FIFO_SIZE (256 * 1024); /**< GX fifo buffer size. */
 
 static int gDisplayWidth = 0;
 static int gDisplayHeight = 0;
 static Mtx                 GXmodelView2D;
+
+//Transform things:
+static guVector AxisX = {1.0f, 0.0f, 0.0f}; 
+static guVector AxisY = {0.0f, 1.0f, 0.0f}; 
+static guVector AxisZ = {0.0f, 0.0f, 1.0f}; 
+static Mtx      ViewMatrix;
+
+static  guVector camPos, camUp, camLook;
 
 int Renderer::InitializeGX() {
     Mtx44 perspective;
@@ -125,6 +130,12 @@ int Renderer::InitializeGX() {
     return 0;
 }
 
+static void drawDoneCallback() {
+    VIDEO_SetNextFramebuffer(frameBuffers[currentFrameBuffer]);
+    VIDEO_Flush();
+    currentFrameBuffer ^= 1;
+}
+
 void Renderer::Initialize() {
     mapTileUVs(6);
     
@@ -135,22 +146,17 @@ void Renderer::Initialize() {
     GX_SetVtxDesc(GX_VA_TEX0, GX_DIRECT); 
     
     GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_POS, GX_POS_XYZ, GX_U16, 0);     //Positions -> U16
-    GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_NRM, GX_NRM_XYZ, GX_S8, 0);     //Normals   -> S8
+    GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_NRM, GX_NRM_XYZ, GX_S8, 0);      //Normals   -> S8
     GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0); //Color     -> UChar
     GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_TEX0, GX_TEX_ST, GX_U16, 0);     //Textures  -> U16
+
+    GX_SetDrawDoneCallback(drawDoneCallback);
 }
-
-static  guVector  _GRRaxisx = (guVector){1.0f, 0.0f, 0.0f}; // DO NOT MODIFY!!!
-static  guVector  _GRRaxisy = (guVector){0.0f, 1.0f, 0.0f}; // Even at runtime
-static  guVector  _GRRaxisz = (guVector){0.0f, 0.0f, 1.0f}; // NOT ever!
-static  Mtx       _GRR_view; 
-
-static  guVector camPos, camUp, camLook;
 
 void Renderer::Set3DMode(Camera& cam) {
     Mtx44 projectionMtx;
     //
-    guLookAt(_GRR_view, &camPos, &camUp, &camLook);
+    guLookAt(ViewMatrix, &camPos, &camUp, &camLook);
     guPerspective(projectionMtx, 60, (float)gDisplayWidth / (float)gDisplayHeight, 0.1f, 300.0f);
     GX_LoadProjectionMtx(projectionMtx, GX_PERSPECTIVE);
 
@@ -183,13 +189,13 @@ void Renderer::Set2DMode() {
     guMtxTransApply(view, view, 0, 0, -100.0f);
     GX_LoadPosMtxImm(view, GX_PNMTX0);
 
-    GX_ClearVtxDesc();
-    GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
-    GX_SetVtxDesc(GX_VA_CLR0, GX_DIRECT);
-    GX_SetVtxDesc(GX_VA_TEX0, GX_NONE);
-    GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);
-    GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
-    GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
+    // GX_ClearVtxDesc();
+    // GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
+    // GX_SetVtxDesc(GX_VA_CLR0, GX_DIRECT);
+    // GX_SetVtxDesc(GX_VA_TEX0, GX_NONE);
+    // GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);
+    // GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
+    // GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
 
     GX_SetNumTexGens(1);  // One texture exists
     GX_SetTevOp(GX_TEVSTAGE0, GX_PASSCLR);
@@ -230,9 +236,6 @@ VIDEO_MODE Renderer::VideoMode() {
 }
 
 void Renderer::ObjectView(f32 posx, f32 posy, f32 posz, f32 angx, f32 angy, f32 angz, f32 scalx, f32 scaly, f32 scalz) {
-    // GRRLIB_ObjectView(posx, posy, posz,
-    //                   angx, angy, angz,
-    //                   scalx, scaly, scalz);
     Mtx ObjTransformationMtx;
     Mtx m;
     Mtx mv, mvi;
@@ -249,9 +252,9 @@ void Renderer::ObjectView(f32 posx, f32 posy, f32 posz, f32 angx, f32 angy, f32 
     if((angx != 0.0f) || (angy != 0.0f) || (angz != 0.0f)) {
         Mtx rx, ry, rz;
         guMtxIdentity(m);
-        guMtxRotAxisDeg(rx, &_GRRaxisx, angx);
-        guMtxRotAxisDeg(ry, &_GRRaxisy, angy);
-        guMtxRotAxisDeg(rz, &_GRRaxisz, angz);
+        guMtxRotAxisDeg(rx, &AxisX, angx);
+        guMtxRotAxisDeg(ry, &AxisY, angy);
+        guMtxRotAxisDeg(rz, &AxisZ, angz);
         guMtxConcat(ry, rx, m);
         guMtxConcat(m, rz, m);
 
@@ -265,7 +268,7 @@ void Renderer::ObjectView(f32 posx, f32 posy, f32 posz, f32 angx, f32 angy, f32 
         guMtxConcat(m, ObjTransformationMtx, ObjTransformationMtx);
     }
 
-    guMtxConcat(_GRR_view, ObjTransformationMtx, mv);
+    guMtxConcat(ViewMatrix, ObjTransformationMtx, mv);
     GX_LoadPosMtxImm(mv, GX_PNMTX0);
 
     guMtxInverse(mv, mvi);
@@ -469,14 +472,24 @@ void Renderer::CallDisplayList(void* list, U32 size) {
 }
 
 void Renderer::RenderGX(bool VSYNC) {
-    GX_DrawDone();         
+    //GX_DrawDone();         
     //GX_InvalidateTexAll();
 
-    currentFrameBuffer ^= 1;  // Toggle framebuffer index
+    //currentFrameBuffer ^= 1;  // Toggle framebuffer index
 
     GX_SetZMode      (GX_TRUE, GX_LEQUAL, GX_TRUE);
     GX_SetColorUpdate(GX_TRUE);
+
+
+    
     GX_CopyDisp      (frameBuffers[currentFrameBuffer], GX_TRUE);
+    
+    GX_SetDrawDone();
+
+    if(VSYNC) VIDEO_WaitVSync();
+    GX_WaitDrawDone();
+
+    
     
     // GX_SetDrawDone();
     //
@@ -486,14 +499,14 @@ void Renderer::RenderGX(bool VSYNC) {
     //     VIDEO_Flush();
     // }
     
-    VIDEO_SetNextFramebuffer(frameBuffers[currentFrameBuffer]);  
-    VIDEO_Flush();                      // Flush video buffer to screen
-    VIDEO_WaitVSync();                  // Wait for screen to update
-    
-    // Interlaced screens require two frames to update
-    if (videoMode->viTVMode &VI_NON_INTERLACE) {
-        VIDEO_WaitVSync();
-    }
+    // VIDEO_SetNextFramebuffer(frameBuffers[currentFrameBuffer]);  
+    // VIDEO_Flush();                      // Flush video buffer to screen
+    // VIDEO_WaitVSync();                  // Wait for screen to update
+    //
+    // // Interlaced screens require two frames to update
+    // if (videoMode->viTVMode &VI_NON_INTERLACE) {
+    //     VIDEO_WaitVSync();
+    // }
 }
 
 u16 tileTexCoords[4][2] = {
