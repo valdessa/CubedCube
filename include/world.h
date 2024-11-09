@@ -12,11 +12,11 @@ namespace poyo {
         ~World();
 
         void generateLand(S16 Radius = 1);
-        void generateLandChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) const;
+        void generateLandChunk(Chunk& chunk, S16 chunkX, S16 chunkZ);
         Chunk& getOrCreateChunkForLand(S16 chunkX, S16 chunkZ);
 
         bool shouldPlaceTree(int localX, int localY, int localZ, Chunk& chunk) const;
-        void placeTree(Chunk& chunk, int x, int y, int z) const;
+        void placeTree(Chunk& chunk, int x, int y, int z);
 
         int getGroundHeight(int worldX, int worldZ, const Chunk& chunk) const;
 
@@ -48,6 +48,7 @@ namespace poyo {
         
         U32 helperCounter = 0;
         U64 validBlocks_ = 0;
+        U16 nTrees_ = 0;
      private:
         Vector<UPtr<Chunk>> chunks_;
         HashMap<Pair<S16, S16>, U16> positionMap_;

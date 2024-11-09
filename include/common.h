@@ -14,6 +14,7 @@
 #define GRASS_LEVEL (WATER_LEVEL + DIRT_LEVEL) // Capa de césped
 
 #define MAX_TREES 2
+#define TRUNK_HEIGHT 4
 
 const int CHUNK_LOAD_RADIUS = 2;
 
