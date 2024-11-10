@@ -17,10 +17,12 @@ using namespace poyo;
 #ifdef OPTIMIZATION_VECTOR
 Chunk::Chunk(World* world) : cubitos_(CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE), world_(world) {
     worldPosition_= {0, 0};
+    offsetPosition_ = {0, 0};
 }
 #else
 Chunk::Chunk() : cubitos_(CHUNK_SIZE, Vector<Vector<Cubito>>(CHUNK_HEIGHT, Vector<Cubito>(CHUNK_SIZE))) {
     worldPosition_= {0, 0};
+    offsetPosition_ = {0, 0};
 }
 #endif
 

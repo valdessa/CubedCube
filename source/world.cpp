@@ -79,9 +79,12 @@ void World::generateLandChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
             for (int y = 0; y < CHUNK_HEIGHT; ++y) {
                 CubePosition pos(x, y, z);
                 if (y > blockHeight) {
-                    chunk.setCubito(pos, BLOCK_AIR);    // Air
-                } else if (y == blockHeight) {
-                    chunk.setCubito(pos, BLOCK_GRASS);  // Grass at the top
+                    if (y <= WATER_LEVEL) chunk.setCubito(pos, BLOCK_WATER);  // Fill any space below WATER_LEVEL with water
+                    else                  chunk.setCubito(pos, BLOCK_AIR);    // Air above water
+                } else if (y == blockHeight) { //The Top of the Height Map
+                    //if (y > WATER_LEVEL) chunk.setCubito(pos, BLOCK_GRASS);  
+                    if(y <= WATER_LEVEL) chunk.setCubito(CubePosition(x, y, z), BLOCK_WATER);
+                    else                 chunk.setCubito(pos, BLOCK_GRASS);  // Grass at the top
                 } else if (y > blockHeight - DIRT_LEVEL) {
                     chunk.setCubito(pos, BLOCK_DIRT);   // Dirt below the grass
                 } else if (y > blockHeight - STONE_LEVEL) {
@@ -92,6 +95,27 @@ void World::generateLandChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
             }
         }
     }
+
+    // // Second pass: Place water in dips, one block below grass level to create a pool effect
+    // for (int x = 0; x < CHUNK_SIZE; ++x) {
+    //     for (int z = 0; z < CHUNK_SIZE; ++z) {
+    //         int worldX = x + (chunkX * CHUNK_SIZE);
+    //         int worldZ = z + (chunkZ * CHUNK_SIZE);
+    //         int groundHeight = getGroundHeight(worldX, worldZ);
+    //
+    //         // Only place water if there’s a dip just below the ground level
+    //         if (groundHeight - 1 > 0) {  // Ensure we're within bounds
+    //             CubePosition waterPos(x, groundHeight - 1, z);
+    //             CubePosition aboveWaterPos(x, groundHeight, z);
+    //
+    //             // Place water if the position directly below the ground is empty (a dip)
+    //             if (chunk.getCubito(aboveWaterPos).type == BLOCK_AIR) {
+    //                 chunk.setCubito(waterPos, BLOCK_WATER); // Water one block below grass, only in dips
+    //             }
+    //         }
+    //     }
+    // }
+
 
     for(int i = 0; i < MAX_TREES; i++) {
         // Generate a random position within the chunk
@@ -134,6 +158,10 @@ bool World::shouldPlaceTree(int localX, int baseY, int localZ, Chunk& chunk) con
     if (baseY + 7 >= CHUNK_HEIGHT) {
         return false;  // Not enough vertical space for the tree
     }
+
+    // Check No trees above other block that is not Dirt or Grass
+    auto currentCubitoType = chunk.getCubito(CubePosition(localX, baseY - 1, localZ)).type;
+    if (currentCubitoType != BLOCK_GRASS && currentCubitoType != BLOCK_DIRT) return false;
 
     // Verify there are no occupied blocks where the trunk will be placed
     for (int i = 0; i < TRUNK_HEIGHT; ++i) {

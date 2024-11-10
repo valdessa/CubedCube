@@ -8,10 +8,10 @@
 
 #define MIN_HEIGHT  2
 
-#define WATER_LEVEL 8        // Nivel del agua
+#define WATER_LEVEL 3       // Nivel del agua
 #define DIRT_LEVEL 2         // Capas de tierra bajo el césped
 #define STONE_LEVEL 4        // Capas de roca bajo la tierra
-#define GRASS_LEVEL (WATER_LEVEL + DIRT_LEVEL) // Capa de césped
+#define GRASS_LEVEL 5 // Capa de césped
 
 #define MAX_TREES 2
 #define TRUNK_HEIGHT 4
@@ -79,9 +79,9 @@ namespace poyo {
         BLOCK_WOOD,
         BLOCK_TREE,
         BLOCK_LEAF,
-        BLOCK_LEAF2,
+        BLOCK_LEAF_FLOWER,
+        BLOCK_WATER,
         BLOCK_CACTUS,
-        BLOCK_SAND_DIRT,
 
         //BLOCK_WATER, //TODO: FIX THIS
         
@@ -89,23 +89,32 @@ namespace poyo {
     };
 
     enum {
-        TILE_DIRT        = 0,
-        TILE_GRASS_SIDE  = 1,
-        TILE_GRASS       = 2,
+        TILE_DIRT        = 0,       //Fixed
+        TILE_GRASS_SIDE  = 1,       //Fixed
+        TILE_GRASS       = 2,       //Fixed
 
-        TILE_STONE       = 3,
+        TILE_STONE       = 7,       //Fixed
 
-        TILE_SAND        = 6,
-        TILE_SAND_DIRT   = 7,
+           
     
-        TILE_TREE_SIDE   = 9,
-        TILE_TREE_TOP    = 10,
-        TILE_WOOD        = 11,
-        TILE_LEAF        = 12,
-        TILE_LEAF_TRANS  = 13,
-        TILE_CACTUS_BOT  = 18,
-        TILE_CACTUS_SIDE = 19,
-        TILE_CACTUS_TOP  = 20,
+        TILE_TREE_SIDE   = 8,       //Fixed
+        TILE_TREE_TOP    = 9,       //Fixed
+        TILE_WOOD        = 10,      //Fixed
+        
+        TILE_LEAF        = 11,      //Fixed
+        TILE_LEAF_FLOWER = 15,      //Fixed
+        
+        TILE_GLASS       = 14,
+        
+        TILE_SAND        = 16,      //Fixed
+        TILE_CACTUS_BOT  = 17,      //Fixed
+        TILE_CACTUS_SIDE = 18,      //Fixed
+        TILE_CACTUS_TOP  = 19,      //Fixed
+
+        TILE_ICE         = 20,      //Fixed
+        TILE_WATER       = 21,      //Fixed
+
+        TILE_DANDELION   = 33,      //Fixed 
         NUM_TILES,
     };
 
@@ -149,10 +158,10 @@ namespace poyo {
         [BLOCK_WOOD] =     {TILE_WOOD,       TILE_WOOD,       TILE_WOOD,     TILE_WOOD,      TILE_WOOD,       TILE_WOOD},
         [BLOCK_TREE] =     {TILE_TREE_SIDE,  TILE_TREE_SIDE,  TILE_TREE_TOP,   TILE_TREE_TOP,   TILE_TREE_SIDE,   TILE_TREE_SIDE},
         [BLOCK_LEAF] =     {TILE_LEAF,       TILE_LEAF,       TILE_LEAF,       TILE_LEAF,       TILE_LEAF,        TILE_LEAF},
-        [BLOCK_LEAF2] =    {TILE_LEAF_TRANS, TILE_LEAF_TRANS, TILE_LEAF_TRANS, TILE_LEAF_TRANS, TILE_LEAF_TRANS,  TILE_LEAF_TRANS},
+        [BLOCK_LEAF_FLOWER] =    {TILE_LEAF_FLOWER, TILE_LEAF_FLOWER, TILE_LEAF_FLOWER, TILE_LEAF_FLOWER, TILE_LEAF_FLOWER,  TILE_LEAF_FLOWER},
+        [BLOCK_WATER] =    {TILE_WATER,      TILE_WATER,      TILE_WATER,      TILE_WATER,      TILE_WATER,       TILE_WATER},
         [BLOCK_CACTUS] =   {TILE_CACTUS_SIDE, TILE_CACTUS_SIDE, TILE_CACTUS_TOP, TILE_CACTUS_BOT, TILE_CACTUS_SIDE, TILE_CACTUS_SIDE},
-        [BLOCK_SAND_DIRT] ={TILE_SAND_DIRT, TILE_SAND_DIRT, TILE_SAND, TILE_DIRT, TILE_SAND_DIRT, TILE_SAND_DIRT},
-
+        
         [BLOCK_AIR] = {TILE_STONE,      TILE_STONE,      TILE_STONE,    TILE_STONE,     TILE_STONE,      TILE_STONE},
     };
 

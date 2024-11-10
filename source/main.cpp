@@ -38,7 +38,7 @@ GRRLIB (GX Version)
 
 using namespace poyo;
 
-#define TILE_SIZE 128
+#define TILE_SIZE 16
 
 static u16 nDrawCalls = 0;
 
@@ -60,6 +60,19 @@ void updatePosition(FVec3& point, float radius, float angle) {
 //lesson 10 tiene movimiento bien
 //display list en CavEX
 //Compilar con O3
+
+inline constexpr U8 grassQuadFaces[2][4][3] = {
+    // Primer quad (diagonal de esquina superior izquierda a inferior derecha)
+    {{0, 1, 1}, {1, 1, 0}, {1, 0, 0}, {0, 0, 1}},  // Quad 1
+
+    // Segundo quad (diagonal de esquina superior derecha a inferior izquierda)
+    {{0, 1, 0}, {1, 1, 1}, {1, 0, 1}, {0, 0, 0}},  // Quad 2
+};
+
+inline constexpr S8 grassNormals[2][3] = {
+    { 0,  1,  0},  // Normal para la cara superior (Y+)
+    { 0,  1,  0},  // Normal para la cara superior (Y+)
+};
 
 int main(int argc, char **argv) {
     // size_t MemoryUsedAtbeginning = (uintptr_t)SYS_GetArena1Lo() - (uintptr_t)SYS_GetArena1Hi;
@@ -133,9 +146,16 @@ int main(int argc, char **argv) {
         currentCam.updateCamera(deltaTime); //deltaTime
         //-----
         Renderer::Set3DMode(currentCam); // Configura el modo 3D //Projection
-        Renderer::PrepareToRenderInVX0(true, true, true, false);
+        Renderer::PrepareToRenderInVX0(true, true, true, true);
         Renderer::ObjectView(lightPos.x, lightPos.y, lightPos.z);
-        Renderer::RenderSphere(1, 20, 20, true, 0xFFFF00FF);
+        //Renderer::RenderSphere(1, 20, 20, true, 0xFFFF00FF);
+
+        u16 tileTexCoords[4][2] = {
+            {0, 0},
+            {1, 0},
+            {1, 1},
+            {0, 1}
+        };
 
         if(options.lightning) {
             Renderer::SetLightDiffuse(0, lightPos, 20, 1);
@@ -143,7 +163,7 @@ int main(int argc, char **argv) {
         
         Renderer::BindTexture(blocksTexture, 0);
         Renderer::SetTextureCoordScaling(0, TILE_SIZE, TILE_SIZE);
-        Renderer::DisableBlend();
+        //Renderer::DisableBlend();
         
 
         nDrawCalls = 0;
@@ -153,6 +173,25 @@ int main(int argc, char **argv) {
         for(auto& chunkito : chunkitos) {
             chunkito->render();
         }
+        GX_SetZCompLoc(GX_FALSE);
+        Renderer::ObjectView(lightPos.x, lightPos.y, lightPos.z);
+        GX_Begin(GX_QUADS, GX_VTXFMT2, 8);
+        for (int i = 0; i < 2; ++i) {
+            // Dibujar un quad (triángulo) en la cara superior
+            for (int j = 0; j < 4; j++) {
+                GX_Position3u16(grassQuadFaces[i][j][0],
+                                grassQuadFaces[i][j][1],
+                                grassQuadFaces[i][j][2]);
+                GX_Normal3s8(grassNormals[i][0],
+                             grassNormals[i][1],
+                             grassNormals[i][2]);
+                GX_Color4u8(255, 255, 255, 255);  // Color blanco
+
+
+                GX_TexCoord2u16(tileTexCoords[j][0] + 0, tileTexCoords[j][1] + 3);
+            }
+        }
+        GX_End();
         
         //currentWorld.renderChunksAround(currentCam.getPosition().x, currentCam.getPosition().z);
 

@@ -140,7 +140,7 @@ static void drawDoneCallback() {
 }
 
 void Renderer::Initialize() {
-    mapTileUVs(6);
+    mapTileUVs(8);
     
     GX_ClearVtxDesc();
     GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
@@ -444,7 +444,6 @@ void Renderer::RenderFace(const CubeFace& face) {
         GX_TexCoord2u16(UV.x + tileTexCoords[j][0], UV.y + tileTexCoords[j][1]);
 #endif
     }
-    GX_End();
 }
 
 void Renderer::RenderFace(const CubeFace& face, S8 x, S8 y, S8 z) {
@@ -466,7 +465,6 @@ void Renderer::RenderFace(const CubeFace& face, S8 x, S8 y, S8 z) {
         GX_TexCoord2u16(UV.x + tileTexCoords[j][0], UV.y + tileTexCoords[j][1]);
 #endif
     }
-    GX_End();
 }
 
 void Renderer::RenderCube(const Cubito& cube, cFVec3& worldPos, cFVec3& angle) {
