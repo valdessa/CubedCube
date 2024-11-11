@@ -193,6 +193,10 @@ int main(int argc, char **argv) {
             chunkito->render();
         }
 
+        for(auto& chunkito : chunkitos) {
+            chunkito->renderTranslucents();
+        }
+
         //currentWorld.renderChunksAround(currentCam.getPosition().x, currentCam.getPosition().z);
         //currentWorld.renderChunksAround(-18, -8);
         

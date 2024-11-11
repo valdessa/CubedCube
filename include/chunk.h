@@ -14,6 +14,7 @@ namespace poyo {
         U32 occludeBlocksFaces();
 
         void render() const;
+        void renderTranslucents() const;
 
         bool isVisible(const Cubito& cubito) const;
         bool isSolid(const Cubito& cubito) const;
@@ -30,18 +31,23 @@ namespace poyo {
         ChunkPosition worldPosition_;
         ChunkPosition offsetPosition_;
         void* displayList = nullptr;
+        void* displayListTransparent = nullptr;
         U32 displayListSize = 0;
+        U32 displayListSizeTransparent = 0;
 #ifdef OPTIMIZATION_VECTOR
         Vector<Cubito> cubitos_;
 #else
         Vector<Vector<Vector<Cubito>>> cubitos_; //To Optimize
 #endif
         
-    Vector<Pair<CubeFace, USVec3>> faces_;
+        Vector<Pair<CubeFace, USVec3>> faces_;
         
      private:
         World* world_ = nullptr; 
         void fillCubito(Cubito& cubito, U8 face, U8 x, U8 y, U8 z, U8 direction, S32 block);
+
+        void CreateListForSolids(Vector<Pair<CubeFace, USVec3>>& faces, int entitiesToRender);
+        void CreateListForTransparents(Vector<Pair<CubeFace, USVec3>>& faces, int entitiesToRender);
     };
 }
 

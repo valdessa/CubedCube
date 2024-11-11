@@ -76,12 +76,43 @@ static inline int round_up(int number, int multiple) {
 void Chunk::createDisplayList() {
 #ifdef OPTIMIZATION_OCCLUSION
     int entitiesToRender = 0;
-    #if OPTIMIZATION_OCCLUSION == 4
-        entitiesToRender = faces_.size() * 4;
-    #else
-        entitiesToRender = validBlocks * 4 * 6;
-    #endif
 
+    //***** OPAQUES *****//
+    Vector<Pair<CubeFace, USVec3>> facesOpaque;
+
+    for(auto& cface : faces_) {
+        if(cface.first.tile != TILE_WATER) facesOpaque.emplace_back(cface);
+    }
+    
+#if OPTIMIZATION_OCCLUSION == 4
+    entitiesToRender = facesOpaque.size() * 4;
+#else
+    entitiesToRender = validBlocks * 4 * 6; //todo: fix this!!
+#endif
+
+    if(!facesOpaque.empty()) CreateListForSolids(facesOpaque, entitiesToRender);
+    
+    //***** TRANSPARENTS *****//
+    Vector<Pair<CubeFace, USVec3>> facesTransparent;
+    for(auto& cface : faces_) {
+        if(cface.first.tile == TILE_WATER) facesTransparent.emplace_back(cface);
+    }
+
+#if OPTIMIZATION_OCCLUSION == 4
+    entitiesToRender = facesTransparent.size() * 4;
+#else
+    entitiesToRender = validBlocks * 4 * 6; //todo: fix this!!
+#endif
+
+    if(!facesTransparent.empty()) CreateListForTransparents(facesTransparent, entitiesToRender);
+    
+    //todo: Clear the Vector!!
+    faces_.clear(); // Elimina los elementos pero no libera la capacidad
+    Vector<Pair<CubeFace, USVec3>>().swap(faces_); // Libera toda la memoria consumida
+#endif
+}
+
+void Chunk::CreateListForSolids(Vector<Pair<CubeFace, USVec3>>& faces, int entitiesToRender) {
     //The GX_DRAW_QUADS command takes up 3 bytes.
     //Each face is a quad with 4 vertexes.
     //Each vertex takes up three u16 for the position coordinate, one u8 for the color index, and two u16 for the texture coordinate.
@@ -98,19 +129,33 @@ void Chunk::createDisplayList() {
     DCInvalidateRange(displayList, listSize);
     
     GX_BeginDispList(displayList, listSize);
-    #if OPTIMIZATION_OCCLUSION == 4
-        Renderer::RenderFaceVector(faces_, entitiesToRender);
-    #else
-        Renderer::RenderCubeVector(cubitos_, entitiesToRender);
-    #endif
+#if OPTIMIZATION_OCCLUSION == 4
+    Renderer::RenderFaceVector(faces, entitiesToRender);
+#else
+    Renderer::RenderCubeVector(cubitos_, entitiesToRender); //todo: fix this
+#endif
     displayListSize = GX_EndDispList();
     // realloc(displayList, displayListSize);
     // DCFlushRange(displayList, displayListSize);
     assert(displayListSize != 0);
-    //todo: Clear the Vector!!
-    faces_.clear(); // Elimina los elementos pero no libera la capacidad
-    Vector<Pair<CubeFace, USVec3>>().swap(faces_); // Libera toda la memoria consumida
+}
+
+void Chunk::CreateListForTransparents(Vector<Pair<CubeFace, USVec3>>& faces,  int entitiesToRender) {
+    size_t listSize = 3 + entitiesToRender * (3 * sizeof(s16) + 3 * sizeof(S8) + 4 * sizeof(u8) + 2 * sizeof(u16)) + 63;
+    listSize = (listSize + 31) & ~31;
+
+    displayListTransparent = memalign(32, listSize);
+    DCInvalidateRange(displayListTransparent, listSize);
+
+    GX_BeginDispList(displayListTransparent, listSize);
+#if OPTIMIZATION_OCCLUSION == 4
+    Renderer::RenderFaceVector(faces, entitiesToRender);
+#else
+    Renderer::RenderCubeVector(cubitos_, entitiesToRender);
 #endif
+    displayListSizeTransparent = GX_EndDispList();
+
+    assert(displayListSizeTransparent != 0);
 }
 
 U32 Chunk::occludeBlocks() {
@@ -244,6 +289,16 @@ void Chunk::render() const {
 #else
 
 #endif
+}
+
+void Chunk::renderTranslucents() const {
+    if(displayListTransparent == nullptr) return;
+    //OPTIMIZATION -> DISPLAY LIST + BATCHING
+#if defined(OPTIMIZATION_BATCHING) && defined(OPTIMIZATION_DISPLAY_LIST)
+    Renderer::ObjectView(worldPosition_.x, 0, worldPosition_.z);
+    Renderer::CallDisplayList(displayListTransparent, displayListSizeTransparent);
+#endif
+
 }
 
 bool Chunk::isVisible(const Cubito& cubito) const {
