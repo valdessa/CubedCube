@@ -64,7 +64,6 @@ int Renderer::InitializeGX() {
 #endif
         break;
     }
-    
     VIDEO_Configure(videoMode);
 
     // Get some memory to use for a "double buffered" frame buffer

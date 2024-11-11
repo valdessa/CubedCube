@@ -79,7 +79,7 @@ namespace poyo {
         INTERLACE     = 0,		/*!< Video mode INTERLACED. */
         NON_INTERLACE = 1,		/*!< Video mode NON INTERLACED */
         PROGRESSIVE   = 2,		/*!< Video mode PROGRESSIVE. Special mode for higher quality */
-        VIDEO_ERROR   = 3		/*!< Video mode PROGRESSIVE. Special mode for higher quality */
+        VIDEO_ERROR   = 3		
     };
 
     enum class CULL_MODE {

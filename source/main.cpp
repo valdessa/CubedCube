@@ -63,19 +63,26 @@ void updatePosition(FVec3& point, float radius, float angle) {
 //display list en CavEX
 //Compilar con O3
 
-inline constexpr U8 grassQuadFaces[2][4][3] = {
-    // Primer quad (diagonal de esquina superior izquierda a inferior derecha)
-    {{0, 1, 1}, {1, 1, 0}, {1, 0, 0}, {0, 0, 1}},  // Quad 1
 
-    // Segundo quad (diagonal de esquina superior derecha a inferior izquierda)
-    {{0, 1, 0}, {1, 1, 1}, {1, 0, 1}, {0, 0, 0}},  // Quad 2
+inline constexpr U8 CubeFaces[][4][3] = {
+    // DIR_X_FRONT: Cara del cubo en el plano X negativo
+    [DIR_X_FRONT] = {{0, 1, 1}, {0, 1, 0}, {0, 0, 0}, {0, 0, 1}},  // drawn clockwise looking x-
+    // DIR_X_BACK: Cara del cubo en el plano X positivo
+    [DIR_X_BACK] =  {{1, 1, 0}, {1, 1, 1}, {1, 0, 1}, {1, 0, 0}},  // drawn clockwise looking x+
+        
+    // DIR_Y_FRONT: Cara del cubo en el plano Y negativo
+    [DIR_Y_FRONT] = {{0, 0, 0}, {1, 0, 0}, {1, 0, 1}, {0, 0, 1}},  // drawn clockwise looking y-
+    // DIR_Y_BACK: Cara del cubo en el plano Y positivo
+    [DIR_Y_BACK] =  {{0, 1, 0}, {0, 1, 1}, {1, 1, 1}, {1, 1, 0}},  // drawn clockwise looking y+
+    
+    // DIR_Z_FRONT: Cara del cubo en el plano Z negativo
+    [DIR_Z_FRONT] = {{0, 1, 0}, {1, 1, 0}, {1, 0, 0}, {0, 0, 0}},  // drawn clockwise looking z-
+    // DIR_Z_BACK: Cara del cubo en el plano Z positivo
+    [DIR_Z_BACK] =  {{0, 1, 1}, {0, 0, 1}, {1, 0, 1}, {1, 1, 1}},  // drawn clockwise looking z+
 };
 
-inline constexpr S8 grassNormals[2][3] = {
-    { 0,  1,  0},  // Normal para la cara superior (Y+)
-    { 0,  1,  0},  // Normal para la cara superior (Y+)
-};
 
+//1 ms = 40,500 ticks
 int main(int argc, char **argv) {
     // size_t MemoryUsedAtbeginning = (uintptr_t)SYS_GetArena1Lo() - (uintptr_t)SYS_GetArena1Hi;
     // MemoryUsedAtbeginning += SYS_GetArena1Size();
@@ -153,9 +160,11 @@ int main(int argc, char **argv) {
         currentCam.updateCamera(deltaTime); //deltaTime
         //-----
         Renderer::Set3DMode(currentCam); // Configura el modo 3D //Projection
-        Renderer::PrepareToRenderInVX0(true, true, true, true);
+        Renderer::PrepareToRenderInVX0(true, true, true, false);
         Renderer::ObjectView(lightPos.x, lightPos.y, lightPos.z);
         //Renderer::RenderSphere(1, 20, 20, true, 0xFFFF00FF);
+
+        Renderer::PrepareToRenderInVX2(true, false, true, true);
 
         u16 tileTexCoords[4][2] = {
             {0, 0},
@@ -163,13 +172,26 @@ int main(int argc, char **argv) {
             {1, 1},
             {0, 1}
         };
+                
+        Renderer::BindTexture(blocksTexture, 0);
+        Renderer::SetTextureCoordScaling(0, TILE_SIZE, TILE_SIZE);
+        Renderer::RenderBegin(24);
+        for(int i = 0; i < 6; i++) {
+            for (int j = 0; j < 4; j++) {
+                GX_Position3u16(CubeFaces[i][j][0],
+                                CubeFaces[i][j][1],
+                                CubeFaces[i][j][2]);
+                GX_Color4u8(255, 255, 255, 255);
+                GX_TexCoord2u16(tileTexCoords[j][0], tileTexCoords[j][1]);
+            }
+        }
+        Renderer::RenderEnd();
+
 
         if(options.lightning) {
             Renderer::SetLightDiffuse(0, lightPos, 20, 1);
         }
-        
-        Renderer::BindTexture(blocksTexture, 0);
-        Renderer::SetTextureCoordScaling(0, TILE_SIZE, TILE_SIZE);
+
         
         
         // // Configuración del Z-Buffer para transparencias
@@ -200,31 +222,28 @@ int main(int argc, char **argv) {
         //currentWorld.renderChunksAround(currentCam.getPosition().x, currentCam.getPosition().z);
         //currentWorld.renderChunksAround(-18, -8);
         
-        Renderer::ObjectView(lightPos.x, lightPos.y, lightPos.z);
-        GX_Begin(GX_QUADS, GX_VTXFMT2, 8);
-        for (int i = 0; i < 2; ++i) {
-            // Dibujar un quad (triángulo) en la cara superior
-            for (int j = 0; j < 4; j++) {
-                GX_Position3u16(grassQuadFaces[i][j][0],
-                                grassQuadFaces[i][j][1],
-                                grassQuadFaces[i][j][2]);
-                GX_Normal3s8(grassNormals[i][0],
-                             grassNormals[i][1],
-                             grassNormals[i][2]);
-                GX_Color4u8(255, 255, 255, 255);  // Color blanco
-
-
-                GX_TexCoord2u16(tileTexCoords[j][0] + 1, tileTexCoords[j][1] + 4);
-            }
-        }
-        GX_End();
+        // Renderer::ObjectView(lightPos.x, lightPos.y, lightPos.z);
+        // GX_Begin(GX_QUADS, GX_VTXFMT2, 8);
+        // for (int i = 0; i < 2; ++i) {
+        //     // Dibujar un quad (triángulo) en la cara superior
+        //     for (int j = 0; j < 4; j++) {
+        //         GX_Position3u16(grassQuadFaces[i][j][0],
+        //                         grassQuadFaces[i][j][1],
+        //                         grassQuadFaces[i][j][2]);
+        //         GX_Normal3s8(grassNormals[i][0],
+        //                      grassNormals[i][1],
+        //                      grassNormals[i][2]);
+        //         GX_Color4u8(255, 255, 255, 255);  // Color blanco
+        //
+        //
+        //         GX_TexCoord2u16(tileTexCoords[j][0] + 1, tileTexCoords[j][1] + 4);
+        //     }
+        // }
+        // GX_End();
         
-        
-
         if(options.lightning) Renderer::SetLightOff();
         
         if(options.boundingBox) {
-            //-----GRRLIB_SetLightOff();
             Renderer::PrepareToRenderInVX2(true, false, true, false);
             for(const auto& chunkito : chunkitos) {
                 Renderer::RenderBoundingBox(chunkito->worldPosition_.x, 0, chunkito->worldPosition_.z, CHUNK_SIZE, UCVec3{0, 255, 255}, true);
@@ -267,9 +286,8 @@ int main(int argc, char **argv) {
             text.render(USVec2{450, 65}, fmt::format("VSYNC      : {}", options.VSYNC ? "YES" : "NOP").c_str());
             text.render(USVec2{450, 80}, fmt::format("NTrees     : {}", options.helper2).c_str()); //currentWorld.nTrees_
             
-
-            // text.render(USVec2{400,  65}, fmt::format("Draw Cycles : {} ts", formatThousands(drawTicks)).c_str());
-            // text.render(USVec2{400,  80}, fmt::format("Draw Time   : {} ms", Tick::TickToMs(drawTicks)).c_str());
+            text.render(USVec2{400,   95}, fmt::format("Draw Cycles : {} ts", drawTicks).c_str());
+            text.render(USVec2{400,  110}, fmt::format("Draw Time   : {} ms", Tick::TickToMs(drawTicks)).c_str());
             //text.render(USVec2{400,  95}, fmt::format("Helper      : {}", currentWorld.helperCounter).c_str());
             //text.render(USVec2{400, 110}, fmt::format("N Blocks    : {}", currentChunk.validBlocks).c_str());
 
@@ -277,7 +295,7 @@ int main(int argc, char **argv) {
         }
         
         //GRRLIB_PrintfTTF(50, 50, myFont, "MINECRAFT", 16, 0x000000FF);
-
+        
         // Renderizar todo a la pantalla
         Renderer::RenderGX(options.VSYNC); // Render the frame buffer to the TV
     }

@@ -1,5 +1,6 @@
 #include <common.h>
 #include <utilities.h>
+#include <algorithm>
 
 using namespace poyo;
 
@@ -20,15 +21,36 @@ double poyo::convertBytesToKilobytes(const size_t bytes) {
     return static_cast<double>(bytes) / 1024.0; // 1 KB = 1024 bytes
 }
 
-String poyo::formatThousands(size_t value) {
-    String num_str = std::to_string(value);  // Convert the number to a string
-    auto insert_position = num_str.length() - 3;   // Start 3 digits from the end
+String poyo::formatThousands(size_t numero) {
+    std::string resultado;
+    bool negativo = false;
 
-    // Insert commas every three digits
-    while (insert_position > 0) {
-        num_str.insert(insert_position, ".");
-        insert_position -= 3;
+    // Si el número es negativo, lo marcamos y lo convertimos en positivo
+    if (numero < 0) {
+        negativo = true;
+        numero = -numero;
     }
 
-    return num_str;
+    // Convertimos el número a una cadena
+    std::string numStr = std::to_string(numero);
+
+    // Añadimos los dígitos de derecha a izquierda, con los separadores de miles
+    int count = 0;
+    for (int i = numStr.size() - 1; i >= 0; --i) {
+        if (count > 0 && count % 3 == 0) {
+            resultado += ',';  // Añadimos el separador de miles
+        }
+        resultado += numStr[i];
+        count++;
+    }
+
+    // Si el número era negativo, lo añadimos al principio
+    if (negativo) {
+        resultado += '-';
+    }
+
+    // Invertimos la cadena para devolver el número en el orden correcto
+    std::reverse(resultado.begin(), resultado.end());
+    
+    return resultado;
 }
