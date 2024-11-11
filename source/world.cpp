@@ -151,7 +151,6 @@ void World::generateLandChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
                         case 2: chunk.setCubito(CubePosition(x, randY + 1, z), BLOCK_DANDELION);
                             break;
                     }
-                    
                 }
             }
         }

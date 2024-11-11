@@ -35,6 +35,8 @@ static Mtx      viewMatrix;
 
 static  guVector camPos, camUp, camLook;
 
+static U8 LastDepthMode = GX_LEQUAL;
+
 //Light Things:
 static int lights = 0;
 
@@ -181,11 +183,10 @@ void Renderer::Set3DMode(Camera& cam) {
     guLookAt(viewMatrix, &camPos, &camUp, &camLook);
     guPerspective(projectionMtx, 60, (float)gDisplayWidth / (float)gDisplayHeight, 0.1f, 300.0f);
     GX_LoadProjectionMtx(projectionMtx, GX_PERSPECTIVE);
-
-    GX_SetZMode (GX_TRUE, GX_LEQUAL, GX_TRUE);
+    
+    SetDepth(GX_TRUE, DEPTH_MODE::LEQUAL, GX_TRUE);
 
     GX_SetCullMode(GX_CULL_NONE);
-
 }
 
 void Renderer::Set2DMode() {
@@ -200,7 +201,7 @@ void Renderer::Set2DMode() {
     Mtx view;
     Mtx44 m;
 
-    GX_SetZMode(GX_FALSE, GX_LEQUAL, GX_TRUE);
+    SetDepth(GX_FALSE, DEPTH_MODE::LEQUAL, GX_TRUE);
 
     GX_SetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_CLEAR);
 
@@ -324,7 +325,21 @@ void Renderer::SetCameraSettings(cFVec3& position, cFVec3& up, cFVec3& look) {
     camLook.z = look.z;
 }
 
-void Renderer::EnableBlend(const BLEND_MODE mode) {
+void Renderer::SetCullFace(const CULL_MODE mode) {
+    switch (mode) {
+        case CULL_MODE::MODE_NONE:  GX_SetCullMode(GX_CULL_NONE);
+            break;
+        case CULL_MODE::MODE_BACK:  GX_SetCullMode(GX_CULL_BACK);
+            break;
+        case CULL_MODE::MODE_FRONT: GX_SetCullMode(GX_CULL_FRONT);
+            break;
+        case CULL_MODE::MODE_ALL:   GX_SetCullMode(GX_CULL_ALL);
+            break;
+        default: ;
+    }
+}
+
+void Renderer::SetBlend(const BLEND_MODE mode) {
     //GX_SetAlphaUpdate(GX_TRUE);
     //GX_SetAlphaCompare(GX_GREATER, 128, GX_AOP_AND, GX_ALWAYS, 200);
     switch (mode) {
@@ -338,11 +353,30 @@ void Renderer::EnableBlend(const BLEND_MODE mode) {
             break;
         case BLEND_MODE::INV:    GX_SetBlendMode(GX_BM_BLEND, GX_BL_INVSRCCLR, GX_BL_INVSRCCLR, GX_LO_CLEAR);
             break;
+        case BLEND_MODE::MODE_OFF: GX_SetBlendMode(GX_BM_NONE, GX_BL_ZERO, GX_BL_ONE, GX_LO_CLEAR);
+            break;
+        default: ;
     }
 }
 
-void Renderer::DisableBlend() {
-    GX_SetBlendMode(GX_BM_NONE, GX_BL_ZERO, GX_BL_ONE, GX_LO_CLEAR);
+void Renderer::SetDepth(bool enable, DEPTH_MODE mode, bool update) {
+    switch(mode) {
+        case DEPTH_MODE::LESS:      LastDepthMode = GX_LESS;    break;
+        case DEPTH_MODE::LEQUAL:    LastDepthMode = GX_LEQUAL;  break;
+        case DEPTH_MODE::EQUAL:     LastDepthMode = GX_EQUAL;   break;
+        default: ;
+    }
+    GX_SetZMode(enable, LastDepthMode, update);
+}
+
+void Renderer::SetAlphaTest(bool enable) {
+    if(enable) {
+        GX_SetAlphaCompare(GX_GEQUAL, 16, GX_AOP_AND, GX_ALWAYS, 0);
+        GX_SetZCompLoc(GX_FALSE);
+    } else {
+        GX_SetAlphaCompare(GX_ALWAYS, 0, GX_AOP_OR, GX_ALWAYS, 0);
+        GX_SetZCompLoc(GX_TRUE);
+    }
 }
 
 void Renderer::BindTexture(GXTexObj& obj, U8 unit) {
@@ -486,7 +520,6 @@ void Renderer::RenderCube(const Cubito& cube, cFVec3& worldPos, cFVec3& angle) {
 
 void Renderer::RenderCubeVector(const Vector<Cubito>& cubes, U16 validBlocks) {
     RenderBegin(validBlocks);
-
     for(auto& cubito: cubes) {
         if(!cubito.visible) continue;
         for (auto& currentFace : cubito.face) {
@@ -585,8 +618,8 @@ void Renderer::RenderGX(bool VSYNC) {
     //GX_InvalidateTexAll();
 
     //currentFrameBuffer ^= 1;  // Toggle framebuffer index
-
-    GX_SetZMode      (GX_TRUE, GX_LEQUAL, GX_TRUE);
+    
+    SetDepth(GX_TRUE, DEPTH_MODE::LEQUAL, GX_TRUE);
     GX_SetColorUpdate(GX_TRUE);
 
 

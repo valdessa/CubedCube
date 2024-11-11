@@ -19,6 +19,9 @@ namespace poyo {
         bool isSolid(const Cubito& cubito) const;
         bool isSolid(S16 x, S16 y, S16 z) const;
         bool isSolid(S16 x, S16 y, S16 z, const ChunkPosition& currentChunkPos) const;
+
+        bool isSameType(S16 x, S16 y, S16 z, U8 direction, BLOCK_TYPE type) const;
+        
         bool isCompletelyOccluded(S16 x, S16 y, S16 z, const ChunkPosition& currentChunkPos) const;
         
         Cubito& getCubito(const CubePosition& pos);

@@ -104,6 +104,8 @@ void Chunk::createDisplayList() {
         Renderer::RenderCubeVector(cubitos_, entitiesToRender);
     #endif
     displayListSize = GX_EndDispList();
+    // realloc(displayList, displayListSize);
+    // DCFlushRange(displayList, displayListSize);
     assert(displayListSize != 0);
     //todo: Clear the Vector!!
     faces_.clear(); // Elimina los elementos pero no libera la capacidad
@@ -134,21 +136,27 @@ U32 Chunk::occludeBlocksFaces() {
                 faces_.emplace_back(cubito.face[1], USVec3(cubito.x, cubito.y, cubito.z));   // Detrás
             }else {
                 if (!isSolid(cubito.x + 1, cubito.y, cubito.z, offsetPosition_)) {
+                    //if(!isSameType(cubito.x, cubito.y, cubito.z, DIR_X_FRONT,BLOCK_WATER))
+                    if(cubito.type != BLOCK_WATER)
                     faces_.emplace_back(cubito.face[DIR_X_FRONT], USVec3(cubito.x, cubito.y, cubito.z));  // Frente
                 }
                 if (!isSolid(cubito.x - 1, cubito.y, cubito.z, offsetPosition_)) {
+                    if(cubito.type != BLOCK_WATER)
                     faces_.emplace_back(cubito.face[DIR_X_BACK], USVec3(cubito.x, cubito.y, cubito.z));   // Detrás
                 }
                 if (!isSolid(cubito.x, cubito.y + 1, cubito.z, offsetPosition_)) {
                     faces_.emplace_back(cubito.face[DIR_Y_FRONT], USVec3(cubito.x, cubito.y, cubito.z)); // Arriba
                 }
                 if (!isSolid(cubito.x, cubito.y - 1, cubito.z, offsetPosition_)) {
+                    if(cubito.type != BLOCK_WATER)
                     faces_.emplace_back(cubito.face[DIR_Y_BACK], USVec3(cubito.x, cubito.y, cubito.z));  // Abajo
                 }
                 if (!isSolid(cubito.x, cubito.y, cubito.z + 1, offsetPosition_)) {
+                    if(cubito.type != BLOCK_WATER)
                     faces_.emplace_back(cubito.face[DIR_Z_FRONT], USVec3(cubito.x, cubito.y, cubito.z)); // Izquierda
                 }
                 if (!isSolid(cubito.x, cubito.y, cubito.z - 1, offsetPosition_)) {
+                    if(cubito.type != BLOCK_WATER)
                     faces_.emplace_back(cubito.face[DIR_Z_BACK], USVec3(cubito.x, cubito.y, cubito.z)); // Derecha
                 }
             }
@@ -290,6 +298,25 @@ bool Chunk::isSolid(S16 x, S16 y, S16 z, const ChunkPosition& currentChunkPos) c
 
     // If the position is within the current chunk's bounds, just check this chunk
     return isSolid(x, y, z);
+}
+
+bool Chunk::isSameType(S16 x, S16 y, S16 z, U8 direction, BLOCK_TYPE type) const {
+    switch (direction) {
+    case DIR_X_FRONT:  // Frente en el eje X
+        return World::isValidPosition(x + 1, y, z) && cubitos_[(x + 1) + CHUNK_SIZE * (y + CHUNK_SIZE * z)].type == type;
+    case DIR_X_BACK:   // Detrás en el eje X
+        return World::isValidPosition(x - 1, y, z) && cubitos_[(x - 1) + CHUNK_SIZE * (y + CHUNK_SIZE * z)].type == type;
+    case DIR_Y_FRONT:  // Arriba en el eje Y
+        return World::isValidPosition(x, y + 1, z) && cubitos_[x + CHUNK_SIZE * ((y + 1) + CHUNK_SIZE * z)].type == type;
+    case DIR_Y_BACK:   // Abajo en el eje Y
+        return World::isValidPosition(x, y - 1, z) && cubitos_[x + CHUNK_SIZE * ((y - 1) + CHUNK_SIZE * z)].type == type;
+    case DIR_Z_FRONT:  // Izquierda en el eje Z
+        return World::isValidPosition(x, y, z + 1) && cubitos_[x + CHUNK_SIZE * (y + CHUNK_SIZE * (z + 1))].type == type;
+    case DIR_Z_BACK:   // Derecha en el eje Z
+        return World::isValidPosition(x, y, z - 1) && cubitos_[x + CHUNK_SIZE * (y + CHUNK_SIZE * (z - 1))].type == type;
+    default:
+        return false;
+    }
 }
 
 bool Chunk::isCompletelyOccluded(S16 x, S16 y, S16 z, const ChunkPosition& currentChunkPos) const {

@@ -47,6 +47,8 @@ struct Options {
     bool lightning = false;
     bool debugUI = false;
     bool VSYNC = true;
+    bool helper = false;
+    int helper2 = 0;
 };
 
 void updatePosition(FVec3& point, float radius, float angle) {
@@ -104,7 +106,10 @@ int main(int argc, char **argv) {
 
 
     auto MemoryUsedByVoxel = Memory::getTotalMemoryUsed();
-    GX_SetZCompLoc(GX_FALSE);
+    //GX_SetZCompLoc(GX_FALSE);
+    
+    Renderer::SetAlphaTest(true);
+    
     World currentWorld;
     
     SYS_Report("N Blocks: %llu\n", 0);
@@ -140,6 +145,8 @@ int main(int argc, char **argv) {
         if(PAD_ButtonsDown(0) & PAD_BUTTON_RIGHT) options.boundingBox = !options.boundingBox;;
         if(PAD_ButtonsDown(0) & PAD_BUTTON_LEFT) options.lightning = !options.lightning;
         if(PAD_ButtonsDown(0) & PAD_BUTTON_DOWN) options.VSYNC = !options.VSYNC;
+        if(PAD_ButtonsDown(0) & PAD_BUTTON_B) options.helper = !options.helper;
+        if(PAD_ButtonsDown(0) & PAD_BUTTON_A) options.helper2++;
         if(PAD_ButtonsDown(0) & PAD_TRIGGER_R) currentCam.setSpeed(CameraSpeed * 5.0f);
         if(PAD_ButtonsUp(0) & PAD_TRIGGER_R) currentCam.setSpeed(CameraSpeed);
         
@@ -163,15 +170,31 @@ int main(int argc, char **argv) {
         
         Renderer::BindTexture(blocksTexture, 0);
         Renderer::SetTextureCoordScaling(0, TILE_SIZE, TILE_SIZE);
-        //Renderer::DisableBlend();
         
+        
+        // // Configuración del Z-Buffer para transparencias
+        // GX_SetZMode(GX_TRUE, GX_ALWAYS, GX_FALSE);
+        //
+        // // Configuración del Alpha Compare para manejar transparencia
+        // GX_SetAlphaCompare(GX_GREATER, 128, GX_AOP_OR, GX_ALWAYS, 0);
+        //
+        // // Configuración del ZCompLoc para que la comparación ocurra después del texturizado
+        // GX_SetZCompLoc(GX_FALSE);
+        //
+        // // Configuración del Blending para transparencias
+        // GX_SetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_CLEAR);
+//Renderer::SetBlend(BLEND_MODE::MODE_OFF);
         nDrawCalls = 0;
         currentTick.start();
         Renderer::PrepareToRenderInVX2(true, true, true, true);
+        
         auto& chunkitos = currentWorld.getChunks();
         for(auto& chunkito : chunkitos) {
             chunkito->render();
         }
+
+        //currentWorld.renderChunksAround(currentCam.getPosition().x, currentCam.getPosition().z);
+        //currentWorld.renderChunksAround(-18, -8);
         
         Renderer::ObjectView(lightPos.x, lightPos.y, lightPos.z);
         GX_Begin(GX_QUADS, GX_VTXFMT2, 8);
@@ -192,7 +215,7 @@ int main(int argc, char **argv) {
         }
         GX_End();
         
-        //currentWorld.renderChunksAround(currentCam.getPosition().x, currentCam.getPosition().z);
+        
 
         if(options.lightning) Renderer::SetLightOff();
         
@@ -238,7 +261,7 @@ int main(int argc, char **argv) {
 
             text.render(USVec2{450, 50}, fmt::format("Video Mode : {}", std::array{"INTERLACE", "NON INTERLACE", "PROGRESSIVE"}[static_cast<int>(Renderer::VideoMode())]).c_str());
             text.render(USVec2{450, 65}, fmt::format("VSYNC      : {}", options.VSYNC ? "YES" : "NOP").c_str());
-            text.render(USVec2{450, 80}, fmt::format("NTrees     : {}", currentWorld.nTrees_).c_str());
+            text.render(USVec2{450, 80}, fmt::format("NTrees     : {}", options.helper2).c_str()); //currentWorld.nTrees_
             
 
             // text.render(USVec2{400,  65}, fmt::format("Draw Cycles : {} ts", formatThousands(drawTicks)).c_str());

@@ -4,6 +4,8 @@
 namespace poyo {
     enum class BLEND_MODE;
     enum class VIDEO_MODE;
+    enum class CULL_MODE;
+    enum class DEPTH_MODE;
     class Renderer {
      public:
         Renderer() = delete;
@@ -22,8 +24,11 @@ namespace poyo {
 
         static void SetCameraSettings(cFVec3& position, cFVec3& up, cFVec3& look);
 
-        static void EnableBlend(BLEND_MODE mode);
-        static void DisableBlend();
+        static void SetCullFace(CULL_MODE mode);
+        static void SetBlend(BLEND_MODE mode);
+        static void SetDepth(bool enable, DEPTH_MODE mode, bool update);
+        
+        static void SetAlphaTest(bool enable);
 
         static void BindTexture(GXTexObj& obj, U8 unit);
 
@@ -66,7 +71,8 @@ namespace poyo {
         ADD    = 1,    /**< Additive Blending. */
         SCREEN = 2,    /**< Alpha Light Blending. */
         MULTI  = 3,    /**< Multiply Blending. */
-        INV    = 4,    /**< Invert Color Blending. */ 
+        INV    = 4,    /**< Invert Color Blending. */
+        MODE_OFF
     };
 
     enum class VIDEO_MODE {
@@ -74,6 +80,19 @@ namespace poyo {
         NON_INTERLACE = 1,		/*!< Video mode NON INTERLACED */
         PROGRESSIVE   = 2,		/*!< Video mode PROGRESSIVE. Special mode for higher quality */
         VIDEO_ERROR   = 3		/*!< Video mode PROGRESSIVE. Special mode for higher quality */
+    };
+
+    enum class CULL_MODE {
+        MODE_NONE,
+        MODE_BACK,
+        MODE_FRONT,
+        MODE_ALL,
+    };
+
+    enum class DEPTH_MODE {
+        LEQUAL,
+        LESS,
+        EQUAL,
     };
     
 }

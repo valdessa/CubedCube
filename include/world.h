@@ -17,6 +17,10 @@ namespace poyo {
 
         int getGroundHeight(int worldX, int worldZ) const;
 
+        static bool isValidPosition(S16 x, S16 y, S16 z) {
+            return x >= 0 && x < CHUNK_SIZE && y >= 0 && y < CHUNK_HEIGHT && z >= 0 && z < CHUNK_SIZE;
+        }
+
         static bool isValidPosition(const CubePosition& pos) {
             return pos.x >= 0 && pos.x < CHUNK_SIZE && pos.y >= 0 && pos.y < CHUNK_HEIGHT && pos.z >= 0 && pos.z < CHUNK_SIZE;
         }
