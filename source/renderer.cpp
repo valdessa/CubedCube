@@ -427,6 +427,9 @@ void Renderer::RenderEnd() {
 
 void Renderer::RenderFace(const CubeFace& face) {
     nFacesRendered++;
+
+    auto& UV = tileUVMap[face.tile];
+    
     for (int j = 0; j < 4; j++) {
         GX_Position3u16(face.x + cubeFaces[face.direction][j][0],
                         face.y + cubeFaces[face.direction][j][1],
@@ -435,8 +438,6 @@ void Renderer::RenderFace(const CubeFace& face) {
                      cubeNormals[face.direction][1],
                      cubeNormals[face.direction][2]);
         GX_Color4u8(255, 255, 255, 255);
-
-        auto& UV = tileUVMap[face.tile];
 
 #ifdef OPTIMIZATION_MAPS
         GX_TexCoord2u16(UV[0] + tileTexCoords[j][0], UV[1] + tileTexCoords[j][1]);
@@ -448,6 +449,9 @@ void Renderer::RenderFace(const CubeFace& face) {
 
 void Renderer::RenderFace(const CubeFace& face, S8 x, S8 y, S8 z) {
     nFacesRendered++;
+
+    auto& UV = tileUVMap[face.tile];
+    
     for (int j = 0; j < 4; j++) {
         GX_Position3u16(face.x + cubeFaces[face.direction][j][0] + x,
                         face.y + cubeFaces[face.direction][j][1] + y,
@@ -456,8 +460,6 @@ void Renderer::RenderFace(const CubeFace& face, S8 x, S8 y, S8 z) {
                      cubeNormals[face.direction][1],
                      cubeNormals[face.direction][2]);
         GX_Color4u8(255, 255, 255, 255);
-
-        auto& UV = tileUVMap[face.tile];
 
 #ifdef OPTIMIZATION_MAPS
         GX_TexCoord2u16(UV[0] + tileTexCoords[j][0], UV[1] + tileTexCoords[j][1]);

@@ -15,6 +15,7 @@ namespace poyo {
 
         void render() const;
 
+        bool isVisible(const Cubito& cubito) const;
         bool isSolid(const Cubito& cubito) const;
         bool isSolid(S16 x, S16 y, S16 z) const;
         bool isSolid(S16 x, S16 y, S16 z, const ChunkPosition& currentChunkPos) const;

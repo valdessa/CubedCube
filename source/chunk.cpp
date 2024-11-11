@@ -34,8 +34,7 @@ Chunk::~Chunk() {
 }
 
 
-void Chunk::
-setCubito(const CubePosition& pos, BLOCK_TYPE block) {
+void Chunk::setCubito(const CubePosition& pos, BLOCK_TYPE block) {
 #ifdef OPTIMIZATION_VECTOR
     auto index = pos.x + CHUNK_SIZE * (pos.y + CHUNK_SIZE * pos.z); //better
     //auto index = (pos.y * CHUNK_SIZE * CHUNK_SIZE) + (pos.z * CHUNK_SIZE) + pos.x;
@@ -47,12 +46,22 @@ setCubito(const CubePosition& pos, BLOCK_TYPE block) {
     currentCubito.y = pos.y;
     currentCubito.z = pos.z;
     currentCubito.type = block;
-    fillCubito(currentCubito, 0, 1, 0, 0, DIR_X_FRONT, block);  // Front
-    fillCubito(currentCubito, 1, 0, 0, 0, DIR_X_BACK,  block);  // Back
-    fillCubito(currentCubito, 2, 0, 1, 0, DIR_Y_FRONT, block);  // Top
-    fillCubito(currentCubito, 3, 0, 0, 0, DIR_Y_BACK,  block);  // Bottom
-    fillCubito(currentCubito, 4, 0, 0, 1, DIR_Z_FRONT, block);  // Left
-    fillCubito(currentCubito, 5, 0, 0, 0, DIR_Z_BACK,  block);  // Right
+
+    if(hasProperty(block, FOLIAGE)) {
+        fillCubito(currentCubito, 0, 0, 0, 0, DIR_DIAG_XY_FRONT, block);  // Front
+        fillCubito(currentCubito, 1, 0, 0, 0, DIR_DIAG_XY_BACK,  block);  // Back
+        fillCubito(currentCubito, 2, 0, 0, 0, DIR_Y_FRONT, BLOCK_AIR);  // Top
+        fillCubito(currentCubito, 3, 0, 0, 0, DIR_Y_BACK,  BLOCK_AIR);  // Bottom
+        fillCubito(currentCubito, 4, 0, 0, 0, DIR_Z_FRONT, BLOCK_AIR);  // Left
+        fillCubito(currentCubito, 5, 0, 0, 0, DIR_Z_BACK,  BLOCK_AIR);  // Right
+    }else {
+        fillCubito(currentCubito, 0, 1, 0, 0, DIR_X_FRONT, block);  // Front
+        fillCubito(currentCubito, 1, 0, 0, 0, DIR_X_BACK,  block);  // Back
+        fillCubito(currentCubito, 2, 0, 1, 0, DIR_Y_FRONT, block);  // Top
+        fillCubito(currentCubito, 3, 0, 0, 0, DIR_Y_BACK,  block);  // Bottom
+        fillCubito(currentCubito, 4, 0, 0, 1, DIR_Z_FRONT, block);  // Left
+        fillCubito(currentCubito, 5, 0, 0, 0, DIR_Z_BACK,  block);  // Right
+    }
     
     if(block != BLOCK_AIR) {
         currentCubito.visible = true;
@@ -106,7 +115,7 @@ U32 Chunk::occludeBlocks() {
     validBlocks = 0;
     
     for(auto& cubito : cubitos_) {
-        if(!isSolid(cubito)) {
+        if(!isVisible(cubito)) {
             cubito.visible = false;
             continue;
         }
@@ -120,24 +129,30 @@ U32 Chunk::occludeBlocks() {
 U32 Chunk::occludeBlocksFaces() {
     for(auto& cubito : cubitos_) {
         if(cubito.visible) {
-            if (!isSolid(cubito.x + 1, cubito.y, cubito.z, offsetPosition_)) {
-                faces_.emplace_back(cubito.face[DIR_X_FRONT], USVec3(cubito.x, cubito.y, cubito.z));  // Frente
+            if(hasProperty(cubito.type, FOLIAGE)) {
+                faces_.emplace_back(cubito.face[0], USVec3(cubito.x, cubito.y, cubito.z));  // Frente
+                faces_.emplace_back(cubito.face[1], USVec3(cubito.x, cubito.y, cubito.z));   // Detrás
+            }else {
+                if (!isSolid(cubito.x + 1, cubito.y, cubito.z, offsetPosition_)) {
+                    faces_.emplace_back(cubito.face[DIR_X_FRONT], USVec3(cubito.x, cubito.y, cubito.z));  // Frente
+                }
+                if (!isSolid(cubito.x - 1, cubito.y, cubito.z, offsetPosition_)) {
+                    faces_.emplace_back(cubito.face[DIR_X_BACK], USVec3(cubito.x, cubito.y, cubito.z));   // Detrás
+                }
+                if (!isSolid(cubito.x, cubito.y + 1, cubito.z, offsetPosition_)) {
+                    faces_.emplace_back(cubito.face[DIR_Y_FRONT], USVec3(cubito.x, cubito.y, cubito.z)); // Arriba
+                }
+                if (!isSolid(cubito.x, cubito.y - 1, cubito.z, offsetPosition_)) {
+                    faces_.emplace_back(cubito.face[DIR_Y_BACK], USVec3(cubito.x, cubito.y, cubito.z));  // Abajo
+                }
+                if (!isSolid(cubito.x, cubito.y, cubito.z + 1, offsetPosition_)) {
+                    faces_.emplace_back(cubito.face[DIR_Z_FRONT], USVec3(cubito.x, cubito.y, cubito.z)); // Izquierda
+                }
+                if (!isSolid(cubito.x, cubito.y, cubito.z - 1, offsetPosition_)) {
+                    faces_.emplace_back(cubito.face[DIR_Z_BACK], USVec3(cubito.x, cubito.y, cubito.z)); // Derecha
+                }
             }
-            if (!isSolid(cubito.x - 1, cubito.y, cubito.z, offsetPosition_)) {
-                faces_.emplace_back(cubito.face[DIR_X_BACK], USVec3(cubito.x, cubito.y, cubito.z));   // Detrás
-            }
-            if (!isSolid(cubito.x, cubito.y + 1, cubito.z, offsetPosition_)) {
-                faces_.emplace_back(cubito.face[DIR_Y_FRONT], USVec3(cubito.x, cubito.y, cubito.z)); // Arriba
-            }
-            if (!isSolid(cubito.x, cubito.y - 1, cubito.z, offsetPosition_)) {
-                faces_.emplace_back(cubito.face[DIR_Y_BACK], USVec3(cubito.x, cubito.y, cubito.z));  // Abajo
-            }
-            if (!isSolid(cubito.x, cubito.y, cubito.z + 1, offsetPosition_)) {
-                faces_.emplace_back(cubito.face[DIR_Z_FRONT], USVec3(cubito.x, cubito.y, cubito.z)); // Izquierda
-            }
-            if (!isSolid(cubito.x, cubito.y, cubito.z - 1, offsetPosition_)) {
-                faces_.emplace_back(cubito.face[DIR_Z_BACK], USVec3(cubito.x, cubito.y, cubito.z)); // Derecha
-            }
+
         }
     }
     return 0;
@@ -223,13 +238,21 @@ void Chunk::render() const {
 #endif
 }
 
+bool Chunk::isVisible(const Cubito& cubito) const {
+    return cubito.type != BLOCK_AIR;
+}
+
 bool Chunk::isSolid(const Cubito& cubito) const {
-    return cubito.type != BLOCK_AIR; //&& cubito.type != BLOCK_WATER; 
+    //return cubito.type != BLOCK_AIR; //&& cubito.type != BLOCK_WATER; 
+    //return cubito.type != BLOCK_AIR && cubito.type != BLOCK_DANDELION && cubito.type != BLOCK_WATER;
+    return hasProperty(cubito.type, SOLID);
 }
 
 bool Chunk::isSolid(S16 x, S16 y, S16 z) const {
     const auto index = x + CHUNK_SIZE * (y + CHUNK_SIZE * z); //better
-    return cubitos_[index].type != BLOCK_AIR; //&& cubitos_[index].type != BLOCK_WATER; 
+    //return cubitos_[index].type != BLOCK_AIR; //&& cubitos_[index].type != BLOCK_WATER; 
+    //return cubitos_[index].type != BLOCK_AIR && cubitos_[index].type != BLOCK_DANDELION && cubitos_[index].type != BLOCK_WATER; 
+    return hasProperty(cubitos_[index].type, SOLID);
 }
 
 bool Chunk::isSolid(S16 x, S16 y, S16 z, const ChunkPosition& currentChunkPos) const {
@@ -301,7 +324,14 @@ void Chunk::fillCubito(Cubito& cubito, U8 face, U8 x, U8 y, U8 z, U8 direction, 
     currentFace.y = y;
     currentFace.z = z;
     currentFace.direction = direction;
-    currentFace.tile = blockTiles[block][direction];
+    if(direction != DIR_DIAG_XY_BACK && direction != DIR_DIAG_XY_FRONT) {
+        currentFace.tile = blockTiles[block][direction];
+    }else if(direction == DIR_DIAG_XY_FRONT) {
+        currentFace.tile = blockTiles[block][0];
+    }else if(direction == DIR_DIAG_XY_BACK) {
+        currentFace.tile = blockTiles[block][1];
+    }
+    
 }
 
 Cubito& Chunk::getCubito(const CubePosition& pos) {

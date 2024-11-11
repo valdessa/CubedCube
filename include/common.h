@@ -14,6 +14,8 @@
 #define GRASS_LEVEL 5 // Capa de césped
 
 #define MAX_TREES 2
+#define MAX_FLOWERS 4
+#define MAX_HERBS 2
 #define TRUNK_HEIGHT 4
 
 const int CHUNK_LOAD_RADIUS = 2;
@@ -69,6 +71,9 @@ namespace poyo {
         DIR_Y_BACK,
         DIR_Z_FRONT,
         DIR_Z_BACK,
+
+        DIR_DIAG_XY_FRONT,        // Diagonal en el plano XY (esquina superior izquierda a inferior derecha)
+        DIR_DIAG_XY_BACK          // Diagonal en el plano XY (esquina superior derecha a inferior izquierda)
     };
 
     enum BLOCK_TYPE {
@@ -83,7 +88,10 @@ namespace poyo {
         BLOCK_WATER,
         BLOCK_CACTUS,
 
-        //BLOCK_WATER, //TODO: FIX THIS
+        BLOCK_POPPY,
+        BLOCK_ORCHID,
+        BLOCK_DANDELION,
+        BLOCK_HERB,
         
         BLOCK_AIR //USED FOR COUNT/NOT BLOCK 
     };
@@ -102,7 +110,7 @@ namespace poyo {
         TILE_WOOD        = 10,      //Fixed
         
         TILE_LEAF        = 11,      //Fixed
-        TILE_LEAF_FLOWER = 15,      //Fixed
+        TILE_LEAF_FL     = 15,      //Fixed
         
         TILE_GLASS       = 14,
         
@@ -114,8 +122,19 @@ namespace poyo {
         TILE_ICE         = 20,      //Fixed
         TILE_WATER       = 21,      //Fixed
 
-        TILE_DANDELION   = 33,      //Fixed 
+        TILE_POPPY       = 28,      //Fixed
+        TILE_ORCHID      = 32,      //Fixed
+        TILE_DANDELION   = 33,      //Fixed
+        TILE_HERB        = 34,      //Fixed
+        
         NUM_TILES,
+    };
+
+    enum BlockProperties {  //I Can have until 8 Properties
+        SOLID   = 1 << 0,  // 00000001
+        TRIGGER = 1 << 1,  // 00000010
+        WATER   = 1 << 2,  // 00000100
+        FOLIAGE = 1 << 3   // 00001000
     };
 
 #ifdef OPTIMIZATION_STRUCTS
@@ -151,36 +170,76 @@ namespace poyo {
 #endif
 
     inline constexpr U8 blockTiles[][6] = {
-        [BLOCK_STONE] =    {TILE_STONE,      TILE_STONE,      TILE_STONE,    TILE_STONE,     TILE_STONE,      TILE_STONE},
-        [BLOCK_SAND] =     {TILE_SAND,       TILE_SAND,       TILE_SAND,     TILE_SAND,      TILE_SAND,       TILE_SAND},
-        [BLOCK_DIRT] =     {TILE_DIRT,       TILE_DIRT,       TILE_DIRT,     TILE_DIRT,      TILE_DIRT,       TILE_DIRT},
-        [BLOCK_GRASS] =    {TILE_GRASS_SIDE, TILE_GRASS_SIDE, TILE_GRASS,    TILE_DIRT,      TILE_GRASS_SIDE, TILE_GRASS_SIDE},
-        [BLOCK_WOOD] =     {TILE_WOOD,       TILE_WOOD,       TILE_WOOD,     TILE_WOOD,      TILE_WOOD,       TILE_WOOD},
-        [BLOCK_TREE] =     {TILE_TREE_SIDE,  TILE_TREE_SIDE,  TILE_TREE_TOP,   TILE_TREE_TOP,   TILE_TREE_SIDE,   TILE_TREE_SIDE},
-        [BLOCK_LEAF] =     {TILE_LEAF,       TILE_LEAF,       TILE_LEAF,       TILE_LEAF,       TILE_LEAF,        TILE_LEAF},
-        [BLOCK_LEAF_FLOWER] =    {TILE_LEAF_FLOWER, TILE_LEAF_FLOWER, TILE_LEAF_FLOWER, TILE_LEAF_FLOWER, TILE_LEAF_FLOWER,  TILE_LEAF_FLOWER},
-        [BLOCK_WATER] =    {TILE_WATER,      TILE_WATER,      TILE_WATER,      TILE_WATER,      TILE_WATER,       TILE_WATER},
-        [BLOCK_CACTUS] =   {TILE_CACTUS_SIDE, TILE_CACTUS_SIDE, TILE_CACTUS_TOP, TILE_CACTUS_BOT, TILE_CACTUS_SIDE, TILE_CACTUS_SIDE},
+        [BLOCK_STONE]       = {TILE_STONE,       TILE_STONE,       TILE_STONE,      TILE_STONE,      TILE_STONE,       TILE_STONE},
+        [BLOCK_SAND]        = {TILE_SAND,        TILE_SAND,        TILE_SAND,       TILE_SAND,       TILE_SAND,        TILE_SAND},
+        [BLOCK_DIRT]        = {TILE_DIRT,        TILE_DIRT,        TILE_DIRT,       TILE_DIRT,       TILE_DIRT,        TILE_DIRT},
+        [BLOCK_GRASS]       = {TILE_GRASS_SIDE,  TILE_GRASS_SIDE,  TILE_GRASS,      TILE_DIRT,       TILE_GRASS_SIDE,  TILE_GRASS_SIDE},
+        [BLOCK_WOOD]        = {TILE_WOOD,        TILE_WOOD,        TILE_WOOD,       TILE_WOOD,       TILE_WOOD,        TILE_WOOD},
+        [BLOCK_TREE]        = {TILE_TREE_SIDE,   TILE_TREE_SIDE,   TILE_TREE_TOP,   TILE_TREE_TOP,   TILE_TREE_SIDE,   TILE_TREE_SIDE},
+        [BLOCK_LEAF]        = {TILE_LEAF,        TILE_LEAF,        TILE_LEAF,       TILE_LEAF,       TILE_LEAF,        TILE_LEAF},
+        [BLOCK_LEAF_FLOWER] = {TILE_LEAF_FL,     TILE_LEAF_FL,     TILE_LEAF_FL,    TILE_LEAF_FL,    TILE_LEAF_FL,     TILE_LEAF_FL},
+        [BLOCK_WATER]       = {TILE_WATER,       TILE_WATER,       TILE_WATER,      TILE_WATER,      TILE_WATER,       TILE_WATER},
+        [BLOCK_CACTUS]      = {TILE_CACTUS_SIDE, TILE_CACTUS_SIDE, TILE_CACTUS_TOP, TILE_CACTUS_BOT, TILE_CACTUS_SIDE, TILE_CACTUS_SIDE},
+
+        [BLOCK_POPPY]       = {TILE_POPPY,       TILE_POPPY,       TILE_POPPY,      TILE_POPPY,      TILE_POPPY,       TILE_POPPY},
+        [BLOCK_ORCHID]      = {TILE_ORCHID,      TILE_ORCHID,      TILE_ORCHID,     TILE_ORCHID,     TILE_ORCHID,      TILE_ORCHID},
+        [BLOCK_DANDELION]   = {TILE_DANDELION,   TILE_DANDELION,   TILE_DANDELION,  TILE_DANDELION,  TILE_DANDELION,   TILE_DANDELION},
+        [BLOCK_HERB]        = {TILE_HERB,        TILE_HERB,        TILE_HERB,       TILE_HERB,       TILE_HERB,        TILE_HERB},
         
         [BLOCK_AIR] = {TILE_STONE,      TILE_STONE,      TILE_STONE,    TILE_STONE,     TILE_STONE,      TILE_STONE},
     };
 
-    inline constexpr U8 cubeFaces[6][4][3] = {
+    inline constexpr U8 BLOCK_PROPERTIES[] = {
+        [BLOCK_STONE]       = SOLID,              
+        [BLOCK_SAND]        = SOLID,                   // BLOCK_SAND
+        [BLOCK_DIRT]        = SOLID,                   // BLOCK_DIRT
+        [BLOCK_GRASS]       = SOLID | TRIGGER,         // BLOCK_GRASS 
+        [BLOCK_WOOD]        = SOLID,                   // BLOCK_WOOD
+        [BLOCK_TREE]        = SOLID,                   // BLOCK_TREE
+        [BLOCK_LEAF]        = SOLID,                   // BLOCK_LEAF
+        [BLOCK_LEAF_FLOWER] = SOLID,                   // BLOCK_LEAF_FLOWER
+        [BLOCK_WATER]       = WATER | TRIGGER,         // BLOCK_WATER
+        [BLOCK_CACTUS]      = SOLID,                   // BLOCK_CACTUS
+
+        [BLOCK_POPPY]       = FOLIAGE,                 // BLOCK_POPPY
+        [BLOCK_ORCHID]      = FOLIAGE,                 // BLOCK_ORCHID
+        [BLOCK_DANDELION]   = FOLIAGE,                 // BLOCK_DANDELION
+        [BLOCK_HERB]        = FOLIAGE,                 // BLOCK_HERB
+        [BLOCK_AIR]         = TRIGGER                  // BLOCK_AIR
+    };
+
+    inline bool hasProperty(U8 blockType, BlockProperties property) {
+        return (BLOCK_PROPERTIES[blockType] & property) != 0;
+    }
+
+    inline constexpr U8 cubeFaces[][4][3] = {
         [DIR_X_FRONT] = {{0, 1, 1}, {0, 1, 0}, {0, 0, 0}, {0, 0, 1}},  //drawn clockwise looking x-
         [DIR_X_BACK] =  {{0, 1, 0}, {0, 1, 1}, {0, 0, 1}, {0, 0, 0}},  //drawn clockwise looking x+
+        //[DIR_X_BACK] =  {{1, 1, 1}, {1, 1, 0}, {1, 0, 0}, {1, 0, 1}},  //drawn clockwise looking x+
+        
         [DIR_Y_FRONT] = {{0, 0, 0}, {1, 0, 0}, {1, 0, 1}, {0, 0, 1}},  //drawn clockwise looking y-
         [DIR_Y_BACK] =  {{0, 0, 0}, {0, 0, 1}, {1, 0, 1}, {1, 0, 0}},  //drawn clockwise looking y+
+        //[DIR_Y_BACK] =  {{0, 1, 0}, {1, 1, 0}, {1, 1, 1}, {0, 1, 1}},  //drawn clockwise looking y+
+
+        
         [DIR_Z_FRONT] = {{0, 1, 0}, {1, 1, 0}, {1, 0, 0}, {0, 0, 0}},  //drawn clockwise looking z-
         [DIR_Z_BACK] =  {{1, 1, 0}, {0, 1, 0}, {0, 0, 0}, {1, 0, 0}},  //drawn clockwise looking z+
+        //[DIR_Z_BACK] =  {{0, 1, 1}, {1, 1, 1}, {1, 0, 1}, {0, 0, 1}},  //drawn clockwise looking z+
+
+        [DIR_DIAG_XY_FRONT] = {{0, 1, 1}, {1, 1, 0}, {1, 0, 0}, {0, 0, 1}}, //-X+Y+Z To +X-Y-Z 
+        [DIR_DIAG_XY_BACK]  = {{0, 1, 0}, {1, 1, 1}, {1, 0, 1}, {0, 0, 0}}  //-X+Y-Z To +X-Y+Z 
     };
     
-    inline constexpr S8 cubeNormals[6][3] = {
+    inline constexpr S8 cubeNormals[][3] = {
         [DIR_X_FRONT] = { 1,  0,  0},  // Front (X+)
         [DIR_X_BACK]  = {-1,  0,  0},  // Back (X-)
         [DIR_Y_FRONT] = { 0,  1,  0},  // Top (Y+)
         [DIR_Y_BACK]  = { 0, -1,  0},  // Bottom (Y-)
         [DIR_Z_FRONT] = { 0,  0,  1},  // Left (Z+)
         [DIR_Z_BACK]  = { 0,  0, -1},  // Right (Z-)
+        
+        [DIR_DIAG_XY_FRONT] ={ 0,  1,  0},  // Normal para la cara superior (Y+)
+        [DIR_DIAG_XY_BACK]  ={ 0,  1,  0},  // Normal para la cara superior (Y+)
     };
     
 #ifdef OPTIMIZATION_MAPS

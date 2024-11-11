@@ -58,6 +58,17 @@ void World::generateLand(S16 radius) {
 #endif
 }
 
+static void placeWater(Chunk& chunk, const CubePosition& pos) {
+    // bool CanBePlaced = true;
+    //
+    // auto positionToCheck = CubePosition(pos.x, pos.y - 1, pos.z);
+    // if(World::isValidPosition(positionToCheck)) {
+    //     if(chunk.getCubito(positionToCheck).type == BLOCK_WATER) CanBePlaced = false;
+    // }
+    //
+    // if(CanBePlaced) chunk.setCubito(pos, BLOCK_WATER);
+}
+
 void World::generateLandChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
     // Set the chunk's offset and world position
     chunk.offsetPosition_.x = chunkX;
@@ -79,12 +90,13 @@ void World::generateLandChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
             for (int y = 0; y < CHUNK_HEIGHT; ++y) {
                 CubePosition pos(x, y, z);
                 if (y > blockHeight) {
-                    if (y <= WATER_LEVEL) chunk.setCubito(pos, BLOCK_WATER);  // Fill any space below WATER_LEVEL with water
+                    if (y == WATER_LEVEL) chunk.setCubito(pos, BLOCK_WATER);  // Fill any space below WATER_LEVEL with water
                     else                  chunk.setCubito(pos, BLOCK_AIR);    // Air above water
                 } else if (y == blockHeight) { //The Top of the Height Map
                     //if (y > WATER_LEVEL) chunk.setCubito(pos, BLOCK_GRASS);  
-                    if(y <= WATER_LEVEL) chunk.setCubito(CubePosition(x, y, z), BLOCK_WATER);
-                    else                 chunk.setCubito(pos, BLOCK_GRASS);  // Grass at the top
+                    if(y == WATER_LEVEL)     chunk.setCubito(pos, BLOCK_WATER);
+                    else if(y < WATER_LEVEL) chunk.setCubito(pos, BLOCK_AIR);
+                    else                     chunk.setCubito(pos, BLOCK_GRASS);  // Grass at the top
                 } else if (y > blockHeight - DIRT_LEVEL) {
                     chunk.setCubito(pos, BLOCK_DIRT);   // Dirt below the grass
                 } else if (y > blockHeight - STONE_LEVEL) {
@@ -115,6 +127,55 @@ void World::generateLandChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
     //         }
     //     }
     // }
+
+    for(int i = 0; i < MAX_FLOWERS; i++) {
+        // Generate a random position within the chunk
+        int x = rand() % CHUNK_SIZE;
+        int z = rand() % CHUNK_SIZE;
+
+        // Calculate the global position in the world
+        int worldX = x + (chunkX * CHUNK_SIZE);
+        int worldZ = z + (chunkZ * CHUNK_SIZE);
+        // Get the terrain height at (worldX, worldZ)
+        int randY = getGroundHeight(worldX, worldZ);
+
+        if(chunk.getCubito(CubePosition(x, randY, z)).type == BLOCK_GRASS) {
+            if(isValidPosition(CubePosition(x, randY + 1, z))) {
+                if(chunk.getCubito(CubePosition(x, randY + 1, z)).type == BLOCK_AIR) {
+                    int randN = rand() % 3;
+                    switch (randN) {
+                        case 0: chunk.setCubito(CubePosition(x, randY + 1, z), BLOCK_POPPY);
+                            break;
+                        case 1: chunk.setCubito(CubePosition(x, randY + 1, z), BLOCK_ORCHID);
+                            break;
+                        case 2: chunk.setCubito(CubePosition(x, randY + 1, z), BLOCK_DANDELION);
+                            break;
+                    }
+                    
+                }
+            }
+        }
+    }
+
+    for(int i = 0; i < MAX_HERBS; i++) {
+        // Generate a random position within the chunk
+        int x = rand() % CHUNK_SIZE;
+        int z = rand() % CHUNK_SIZE;
+
+        // Calculate the global position in the world
+        int worldX = x + (chunkX * CHUNK_SIZE);
+        int worldZ = z + (chunkZ * CHUNK_SIZE);
+        // Get the terrain height at (worldX, worldZ)
+        int randY = getGroundHeight(worldX, worldZ);
+
+        if(chunk.getCubito(CubePosition(x, randY, z)).type == BLOCK_GRASS) {
+            if(isValidPosition(CubePosition(x, randY + 1, z))) {
+                if(chunk.getCubito(CubePosition(x, randY + 1, z)).type == BLOCK_AIR) {
+                    chunk.setCubito(CubePosition(x, randY + 1, z), BLOCK_HERB);
+                }
+            }
+        }
+    }
 
 
     for(int i = 0; i < MAX_TREES; i++) {

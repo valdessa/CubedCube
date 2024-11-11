@@ -104,7 +104,7 @@ int main(int argc, char **argv) {
 
 
     auto MemoryUsedByVoxel = Memory::getTotalMemoryUsed();
-    
+    GX_SetZCompLoc(GX_FALSE);
     World currentWorld;
     
     SYS_Report("N Blocks: %llu\n", 0);
@@ -165,7 +165,6 @@ int main(int argc, char **argv) {
         Renderer::SetTextureCoordScaling(0, TILE_SIZE, TILE_SIZE);
         //Renderer::DisableBlend();
         
-
         nDrawCalls = 0;
         currentTick.start();
         Renderer::PrepareToRenderInVX2(true, true, true, true);
@@ -173,7 +172,7 @@ int main(int argc, char **argv) {
         for(auto& chunkito : chunkitos) {
             chunkito->render();
         }
-        GX_SetZCompLoc(GX_FALSE);
+        
         Renderer::ObjectView(lightPos.x, lightPos.y, lightPos.z);
         GX_Begin(GX_QUADS, GX_VTXFMT2, 8);
         for (int i = 0; i < 2; ++i) {
@@ -188,7 +187,7 @@ int main(int argc, char **argv) {
                 GX_Color4u8(255, 255, 255, 255);  // Color blanco
 
 
-                GX_TexCoord2u16(tileTexCoords[j][0] + 0, tileTexCoords[j][1] + 3);
+                GX_TexCoord2u16(tileTexCoords[j][0] + 1, tileTexCoords[j][1] + 4);
             }
         }
         GX_End();
