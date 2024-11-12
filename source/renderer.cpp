@@ -14,7 +14,8 @@ using namespace poyo;
 extern U16 vertices[8][3];
 extern U16 edges[12][2];
 extern U16 diagonals[12][2];
-extern u16 tileTexCoords[4][2];
+extern U16 tileTexCoords[4][2];
+extern U8  positionsCoords[6][3];
 
 //GX Stuff
 GXRModeObj* videoMode = nullptr;
@@ -464,9 +465,15 @@ void Renderer::RenderFace(const CubeFace& face) {
     auto& UV = tileUVMap[face.tile];
     
     for (int j = 0; j < 4; j++) {
+#ifdef OPTIMIZATION_STRUCTS_POS
+        GX_Position3u16(positionsCoords[face.direction][0] + cubeFaces[face.direction][j][0],
+                        positionsCoords[face.direction][1] + cubeFaces[face.direction][j][1],
+                        positionsCoords[face.direction][2] + cubeFaces[face.direction][j][2]);
+#else
         GX_Position3u16(face.x + cubeFaces[face.direction][j][0],
                         face.y + cubeFaces[face.direction][j][1],
                         face.z + cubeFaces[face.direction][j][2]);
+#endif
         GX_Normal3s8(cubeNormals[face.direction][0],
                      cubeNormals[face.direction][1],
                      cubeNormals[face.direction][2]);
@@ -486,9 +493,15 @@ void Renderer::RenderFace(const CubeFace& face, S8 x, S8 y, S8 z) {
     auto& UV = tileUVMap[face.tile];
     
     for (int j = 0; j < 4; j++) {
+#ifdef OPTIMIZATION_STRUCTS_POS
+        GX_Position3u16(positionsCoords[face.direction][0] + cubeFaces[face.direction][j][0] + x,
+                        positionsCoords[face.direction][1] + cubeFaces[face.direction][j][1] + y,
+                        positionsCoords[face.direction][2] + cubeFaces[face.direction][j][2] + z);
+#else
         GX_Position3u16(face.x + cubeFaces[face.direction][j][0] + x,
                         face.y + cubeFaces[face.direction][j][1] + y,
                         face.z + cubeFaces[face.direction][j][2] + z);
+#endif
         GX_Normal3s8(cubeNormals[face.direction][0],
                      cubeNormals[face.direction][1],
                      cubeNormals[face.direction][2]);
@@ -499,6 +512,26 @@ void Renderer::RenderFace(const CubeFace& face, S8 x, S8 y, S8 z) {
 #else
         GX_TexCoord2u16(UV.x + tileTexCoords[j][0], UV.y + tileTexCoords[j][1]);
 #endif
+    }
+}
+
+void Renderer::RenderFaceIndexed(const CubeFace& face, S8 x, S8 y, S8 z) {
+    nFacesRendered++;
+    for (U8 j = 0; j < 4; j++) {
+#ifdef OPTIMIZATION_STRUCTS_POS
+        GX_Position3u16(positionsCoords[face.direction][0] + cubeFaces[face.direction][j][0] + x,
+                        positionsCoords[face.direction][1] + cubeFaces[face.direction][j][1] + y,
+                        positionsCoords[face.direction][2] + cubeFaces[face.direction][j][2] + z);
+#else
+        GX_Position3u16(face.x + cubeFaces[face.direction][j][0] + x,
+                        face.y + cubeFaces[face.direction][j][1] + y,
+                        face.z + cubeFaces[face.direction][j][2] + z);
+#endif
+        GX_Normal3s8(cubeNormals[face.direction][0],
+                     cubeNormals[face.direction][1],
+                     cubeNormals[face.direction][2]);
+        GX_Color4u8(255, 255, 255, 255);
+        GX_TexCoord1x8(j);
     }
 }
 
@@ -538,6 +571,21 @@ void Renderer::RenderFaceVector(const Vector<Pair<CubeFace, USVec3>>& faces, U16
         RenderFace(currentFace, cubito.x, cubito.y, cubito.z);
 #else
         RenderFace(currentFace);
+#endif
+    }
+
+    GX_End();
+}
+
+void Renderer::RenderFaceVectorIndexed(const Vector<Pair<CubeFace, USVec3>>& faces, U16 validBlocks) {
+    GX_Begin(GX_QUADS, GX_VTXFMT2, validBlocks);
+    for (auto& currentFaceVec : faces) {
+        auto& currentFace = currentFaceVec.first;
+#ifdef OPTIMIZATION_BATCHING
+        auto& cubito = currentFaceVec.second;
+        RenderFaceIndexed(currentFace, cubito.x, cubito.y, cubito.z);
+#else
+        RenderFaceIndexed(currentFace);
 #endif
     }
 
@@ -650,11 +698,20 @@ void Renderer::RenderGX(bool VSYNC) {
     // }
 }
 
-u16 tileTexCoords[4][2] = {
+U16 tileTexCoords[4][2] = {
     {0, 0},
     {1, 0},
     {1, 1},
     {0, 1}
+};
+
+U8 positionsCoords[6][3] = {
+    {1, 0, 0},
+    {0, 0, 0},
+    {0, 1, 0},
+    {0, 0, 0},
+    {0, 0, 1},
+    {0, 0, 0}
 };
 
 // Cube vertices

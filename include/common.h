@@ -35,6 +35,7 @@ constexpr poyo::U8 CHUNK_RADIUS = 6;
 #define OPTIMIZATION_BATCHING       //TODO: IMPROVE THIS OPTION!!
 #define OPTIMIZATION_DISPLAY_LIST
 #define OPTIMIZATION_STRUCTS
+#define OPTIMIZATION_STRUCTS_POS
 
 /*  
 =============================================================== BENCHMARKING ==================================================================|

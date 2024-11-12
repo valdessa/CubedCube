@@ -149,7 +149,7 @@ void Chunk::CreateListForTransparents(Vector<Pair<CubeFace, USVec3>>& faces,  in
 
     GX_BeginDispList(displayListTransparent, listSize);
 #if OPTIMIZATION_OCCLUSION == 4
-    Renderer::RenderFaceVector(faces, entitiesToRender);
+    Renderer::RenderFaceVectorIndexed(faces, entitiesToRender);
 #else
     Renderer::RenderCubeVector(cubitos_, entitiesToRender);
 #endif
@@ -402,9 +402,9 @@ bool Chunk::isCompletelyOccluded(S16 x, S16 y, S16 z, const ChunkPosition& curre
 
 void Chunk::fillCubito(Cubito& cubito, U8 face, U8 x, U8 y, U8 z, U8 direction, S32 block) {
     auto& currentFace = cubito.face[face]; 
-    currentFace.x = x;
-    currentFace.y = y;
-    currentFace.z = z;
+    // currentFace.x = x;
+    // currentFace.y = y;
+    // currentFace.z = z;
     currentFace.direction = direction;
     if(direction != DIR_DIAG_XY_BACK && direction != DIR_DIAG_XY_FRONT) {
         currentFace.tile = blockTiles[block][direction];

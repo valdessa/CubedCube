@@ -76,7 +76,7 @@ void TextRenderer::render(USVec2 pos, const char* text) {
         // GX_Position2u16(pos.x, pos.y + size_.y);
         // GX_TexCoord2u16(glyph, 1);
 
-        auto UV = tileUVMap_[glyph];
+        const auto& UV = tileUVMap_[glyph];
 
         GX_Position2u16(pos.x, pos.y);
         GX_TexCoord2u16(UV.first + tileTexCoords[0][0], UV.second + tileTexCoords[0][1]);

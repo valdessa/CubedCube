@@ -62,25 +62,56 @@ void updatePosition(FVec3& point, float radius, float angle) {
 //lesson 10 tiene movimiento bien
 //display list en CavEX
 //Compilar con O3
+//3D example from GGRLIB, deform a textured cube
+//GRRLIB Basic Drawing has good fonts
+//GRRLIB Bitmaps tiene efectos de framebuffer guapos como pixelate y blur
+//GRRLIB Compositiing mola tambien
+//GRRLIB TTF demo its cool too
+//tutorial de particulas 2D en GRRLIB
+//GRRLIB Enviromental Mapping, tah guapo
+//Fix text Renderer memory
 
+//Lesson 19, Particles!!
+
+u8 waterTexCoords[8];
+
+void updateWaterTextureCoordinates(int textureCounter, u8 offset = 5) {
+    // Calculamos el desplazamiento base de las coordenadas en función de textureCounter
+    u8 baseOffset = static_cast<u8>(textureCounter / 4);  // Los niveles cambian en 4, es decir, 0, 4, 8, 12, ...
+
+    waterTexCoords[0] = 0 + baseOffset;     waterTexCoords[1] = 0 + offset;
+    waterTexCoords[2] = 1 + baseOffset;     waterTexCoords[3] = 0 + offset;
+    waterTexCoords[4] = 1 + baseOffset;     waterTexCoords[5] = 1 + offset;
+    waterTexCoords[6] = 0 + baseOffset;     waterTexCoords[7] = 1 + offset;
+}
 
 inline constexpr U8 CubeFaces[][4][3] = {
-    // DIR_X_FRONT: Cara del cubo en el plano X negativo
-    [DIR_X_FRONT] = {{0, 1, 1}, {0, 1, 0}, {0, 0, 0}, {0, 0, 1}},  // drawn clockwise looking x-
-    // DIR_X_BACK: Cara del cubo en el plano X positivo
-    [DIR_X_BACK] =  {{1, 1, 0}, {1, 1, 1}, {1, 0, 1}, {1, 0, 0}},  // drawn clockwise looking x+
-        
-    // DIR_Y_FRONT: Cara del cubo en el plano Y negativo
-    [DIR_Y_FRONT] = {{0, 0, 0}, {1, 0, 0}, {1, 0, 1}, {0, 0, 1}},  // drawn clockwise looking y-
-    // DIR_Y_BACK: Cara del cubo en el plano Y positivo
-    [DIR_Y_BACK] =  {{0, 1, 0}, {0, 1, 1}, {1, 1, 1}, {1, 1, 0}},  // drawn clockwise looking y+
-    
-    // DIR_Z_FRONT: Cara del cubo en el plano Z negativo
-    [DIR_Z_FRONT] = {{0, 1, 0}, {1, 1, 0}, {1, 0, 0}, {0, 0, 0}},  // drawn clockwise looking z-
-    // DIR_Z_BACK: Cara del cubo en el plano Z positivo
-    [DIR_Z_BACK] =  {{0, 1, 1}, {0, 0, 1}, {1, 0, 1}, {1, 1, 1}},  // drawn clockwise looking z+
+    [DIR_X_FRONT] = {{0, 1, 1}, {0, 1, 0}, {0, 0, 0}, {0, 0, 1}},  // Cara frontal en el eje X
+    [DIR_X_BACK] =  {{0, 1, 0}, {0, 1, 1}, {0, 0, 1}, {0, 0, 0}},  // Cara trasera en el eje X
+
+    [DIR_Y_FRONT] = {{0, 0, 0}, {1, 0, 0}, {1, 0, 1}, {0, 0, 1}},  // Cara frontal en el eje Y
+    [DIR_Y_BACK] =  {{0, 0, 0}, {0, 0, 1}, {1, 0, 1}, {1, 0, 0}},  // Cara trasera en el eje Y
+
+    [DIR_Z_FRONT] = {{0, 1, 0}, {1, 1, 0}, {1, 0, 0}, {0, 0, 0}},  // Cara frontal en el eje Z
+    [DIR_Z_BACK] =  {{1, 1, 0}, {0, 1, 0}, {0, 0, 0}, {1, 0, 0}},  // Cara trasera en el eje Z
 };
 
+static u8 CalculateFrameRate(void) {
+    static u8 frameCount = 0;
+    static u32 lastTime;
+    static u8 FPS = 0;
+    const u32 currentTime = ticks_to_millisecs(gettime());
+
+    frameCount++;
+    if(currentTime - lastTime > 1000) {
+        lastTime = currentTime;
+        FPS = frameCount;
+        frameCount = 0;
+    }
+    return FPS;
+}
+
+#include "grrlib/grrlib.h"
 
 //1 ms = 40,500 ticks
 int main(int argc, char **argv) {
@@ -128,10 +159,19 @@ int main(int argc, char **argv) {
 
     Tick currentTick;
     FVec3 lightPos{0, 25, 0};
+
+
+    // auto memoryUsedByStruct = Memory::getTotalMemoryUsed();
+    // auto cubeFacePointer = (CubeFace*)calloc(32, sizeof(CubeFace));
+    // cubeFacePointer->tile = 4;
+    // memoryUsedByStruct = Memory::getTotalMemoryUsed() - memoryUsedByStruct;
     
     //Start from the first GX command after VSync, and end after GX_DrawDone().
     // GX_SetDrawDone();
     // Loop forever
+    int textureCounter = 0;
+    float textureCounterFloat = 0;
+    float TextureTime = 0.33f;
     while(1) {
         Engine::UpdateEngine();
         auto deltaTime = Engine::getDeltaTime();
@@ -141,6 +181,24 @@ int main(int argc, char **argv) {
             angle+=deltaTime;
             updatePosition(lightPos, 20, angle);
         }
+
+        textureCounterFloat += deltaTime;
+    
+        // Cada vez que textureCounterFloat alcanza o supera 2
+        if (textureCounterFloat >= TextureTime) {
+            // Incrementa textureCounter en 4
+            textureCounter += 4;
+        
+            // Resetea textureCounterFloat para comenzar un nuevo ciclo
+            textureCounterFloat -= TextureTime;
+        
+            // Mantiene textureCounter en el rango 0, 4, 8
+            if (textureCounter > 28) {
+                textureCounter = 0;
+            }
+        }
+
+        
         
         Renderer::Set2DMode();
         PAD_ScanPads(); // Scan the GameCube controllers
@@ -162,50 +220,31 @@ int main(int argc, char **argv) {
         Renderer::Set3DMode(currentCam); // Configura el modo 3D //Projection
         Renderer::PrepareToRenderInVX0(true, true, true, false);
         Renderer::ObjectView(lightPos.x, lightPos.y, lightPos.z);
-        //Renderer::RenderSphere(1, 20, 20, true, 0xFFFF00FF);
+        Renderer::RenderSphere(1, 20, 20, true, 0xFFFF00FF);
 
-        Renderer::PrepareToRenderInVX2(true, false, true, true);
+        
 
-        u16 tileTexCoords[4][2] = {
-            {0, 0},
-            {1, 0},
-            {1, 1},
-            {0, 1}
+        U16 positions[6][3] = {
+            {1, 0, 0},
+            {0, 0, 0},
+            {0, 1, 0},
+            {0, 0, 0},
+            {0, 0, 1},
+            {0, 0, 0}
         };
-                
+
+
         Renderer::BindTexture(blocksTexture, 0);
         Renderer::SetTextureCoordScaling(0, TILE_SIZE, TILE_SIZE);
-        Renderer::RenderBegin(24);
-        for(int i = 0; i < 6; i++) {
-            for (int j = 0; j < 4; j++) {
-                GX_Position3u16(CubeFaces[i][j][0],
-                                CubeFaces[i][j][1],
-                                CubeFaces[i][j][2]);
-                GX_Color4u8(255, 255, 255, 255);
-                GX_TexCoord2u16(tileTexCoords[j][0], tileTexCoords[j][1]);
-            }
-        }
-        Renderer::RenderEnd();
+
+
+
 
 
         if(options.lightning) {
             Renderer::SetLightDiffuse(0, lightPos, 20, 1);
         }
-
         
-        
-        // // Configuración del Z-Buffer para transparencias
-        // GX_SetZMode(GX_TRUE, GX_ALWAYS, GX_FALSE);
-        //
-        // // Configuración del Alpha Compare para manejar transparencia
-        // GX_SetAlphaCompare(GX_GREATER, 128, GX_AOP_OR, GX_ALWAYS, 0);
-        //
-        // // Configuración del ZCompLoc para que la comparación ocurra después del texturizado
-        // GX_SetZCompLoc(GX_FALSE);
-        //
-        // // Configuración del Blending para transparencias
-        // GX_SetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_CLEAR);
-//Renderer::SetBlend(BLEND_MODE::MODE_OFF);
         nDrawCalls = 0;
         currentTick.start();
         Renderer::PrepareToRenderInVX2(true, true, true, true);
@@ -214,10 +253,69 @@ int main(int argc, char **argv) {
         for(auto& chunkito : chunkitos) {
             chunkito->render();
         }
-
+        
+        updateWaterTextureCoordinates(textureCounter, 6);
+        
+        GX_SetVtxDesc(GX_VA_TEX0, GX_INDEX8);
+        GX_SetArray(GX_VA_TEX0, waterTexCoords, 2 * sizeof(u8));
+        GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_TEX0, GX_TEX_ST, GX_U8, 0);
+        
         for(auto& chunkito : chunkitos) {
             chunkito->renderTranslucents();
         }
+
+
+        // Renderer::PrepareToRenderInVX2(true, false, true, true);
+        // updateWaterTextureCoordinates(textureCounter, 6);
+        //
+        // GX_SetVtxDesc(GX_VA_TEX0, GX_INDEX8);
+        // GX_SetArray(GX_VA_TEX0, waterTexCoords, 2 * sizeof(u8));
+        // GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_TEX0, GX_TEX_ST, GX_U8, 0);
+
+
+        // for(int Cubito = 0; Cubito < 10; Cubito++) {
+        //     Renderer::ObjectView(lightPos.x + Cubito, lightPos.y, lightPos.z);
+        //     Renderer::RenderBegin(4);
+        //     int i = 2;
+        //     //for(int i = 0; i < 6; i++) {
+        //     auto& UV = tileUVMap[blockTiles[BLOCK_WATER][i]];
+        //     for (int j = 0; j < 4; j++) {
+        //         GX_Position3u16(CubeFaces[i][j][0] + positions[i][0],
+        //                         CubeFaces[i][j][1] + positions[i][1],
+        //                         CubeFaces[i][j][2] + positions[i][2]);
+        //         GX_Color4u8(255, 255, 255, 255);
+        //         
+        //         //GX_TexCoord2u16(tileTexCoords[j][0] + UV[0], tileTexCoords[j][1]+ UV[1]);
+        //         GX_TexCoord1x8(j);
+        //     }
+        //     //}
+        //     Renderer::RenderEnd();
+        //
+        //
+        //     Renderer::ObjectView(lightPos.x + Cubito, lightPos.y, lightPos.z + 1);
+        //     Renderer::RenderBegin(4);
+        //     for (int j = 0; j < 4; j++) {
+        //         GX_Position3u16(CubeFaces[i][j][0] + positions[i][0],
+        //                         CubeFaces[i][j][1] + positions[i][1],
+        //                         CubeFaces[i][j][2] + positions[i][2]);
+        //         GX_Color4u8(255, 255, 255, 255);
+        //         
+        //         GX_TexCoord1x8(j);
+        //     }
+        //     Renderer::RenderEnd();
+        //
+        //     Renderer::ObjectView(lightPos.x + Cubito, lightPos.y, lightPos.z + 2);
+        //     Renderer::RenderBegin(4);
+        //     for (int j = 0; j < 4; j++) {
+        //         GX_Position3u16(CubeFaces[i][j][0] + positions[i][0],
+        //                         CubeFaces[i][j][1] + positions[i][1],
+        //                         CubeFaces[i][j][2] + positions[i][2]);
+        //         GX_Color4u8(255, 255, 255, 255);
+        //         
+        //         GX_TexCoord1x8(j);
+        //     }
+        //     Renderer::RenderEnd();
+        // }
 
         //currentWorld.renderChunksAround(currentCam.getPosition().x, currentCam.getPosition().z);
         //currentWorld.renderChunksAround(-18, -8);
@@ -253,7 +351,6 @@ int main(int argc, char **argv) {
         //std::this_thread::sleep_for(std::chrono::seconds(1));
         auto drawTicks = currentTick.stopAndGetTick();
         currentTick.reset();
-
         
         auto& camPos = currentCam.getPosition();
         // Switch to 2D Mode to display text
@@ -284,7 +381,7 @@ int main(int argc, char **argv) {
 
             text.render(USVec2{450, 50}, fmt::format("Video Mode : {}", std::array{"INTERLACE", "NON INTERLACE", "PROGRESSIVE"}[static_cast<int>(Renderer::VideoMode())]).c_str());
             text.render(USVec2{450, 65}, fmt::format("VSYNC      : {}", options.VSYNC ? "YES" : "NOP").c_str());
-            text.render(USVec2{450, 80}, fmt::format("NTrees     : {}", options.helper2).c_str()); //currentWorld.nTrees_
+            text.render(USVec2{450, 80}, fmt::format("NTrees     : {}", currentWorld.nTrees_).c_str()); //currentWorld.nTrees_
             
             text.render(USVec2{400,   95}, fmt::format("Draw Cycles : {} ts", drawTicks).c_str());
             text.render(USVec2{400,  110}, fmt::format("Draw Time   : {} ms", Tick::TickToMs(drawTicks)).c_str());
