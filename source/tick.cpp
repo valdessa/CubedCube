@@ -55,3 +55,8 @@ const U64& Tick::stopAndGetTick() {
 U64 Tick::TickToMs(U64 ticks) {
     return ticks_to_millisecs(ticks);
 }
+
+float Tick::TickToMsfloat(U64 ticks) {
+    auto result = ticks_to_microsecs(ticks);
+    return static_cast<float>(result ) / 1000.0f; //to ms!!
+}

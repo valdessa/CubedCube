@@ -22,10 +22,10 @@ void Engine::UpdateEngine() {
     auto& e = get();
     e.lastTime_ = e.currentTime_;
     e.currentTime_ = gettick();
-    //u64 deltaTimeTicks = e.currentTime_ - e.lastTime_;
-    auto deltaTimeMs  = diff_msec(e.lastTime_, e.currentTime_);
+    //auto deltaTimeMs =  e.lastTime_ - e.currentTime_;
+    auto deltaTimeMs  = diff_usec(e.lastTime_, e.currentTime_);
     //e.deltaTime_ = static_cast<float>(ticks_to_millisecs(deltaTimeTicks)) / 1000.0f; //to seconds!!
-    e.deltaTime_ = static_cast<float>(deltaTimeMs ) / 1000.0f; //to seconds!!
+    e.deltaTime_ = static_cast<float>(deltaTimeMs ) / 1000000.0f; //to seconds!!
     e.deltaTime_ = glm::clamp(e.deltaTime_, 0.0f, 0.1f);
 }
 

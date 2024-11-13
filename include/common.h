@@ -8,10 +8,10 @@
 
 #define MIN_HEIGHT  2
 
-#define WATER_LEVEL 3       // Nivel del agua
-#define DIRT_LEVEL 2         // Capas de tierra bajo el césped
-#define STONE_LEVEL 4        // Capas de roca bajo la tierra
-#define GRASS_LEVEL 5 // Capa de césped
+#define WATER_LEVEL 3       
+#define DIRT_LEVEL  2         
+#define STONE_LEVEL 4        
+#define GRASS_LEVEL 5
 
 #define MAX_TREES 2
 #define MAX_FLOWERS 4
@@ -29,13 +29,18 @@ constexpr poyo::U8 CHUNK_RADIUS = 6;
 //3 -> OCCLUSION CULLING ONLY BLOCKS   (PRECALCULATED)  
 //4 -> OCCLUSION CULLING BLOCKS FACES  (PRECALCULATED) 
 
+//measures with ticks and ms
+//full frame + only draw part
+
 #define OPTIMIZATION_VECTOR
 #define OPTIMIZATION_MAPS
 #define OPTIMIZATION_OCCLUSION 4
-#define OPTIMIZATION_BATCHING       //TODO: IMPROVE THIS OPTION!!
+#define OPTIMIZATION_BATCHING       
 #define OPTIMIZATION_DISPLAY_LIST
 #define OPTIMIZATION_STRUCTS
 #define OPTIMIZATION_STRUCTS_POS
+
+#define SEPARATED_SOLIDS_TRANSPARENTS
 
 /*  
 =============================================================== BENCHMARKING ==================================================================|
@@ -128,7 +133,7 @@ namespace poyo {
         TILE_DANDELION   = 33,      //Fixed
         TILE_HERB        = 34,      //Fixed
         
-        NUM_TILES,
+        NUM_TILES,                  //ALSO A INVALID TILE
     };
 
     enum BlockProperties {  //I Can have until 8 Properties
@@ -187,7 +192,7 @@ namespace poyo {
         [BLOCK_DANDELION]   = {TILE_DANDELION,   TILE_DANDELION,   TILE_DANDELION,  TILE_DANDELION,  TILE_DANDELION,   TILE_DANDELION},
         [BLOCK_HERB]        = {TILE_HERB,        TILE_HERB,        TILE_HERB,       TILE_HERB,       TILE_HERB,        TILE_HERB},
         
-        [BLOCK_AIR] = {TILE_STONE,      TILE_STONE,      TILE_STONE,    TILE_STONE,     TILE_STONE,      TILE_STONE},
+        [BLOCK_AIR]         = {NUM_TILES,      NUM_TILES,      NUM_TILES,    NUM_TILES,     NUM_TILES,      NUM_TILES},
     };
 
     inline constexpr U8 BLOCK_PROPERTIES[] = {
@@ -248,6 +253,9 @@ namespace poyo {
 #else
     inline Map<U8, USVec2> tileUVMap;
 #endif
+
+
+    using Blocks_Faces = USVec2;
 }
 
 // Bits -> U(0<->Max Value) S(Min Value<->Max Value)

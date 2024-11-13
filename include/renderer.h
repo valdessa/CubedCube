@@ -42,6 +42,7 @@ namespace poyo {
         static VIDEO_MODE VideoMode();
         static const Mtx& ViewMatrix(); 
 
+        //Todo: make 1 only using one
         static void ObjectView(f32 posx, f32 posy, f32 posz,
                                f32 angx = 0, f32 angy = 0, f32 angz = 0,
                                f32 scalx = 1, f32 scaly = 1, f32 scalz = 1);
@@ -52,12 +53,15 @@ namespace poyo {
         static void RenderBegin(U16 VertexCount);
         static void RenderEnd();
 
-        static void RenderFace(const CubeFace& face);                   // No Batching
-        static void RenderFace(const CubeFace& face, S8 x, S8 y, S8 z); // Batching
-        static void RenderFaceIndexed(const CubeFace& face, S8 x, S8 y, S8 z); // Batching
+        static void RenderFace(const CubeFace& face);                           // No Batching
+        static void RenderFaceIndexed(const CubeFace& face);                    // No Batching
+        static void RenderFace(const CubeFace& face, S8 x, S8 y, S8 z);         // Batching
+        static void RenderFaceIndexed(const CubeFace& face, S8 x, S8 y, S8 z);  // Batching
         static void RenderCube(const Cubito& cube, cFVec3& worldPos = cFVec3(0), cFVec3& angle = cFVec3(0)); // No Batching
-        static void RenderCubeVector(const Vector<Cubito>& cubes, U16 validBlocks);                 //Only for Batching
-        static void RenderFaceVector(const Vector<Pair<CubeFace, USVec3>>& faces, U16 validBlocks); //Only for Batching
+        
+        static void RenderCubeVector(const Vector<Cubito>& cubes, U16 validBlocks);                        //Only for Batching
+        static void RenderCubeVectorIndexed(const Vector<Cubito>& cubes, U16 validBlocks);                 //Only for Batching
+        static void RenderFaceVector(const Vector<Pair<CubeFace, USVec3>>& faces, U16 validBlocks);        //Only for Batching
         static void RenderFaceVectorIndexed(const Vector<Pair<CubeFace, USVec3>>& faces, U16 validBlocks); //Only for Batching
         static void RenderBoundingBox(S16 originX, S16 originY, S16 originZ, U16 size, cUCVec3& color, bool RenderCross = false);
 

@@ -16,6 +16,7 @@ namespace poyo {
         const U64& stopAndGetTick();
 
         U64 static TickToMs(U64 ticks);
+        static float TickToMsfloat(U64 ticks);
 
     private:
         bool running_;

@@ -40,8 +40,6 @@ using namespace poyo;
 
 #define TILE_SIZE 16
 
-static u16 nDrawCalls = 0;
-
 struct Options {
     bool boundingBox = false;
     bool lightning = false;
@@ -100,7 +98,7 @@ static u8 CalculateFrameRate(void) {
     static u8 frameCount = 0;
     static u32 lastTime;
     static u8 FPS = 0;
-    const u32 currentTime = ticks_to_millisecs(gettime());
+    const u32 currentTime = Tick::TickToMs(gettime());
 
     frameCount++;
     if(currentTime - lastTime > 1000) {
@@ -158,6 +156,8 @@ int main(int argc, char **argv) {
     MemoryUsedByVoxel = Memory::getTotalMemoryUsed() - MemoryUsedByVoxel;
 
     Tick currentTick;
+    Tick frameTick;
+    U64 frameTicks = 0;
     FVec3 lightPos{0, 25, 0};
 
 
@@ -170,9 +170,10 @@ int main(int argc, char **argv) {
     // GX_SetDrawDone();
     // Loop forever
     int textureCounter = 0;
-    float textureCounterFloat = 0;
+    float textureCounterFloat = 0.0f;
     float TextureTime = 0.33f;
     while(1) {
+        frameTick.start();
         Engine::UpdateEngine();
         auto deltaTime = Engine::getDeltaTime();
         Renderer::ResetDrawCalls();
@@ -190,7 +191,7 @@ int main(int argc, char **argv) {
             textureCounter += 4;
         
             // Resetea textureCounterFloat para comenzar un nuevo ciclo
-            textureCounterFloat -= TextureTime;
+            textureCounterFloat = 0.0f;
         
             // Mantiene textureCounter en el rango 0, 4, 8
             if (textureCounter > 28) {
@@ -245,7 +246,6 @@ int main(int argc, char **argv) {
             Renderer::SetLightDiffuse(0, lightPos, 20, 1);
         }
         
-        nDrawCalls = 0;
         currentTick.start();
         Renderer::PrepareToRenderInVX2(true, true, true, true);
         
@@ -362,7 +362,7 @@ int main(int argc, char **argv) {
             text.render(USVec2{5,  20}, fmt::format("Time        : {}", gettime()).c_str());
             text.render(USVec2{5,  35}, fmt::format("Current Time: {}", Engine::getCurrentTime()).c_str());
             text.render(USVec2{5,  50}, fmt::format("Last Time   : {}", Engine::getLastTime()).c_str());
-            text.render(USVec2{5,  65}, fmt::format("Delta Time  : {:.3f} s", deltaTime).c_str());
+            text.render(USVec2{5,  65}, fmt::format("Delta Time  : {:.5f} s", deltaTime).c_str());
             
             //Memory Things
             text.render(USVec2{5,  110}, fmt::format("Memory (System)   : {:.2f} KB", convertBytesToKilobytes(MemoryUsedBySystem)).c_str());
@@ -375,16 +375,19 @@ int main(int argc, char **argv) {
             text.render(USVec2{275, 20}, fmt::format("Camera Pitch [{:.4f}] Yaw [{:.4f}]", currentCam.getPitch(), currentCam.getYaw()).c_str());
 
             //Render Things
-            text.render(USVec2{275,  50}, fmt::format("Valid Blocks : {}", currentWorld.validBlocks_).c_str());
+            text.render(USVec2{275,  35}, fmt::format("Valid Blocks : {}", currentWorld.validBlocks_).c_str());
+            text.render(USVec2{275,  50}, fmt::format("Valid Faces : {}", currentWorld.validFaces_).c_str());
             text.render(USVec2{275,  65}, fmt::format("NDraw Calls  : {}", Renderer::DrawCalls()).c_str());
-            text.render(USVec2{275,  80}, fmt::format("NFaces Drawn : {}", Renderer::FacesDrawn()).c_str());
+            //text.render(USVec2{275,  80}, fmt::format("NFaces Drawn : {}", Renderer::FacesDrawn()).c_str());  //todo: fix
+            text.render(USVec2{275,  80}, fmt::format("NChunks      : {}", currentWorld.NChunks()).c_str());
 
             text.render(USVec2{450, 50}, fmt::format("Video Mode : {}", std::array{"INTERLACE", "NON INTERLACE", "PROGRESSIVE"}[static_cast<int>(Renderer::VideoMode())]).c_str());
             text.render(USVec2{450, 65}, fmt::format("VSYNC      : {}", options.VSYNC ? "YES" : "NOP").c_str());
             text.render(USVec2{450, 80}, fmt::format("NTrees     : {}", currentWorld.nTrees_).c_str()); //currentWorld.nTrees_
             
-            text.render(USVec2{400,   95}, fmt::format("Draw Cycles : {} ts", drawTicks).c_str());
-            text.render(USVec2{400,  110}, fmt::format("Draw Time   : {} ms", Tick::TickToMs(drawTicks)).c_str());
+            text.render(USVec2{400,   95}, fmt::format("Draw Cycles  : {} ts", drawTicks).c_str());
+            text.render(USVec2{400,   110}, fmt::format("Frame Cycles : {} ts", frameTicks).c_str());
+            text.render(USVec2{400,  125}, fmt::format("Draw Time    : {} ms", Tick::TickToMsfloat(drawTicks)).c_str());
             //text.render(USVec2{400,  95}, fmt::format("Helper      : {}", currentWorld.helperCounter).c_str());
             //text.render(USVec2{400, 110}, fmt::format("N Blocks    : {}", currentChunk.validBlocks).c_str());
 
@@ -392,6 +395,9 @@ int main(int argc, char **argv) {
         }
         
         //GRRLIB_PrintfTTF(50, 50, myFont, "MINECRAFT", 16, 0x000000FF);
+
+        frameTicks = frameTick.stopAndGetTick();
+        frameTick.reset();
         
         // Renderizar todo a la pantalla
         Renderer::RenderGX(options.VSYNC); // Render the frame buffer to the TV

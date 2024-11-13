@@ -35,10 +35,11 @@ World::~World() {
 void World::generateLand(S16 radius) {
     for (int chunkX = -radius; chunkX <= radius; ++chunkX) {
         for (int chunkZ = -radius; chunkZ <= radius; ++chunkZ) {
-
-            validBlocks_ += getOrCreateChunkForLand(
+            const auto& currentChunk = getOrCreateChunkForLand(
                 static_cast<S16>(chunkX),
-                static_cast<S16>(chunkZ)).validBlocks;
+                static_cast<S16>(chunkZ));
+            validBlocks_ += currentChunk.validBlocks_;
+            validFaces_  += currentChunk.validFaces_;
         }
     }
 
@@ -108,26 +109,6 @@ void World::generateLandChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
         }
     }
 
-    // // Second pass: Place water in dips, one block below grass level to create a pool effect
-    // for (int x = 0; x < CHUNK_SIZE; ++x) {
-    //     for (int z = 0; z < CHUNK_SIZE; ++z) {
-    //         int worldX = x + (chunkX * CHUNK_SIZE);
-    //         int worldZ = z + (chunkZ * CHUNK_SIZE);
-    //         int groundHeight = getGroundHeight(worldX, worldZ);
-    //
-    //         // Only place water if there’s a dip just below the ground level
-    //         if (groundHeight - 1 > 0) {  // Ensure we're within bounds
-    //             CubePosition waterPos(x, groundHeight - 1, z);
-    //             CubePosition aboveWaterPos(x, groundHeight, z);
-    //
-    //             // Place water if the position directly below the ground is empty (a dip)
-    //             if (chunk.getCubito(aboveWaterPos).type == BLOCK_AIR) {
-    //                 chunk.setCubito(waterPos, BLOCK_WATER); // Water one block below grass, only in dips
-    //             }
-    //         }
-    //     }
-    // }
-
     for(int i = 0; i < MAX_FLOWERS; i++) {
         // Generate a random position within the chunk
         int x = rand() % CHUNK_SIZE;
@@ -194,6 +175,8 @@ void World::generateLandChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
             placeTree(chunk, x, randY + 1, z);
         }
     }
+
+    chunk.updateVisibilityCount();
 }
 
 Chunk& World::getOrCreateChunkForLand(S16 chunkX, S16 chunkZ) {
@@ -301,8 +284,11 @@ Chunk* World::getChunk(S16 chunkX, S16 chunkZ) {
 
 void World::occludeChunkBlocks() {
     validBlocks_ = 0;
+    validFaces_ = 0;
     for(auto& chunk : chunks_) {
-        validBlocks_ += chunk->occludeBlocks();
+        auto valid = chunk->occludeBlocks();
+        validBlocks_ += valid.x;
+        validFaces_ += valid.y;
     }
 }
 

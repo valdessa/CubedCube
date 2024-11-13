@@ -29,6 +29,10 @@ namespace poyo {
         const Vector<UPtr<Chunk>>& getChunks() const {
             return chunks_;
         }
+
+        U16 NChunks() const {
+            return static_cast<U16>(chunks_.size());
+        }
         
         void occludeChunkBlocks();
         void occludeChunkBlocksFaces() const;
@@ -36,6 +40,7 @@ namespace poyo {
         void renderChunksAround(int playerX, int playerZ);
         
         U64 validBlocks_ = 0;
+        U64 validFaces_ = 0;
         U16 nTrees_ = 0;
      private:
         Vector<UPtr<Chunk>> chunks_;

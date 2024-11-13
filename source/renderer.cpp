@@ -266,7 +266,7 @@ void Renderer::ObjectView(f32 posx, f32 posy, f32 posz, f32 angx, f32 angy, f32 
     Mtx ObjTransformationMtx;
     Mtx m;
     Mtx mv, mvi;
-
+    
     guMtxIdentity(ObjTransformationMtx);
 
     if((scalx != 1.0f) || (scaly != 1.0f) || (scalz != 1.0f)) {
@@ -487,6 +487,26 @@ void Renderer::RenderFace(const CubeFace& face) {
     }
 }
 
+void Renderer::RenderFaceIndexed(const CubeFace& face) {
+    nFacesRendered++;
+    for (U8 j = 0; j < 4; j++) {
+#ifdef OPTIMIZATION_STRUCTS_POS
+        GX_Position3u16(positionsCoords[face.direction][0] + cubeFaces[face.direction][j][0],
+                        positionsCoords[face.direction][1] + cubeFaces[face.direction][j][1],
+                        positionsCoords[face.direction][2] + cubeFaces[face.direction][j][2]);
+#else
+        GX_Position3u16(face.x + cubeFaces[face.direction][j][0] + x,
+                        face.y + cubeFaces[face.direction][j][1] + y,
+                        face.z + cubeFaces[face.direction][j][2] + z);
+#endif
+        GX_Normal3s8(cubeNormals[face.direction][0],
+                     cubeNormals[face.direction][1],
+                     cubeNormals[face.direction][2]);
+        GX_Color4u8(255, 255, 255, 255);
+        GX_TexCoord1x8(j);
+    }
+}
+
 void Renderer::RenderFace(const CubeFace& face, S8 x, S8 y, S8 z) {
     nFacesRendered++;
 
@@ -543,11 +563,20 @@ void Renderer::RenderCube(const Cubito& cube, cFVec3& worldPos, cFVec3& angle) {
                       angle.x, angle.y, angle.z,
                       1.0f, 1.0f, 1.0f);
 
-    RenderBegin(24);
-    for (auto& currentFace : cube.face) {
-        RenderFace(currentFace);
+
+    if(hasProperty(cube.type, FOLIAGE)) {
+        RenderBegin(2 * 4);
+        for (auto& currentFace : cube.face) {
+            if(currentFace.tile != NUM_TILES)   RenderFace(currentFace);
+        }
+        RenderEnd();
+    }else {
+        RenderBegin(24);
+        for (auto& currentFace : cube.face) {
+            RenderFace(currentFace);
+        }
+        RenderEnd();
     }
-    RenderEnd();
 }
 
 void Renderer::RenderCubeVector(const Vector<Cubito>& cubes, U16 validBlocks) {
@@ -555,41 +584,45 @@ void Renderer::RenderCubeVector(const Vector<Cubito>& cubes, U16 validBlocks) {
     for(auto& cubito: cubes) {
         if(!cubito.visible) continue;
         for (auto& currentFace : cubito.face) {
-            RenderFace(currentFace, cubito.x, cubito.y, cubito.z);
+            if(currentFace.tile != NUM_TILES) {
+                RenderFace(currentFace, cubito.x, cubito.y, cubito.z);
+            }
         }
     }
+    RenderEnd();
+}
 
+void Renderer::RenderCubeVectorIndexed(const Vector<Cubito>& cubes, U16 validBlocks) {
+    RenderBegin(validBlocks);
+    for(auto& cubito: cubes) {
+        if(!cubito.visible) continue;
+        for (auto& currentFace : cubito.face) {
+            if(currentFace.tile != NUM_TILES) {
+                RenderFaceIndexed(currentFace, cubito.x, cubito.y, cubito.z);
+            }
+        }
+    }
     RenderEnd();
 }
 
 void Renderer::RenderFaceVector(const Vector<Pair<CubeFace, USVec3>>& faces, U16 validBlocks) {
-    GX_Begin(GX_QUADS, GX_VTXFMT2, validBlocks);
+    RenderBegin(validBlocks);
     for (auto& currentFaceVec : faces) {
         auto& currentFace = currentFaceVec.first;
-#ifdef OPTIMIZATION_BATCHING
         auto& cubito = currentFaceVec.second;
         RenderFace(currentFace, cubito.x, cubito.y, cubito.z);
-#else
-        RenderFace(currentFace);
-#endif
     }
-
-    GX_End();
+    RenderEnd();
 }
 
 void Renderer::RenderFaceVectorIndexed(const Vector<Pair<CubeFace, USVec3>>& faces, U16 validBlocks) {
-    GX_Begin(GX_QUADS, GX_VTXFMT2, validBlocks);
+    RenderBegin(validBlocks);
     for (auto& currentFaceVec : faces) {
         auto& currentFace = currentFaceVec.first;
-#ifdef OPTIMIZATION_BATCHING
         auto& cubito = currentFaceVec.second;
         RenderFaceIndexed(currentFace, cubito.x, cubito.y, cubito.z);
-#else
-        RenderFaceIndexed(currentFace);
-#endif
     }
-
-    GX_End();
+    RenderEnd();
 }
 
 void Renderer::RenderBoundingBox(S16 originX, S16 originY, S16 originZ, U16 size, cUCVec3& color, bool RenderCross) {
