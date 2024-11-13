@@ -31,6 +31,11 @@ Chunk::Chunk(World* world) : cubitos_(CHUNK_SIZE, Vector<Vector<Cubito>>(CHUNK_H
 #endif
 
 Chunk::~Chunk() {
+    if(displayListTransparent != nullptr) {
+        DCFlushRange(displayListTransparent, displayListTransparentSize);
+        free(displayListTransparent);
+    }
+    
     if(displayList != nullptr) {
         DCFlushRange(displayList, displayListSize);
         free(displayList);
