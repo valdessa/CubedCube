@@ -39,6 +39,10 @@ constexpr poyo::U8 CHUNK_RADIUS = 6;
 #define OPTIMIZATION_DISPLAY_LIST
 #define OPTIMIZATION_STRUCTS
 #define OPTIMIZATION_STRUCTS_POS
+#define OPTIMIZATION_MODEL_MATRIX
+//2600 vs 1888
+//todo puesto:  3675 vs 2640
+//todo puesto optimizado 3138 vs 2378
 
 #define SEPARATED_SOLIDS_TRANSPARENTS
 

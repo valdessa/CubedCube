@@ -18,6 +18,7 @@ namespace std {
 
 #include <world.h>
 
+#include <ogc/gx.h> //for mtx
 #include <chunk.h>
 
 using namespace poyo;

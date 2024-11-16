@@ -40,9 +40,10 @@ namespace poyo {
         static U32 DrawCalls();
         static U32 FacesDrawn();
         static VIDEO_MODE VideoMode();
-        static const Mtx& ViewMatrix(); 
+        static const Mtx& ViewMatrix();
 
         //Todo: make 1 only using one
+        static void CalculateModelMatrix(Mtx& modelToFill, f32 posx, f32 posy, f32 posz);
         static void ObjectView(f32 posx, f32 posy, f32 posz,
                                f32 angx = 0, f32 angy = 0, f32 angz = 0,
                                f32 scalx = 1, f32 scaly = 1, f32 scalz = 1);

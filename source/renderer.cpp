@@ -262,18 +262,24 @@ const Mtx& Renderer::ViewMatrix() {
     return viewMatrix;
 }
 
+void Renderer::CalculateModelMatrix(Mtx& modelToFill, f32 posx, f32 posy, f32 posz) {
+    guMtxIdentity(modelToFill);
+
+    guMtxTransApply(modelToFill, modelToFill, posx, posy, posz);
+}
+
 void Renderer::ObjectView(f32 posx, f32 posy, f32 posz, f32 angx, f32 angy, f32 angz, f32 scalx, f32 scaly, f32 scalz) {
-    Mtx ObjTransformationMtx;
+    Mtx modelMatrix;
     Mtx m;
-    Mtx mv, mvi;
+    Mtx modelViewMatrix, ModelViewInverse;
     
-    guMtxIdentity(ObjTransformationMtx);
+    guMtxIdentity(modelMatrix);
 
     if((scalx != 1.0f) || (scaly != 1.0f) || (scalz != 1.0f)) {
         guMtxIdentity(m);
         guMtxScaleApply(m, m, scalx, scaly, scalz);
 
-        guMtxConcat(m, ObjTransformationMtx, ObjTransformationMtx);
+        guMtxConcat(m, modelMatrix, modelMatrix);
     }
 
     if((angx != 0.0f) || (angy != 0.0f) || (angz != 0.0f)) {
@@ -285,22 +291,22 @@ void Renderer::ObjectView(f32 posx, f32 posy, f32 posz, f32 angx, f32 angy, f32 
         guMtxConcat(ry, rx, m);
         guMtxConcat(m, rz, m);
 
-        guMtxConcat(m, ObjTransformationMtx, ObjTransformationMtx);
+        guMtxConcat(m, modelMatrix, modelMatrix);
     }
 
     if((posx != 0.0f) || (posy != 0.0f) || (posz != 0.0f)) {
         guMtxIdentity(m);
         guMtxTransApply(m, m, posx, posy, posz);
 
-        guMtxConcat(m, ObjTransformationMtx, ObjTransformationMtx);
+        guMtxConcat(m, modelMatrix, modelMatrix);
     }
 
-    guMtxConcat(viewMatrix, ObjTransformationMtx, mv);
-    GX_LoadPosMtxImm(mv, GX_PNMTX0);
+    guMtxConcat(viewMatrix, modelMatrix, modelViewMatrix);
+    GX_LoadPosMtxImm(modelViewMatrix, GX_PNMTX0);
 
-    guMtxInverse(mv, mvi);
-    guMtxTranspose(mvi, mv);
-    GX_LoadNrmMtxImm(mv, GX_PNMTX0);
+    guMtxInverse(modelViewMatrix, ModelViewInverse);
+    guMtxTranspose(ModelViewInverse, modelViewMatrix);
+    GX_LoadNrmMtxImm(modelViewMatrix, GX_PNMTX0);
 }
 
 void Renderer::SetTextureCoordScaling(U8 unit, U16 scaleX, U16 scaleY) {
@@ -354,6 +360,7 @@ void Renderer::SetBlend(const BLEND_MODE mode) {
         case BLEND_MODE::INV:    GX_SetBlendMode(GX_BM_BLEND, GX_BL_INVSRCCLR, GX_BL_INVSRCCLR, GX_LO_CLEAR);
             break;
         case BLEND_MODE::MODE_OFF: GX_SetBlendMode(GX_BM_NONE, GX_BL_ZERO, GX_BL_ONE, GX_LO_CLEAR);
+                                   //GX_SetAlphaUpdate(GX_FALSE);
             break;
         default: ;
     }

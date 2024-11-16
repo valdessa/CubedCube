@@ -1,9 +1,10 @@
 #include <common.h>
 
+#include <ogc/gx.h>
 #include <chunk.h>
 
 //#include <grrlib.h>
-#include <ogc/gx.h>
+
 #include <ogc/cache.h>
 
 #include <renderer.h>
@@ -164,19 +165,23 @@ void Chunk::createDisplayList() {
 #endif
     
 #endif
+
+
+#ifdef OPTIMIZATION_MODEL_MATRIX
+    Renderer::CalculateModelMatrix(modelMatrix_, worldPosition_.x, 0, worldPosition_.z);
+#endif
 }
 
 void Chunk::CreateList(U32 entitiesToRender, void*& list) {
     //The GX_DRAW_QUADS command takes up 3 bytes.
     //Each face is a quad with 4 vertexes.
-    //Each vertex takes up three u16 for the position coordinate, one u8 for the color index, and two u16 for the texture coordinate.
-    //Because of the write gathering pipe, an extra 63 bytes are needed.
+    //Each Vertex 3->s16 for positions, 3->s8 for normals, 4->u8 for colors and 2->u16 for texture coords.
+    //Said by GX Documentation, an extra 63 bytes are needed.
     U32 listSize = 3 + entitiesToRender * (3 * sizeof(s16) + 3 * sizeof(S8) + 4 * sizeof(u8) + 2 * sizeof(u16)) + 63;
     //The list size also must be a multiple of 32, so round up to the next multiple of 32.
-
     //2 Options to Round Up:
     //listSize = round_up(listSize, 32);
-    listSize = (listSize + 31) & ~31;
+    listSize = (listSize + 31) & ~31;   //Round up to a multiple of 32
     
     list = memalign(32, listSize);
     //Remove this block of memory from the CPU's cache because the write gather pipe is used to write the commands
@@ -362,18 +367,40 @@ void Chunk::render() {
 
 //OPTIMIZATION -> DISPLAY LIST + BATCHING
 #if defined(OPTIMIZATION_BATCHING) && defined(OPTIMIZATION_DISPLAY_LIST)
-    Renderer::ObjectView(worldPosition_.x, 0, worldPosition_.z);
+
+    #ifdef OPTIMIZATION_MODEL_MATRIX
+    // Mtx resultMatrix;
+    // //Renderer::CalculateModelMatrix(modelMatrix_, worldPosition_.x, 0, worldPosition_.z); //3k ticks
+    // guMtxConcat(Renderer::ViewMatrix(), modelMatrix_, resultMatrix);
+    // GX_LoadPosMtxImm(resultMatrix, GX_PNMTX0);
+        guMtxConcat(Renderer::ViewMatrix(), modelMatrix_, resultMatrix);
+        GX_LoadPosMtxImm(resultMatrix, GX_PNMTX0);
+    
+    #else
+        guMtxIdentity(resultMatrix);
+        guMtxTransApply(resultMatrix, resultMatrix, worldPosition_.x, 0, worldPosition_.z);
+        guMtxConcat(Renderer::ViewMatrix(), resultMatrix, resultMatrix);
+        GX_LoadPosMtxImm(resultMatrix, GX_PNMTX0);
+        //Renderer::ObjectView(worldPosition_.x, 0, worldPosition_.z);
+    #endif
+    
     Renderer::CallDisplayList(displayList, displayListSize);
 #else
 
 #endif
 }
 
-void Chunk::renderTranslucents() const {
+void Chunk::renderTranslucents() {
     if(displayListTransparent == nullptr) return;
     //OPTIMIZATION -> DISPLAY LIST + BATCHING
 #if defined(OPTIMIZATION_BATCHING) && defined(OPTIMIZATION_DISPLAY_LIST)
-    Renderer::ObjectView(worldPosition_.x, 0, worldPosition_.z);
+    #ifdef OPTIMIZATION_MODEL_MATRIX
+        GX_LoadPosMtxImm(resultMatrix, GX_PNMTX0);
+    #else
+    
+        GX_LoadPosMtxImm(resultMatrix, GX_PNMTX0);
+        //Renderer::ObjectView(worldPosition_.x, 0, worldPosition_.z);
+    #endif
     Renderer::CallDisplayList(displayListTransparent, displayListTransparentSize);
 #endif
 

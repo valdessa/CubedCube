@@ -16,7 +16,7 @@ namespace poyo {
         void updateVisibilityCount();
 
         void render();
-        void renderTranslucents() const;
+        void renderTranslucents();
 
         bool isVisible(const Cubito& cubito) const;
         bool isSolid(const Cubito& cubito) const;
@@ -43,6 +43,11 @@ namespace poyo {
 #else
         Vector<Vector<Vector<Cubito>>> cubitos_; //To Optimize
 #endif
+
+#ifdef OPTIMIZATION_MODEL_MATRIX
+        Mtx modelMatrix_;
+#endif
+        Mtx resultMatrix;
         
         Vector<Pair<CubeFace, USVec3>> faces_;
         

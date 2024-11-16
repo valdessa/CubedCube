@@ -172,12 +172,14 @@ int main(int argc, char **argv) {
     int textureCounter = 0;
     float textureCounterFloat = 0.0f;
     float TextureTime = 0.33f;
+
+    
+    
     while(1) {
         frameTick.start();
         Engine::UpdateEngine();
         auto deltaTime = Engine::getDeltaTime();
         Renderer::ResetDrawCalls();
-        
         if(options.lightning) {
             angle+=deltaTime;
             updatePosition(lightPos, 20, angle);
@@ -219,9 +221,13 @@ int main(int argc, char **argv) {
         currentCam.updateCamera(deltaTime); //deltaTime
         //-----
         Renderer::Set3DMode(currentCam); // Configura el modo 3D //Projection
-        Renderer::PrepareToRenderInVX0(true, true, true, false);
-        Renderer::ObjectView(lightPos.x, lightPos.y, lightPos.z);
-        Renderer::RenderSphere(1, 20, 20, true, 0xFFFF00FF);
+
+        if(options.lightning) {
+            Renderer::PrepareToRenderInVX0(true, true, true, false);
+            Renderer::ObjectView(lightPos.x, lightPos.y, lightPos.z);
+            Renderer::RenderSphere(1, 20, 20, true, 0xFFFF00FF);
+        }
+
 
         
 
@@ -233,14 +239,7 @@ int main(int argc, char **argv) {
             {0, 0, 1},
             {0, 0, 0}
         };
-
-
-        Renderer::BindTexture(blocksTexture, 0);
-        Renderer::SetTextureCoordScaling(0, TILE_SIZE, TILE_SIZE);
-
-
-
-
+        
 
         if(options.lightning) {
             Renderer::SetLightDiffuse(0, lightPos, 20, 1);
@@ -248,6 +247,8 @@ int main(int argc, char **argv) {
         
         currentTick.start();
         Renderer::PrepareToRenderInVX2(true, true, true, true);
+        Renderer::BindTexture(blocksTexture, 0);
+        Renderer::SetTextureCoordScaling(0, TILE_SIZE, TILE_SIZE);
         
         auto& chunkitos = currentWorld.getChunks();
         for(auto& chunkito : chunkitos) {
