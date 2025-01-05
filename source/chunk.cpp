@@ -386,6 +386,7 @@ void Chunk::render() {
     // //Renderer::CalculateModelMatrix(modelMatrix_, worldPosition_.x, 0, worldPosition_.z); //3k ticks
     // guMtxConcat(Renderer::ViewMatrix(), modelMatrix_, resultMatrix);
     // GX_LoadPosMtxImm(resultMatrix, GX_PNMTX0);
+    //todo: tengo un error que la iluminacion falla porque no calculo de nuevo la normal matrix... solo cuando hay iluminacion
         guMtxConcat(Renderer::ViewMatrix(), modelMatrix_, resultMatrix);
         GX_LoadPosMtxImm(resultMatrix, GX_PNMTX0);
     

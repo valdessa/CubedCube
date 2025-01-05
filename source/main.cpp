@@ -85,15 +85,6 @@ void updateWaterTextureCoordinates(int textureCounter, u8 offset = 5) {
     waterTexCoords[6] = 0 + baseOffset;     waterTexCoords[7] = 1 + offset;
 }
 
-U8 tileTexCoordsTri[6][2] = {  // Ahora tenemos 6 vértices, ya que son dos triángulos
-    {1, 1},  // Vértice 0 del triángulo 1
-    {1, 0},  // Vértice 1 del triángulo 1
-    {0, 0},  // Vértice 2 del triángulo 1
-    {1, 1},  // Vértice 0 del triángulo 2
-    {0, 0},  // Vértice 2 del triángulo 2
-    {0, 1},  // Vértice 3 del triángulo 2
-};
-
 static u8 CalculateFrameRate(void) {
     static u8 frameCount = 0;
     static u32 lastTime;
@@ -109,81 +100,7 @@ static u8 CalculateFrameRate(void) {
     return FPS;
 }
 
-
-///ayudaaaa
-struct AnimationData {
-    Vector<Vector<FMat4>> boneTransformations;  // Matrices de huesos por fotograma
-    uint8_t numFrames;  // Usamos uint8_t para ahorrar espacio
-};
-
-#define MAX_BONE_INFLUENCE 4
-struct Vertex {
-    // position
-    FVec3 Position;                             //Layout 0
-    // normal
-    FVec3 Normal;                               //Layout 1
-    // texCoords    
-    FVec2 UV;                                   //Layout 2
-    // color
-    FVec3 Color;                                //Layout 3
-    //bone indexes which will influence this vertex
-    int m_BoneIDs[MAX_BONE_INFLUENCE];          //Layout 6
-    //weights from each bone
-    float m_Weights[MAX_BONE_INFLUENCE];        //Layout 7
-};
-
 #include <kirbyinfo.h>
-
-void drawKirbyFINAL() {
-    constexpr size_t size = 36;
-    static float currentFrame = 0;
-    auto& finalBonesMatrices = BoneTransformations[static_cast<uint32_t>(currentFrame) % NumFrames];
-    
-    for(size_t j = 0; j < 5; j++) {
-        bool texture =  j < 3 ? true : false;
-        Renderer::PrepareToRenderInVX0(true, true, !texture, texture);
-        GX_Begin(GX_TRIANGLES, GX_VTXFMT0, size);
-        for (size_t i = 0; i < size; i++) {
-            unsigned int index = IndicesKirbyFINAL[j][i];
-            const auto& vertex = VerticesKirbyFINAL[j][index];
-
-            FVec4 position(vertex.Position[0], vertex.Position[1], vertex.Position[2], 1.0f);
-            FVec4 finalPosition = position;
-        
-            FVec4 totalPosition(0.0f);
-            for (int b = 0; b < MAX_BONE_INFLUENCE; ++b) {
-                if (vertex.m_BoneIDs[b] == -1)
-                    continue;
-                const auto& boneMatrix = finalBonesMatrices[vertex.m_BoneIDs[b]];
-                glm::vec4 localPosition = boneMatrix * position;
-                totalPosition += localPosition * vertex.m_Weights[b];
-            }
-            finalPosition = totalPosition;
-            auto result = i % 6;
-            size_t faceIndex = i / 6; 
-            GX_Position3f32(finalPosition[0], finalPosition[1], finalPosition[2]);
-            //GX_Position3f32(vertex.Position[0], vertex.Position[1], vertex.Position[2]);
-            GX_Normal3f32(vertex.Normal[0], vertex.Normal[1], vertex.Normal[2]);
-            switch (j) {
-                case 0: GX_TexCoord2u8(tileTexCoordsTri[result][0] + (faceIndex == 4 ? 7 : 6),  tileTexCoordsTri[result][1] + 4);
-                    break;
-                case 1: GX_TexCoord2u8(tileTexCoordsTri[result][0] + 6, tileTexCoordsTri[result][1] + 4);
-                    break;
-                case 2: GX_TexCoord2u8(tileTexCoordsTri[result][0] + 6, tileTexCoordsTri[result][1] + 4);
-                    break;
-                case 3: GX_Color4u8(204, 0, 21, 255);
-                    break;
-                case 4: GX_Color4u8(204, 0, 21, 255);
-                    break;
-                default: ;
-            }
-            
-        }
-        GX_End();
-    }
-    currentFrame += Engine::getDeltaTime() * 30.0f;
-    currentFrame = fmod(currentFrame, 56.0f);
-}
 
 #include <fat.h>
 //1 ms = 40,500 ticks
@@ -249,21 +166,6 @@ int main(int argc, char **argv) {
     int textureCounter = 0;
     float textureCounterFloat = 0.0f;
     float TextureTime = 0.33f;
-
-
-    // FILE *file = fopen("saludo.txt", "w");
-    //
-    // // Verifica que el archivo se abrió correctamente
-    // if (file == NULL) {
-    //     perror("Error al abrir el archivo");
-    //     //return 1;
-    // }
-    //
-    // // Escribe la palabra "Hola Mundo" en el archivo
-    // fprintf(file, "Hola Mundo\n");
-    //
-    // // Cierra el archivo
-    // fclose(file);
 
     std::string helpValue;
     if(fatInitDefault()) {
