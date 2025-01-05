@@ -1,4 +1,5 @@
 #include <common.h>
+#include <ogc/cache.h>
 
 namespace std {
     // Custom hash function for std::pair<short, short>
@@ -299,18 +300,53 @@ void World::occludeChunkBlocksFaces() const {
     }
 }
 
-void World::renderChunksAround(int playerX, int playerZ) {
+void World::renderChunksAround(int playerX, int playerZ, U8* waterTexCoords) {
     int chunkX = playerX / CHUNK_SIZE; 
     int chunkZ = playerZ / CHUNK_SIZE; 
 
-    int counter = 0;
+    std::vector<Chunk*> chunksToRender;
+    
     for (int x = -CHUNK_LOAD_RADIUS; x <= CHUNK_LOAD_RADIUS; ++x) {
         for (int z = -CHUNK_LOAD_RADIUS; z <= CHUNK_LOAD_RADIUS; ++z) {
             if(auto currentChunk = getChunk(chunkX + x, chunkZ + z)) {
-                currentChunk->render();
-                counter++;
+                //currentChunk->render();
+                chunksToRender.push_back(currentChunk);
             }
         }
     }
+
+    for(auto& c : chunksToRender) {
+        c->render();
+    }
+
+    GX_SetVtxDesc(GX_VA_TEX0, GX_INDEX8);
+    GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_TEX0, GX_TEX_ST, GX_U8, 0);
+        
+    GX_SetArray(GX_VA_TEX0, waterTexCoords, 2 * sizeof(u8));
+    DCStoreRange(waterTexCoords, 8 * sizeof(u8));
+    GX_InvVtxCache();
+
+    for(auto& c : chunksToRender) {
+        c->renderTranslucents();
+    }
+    
     //SYS_Report("N Chunks: %d\n", counter);
+}
+
+void World::render(U8* waterTexCoords) const {
+    for(auto& chunkito : chunks_) {
+        chunkito->render();
+    }
+
+    GX_SetVtxDesc(GX_VA_TEX0, GX_INDEX8);
+    GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_TEX0, GX_TEX_ST, GX_U8, 0);
+        
+    GX_SetArray(GX_VA_TEX0, waterTexCoords, 2 * sizeof(u8));
+    DCStoreRange(waterTexCoords, 8 * sizeof(u8));
+    GX_InvVtxCache();
+
+    for(auto& chunkito : chunks_) {
+        if(!chunkito->displayListTransparent) continue;
+        chunkito->renderTranslucents();
+    }
 }

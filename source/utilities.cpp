@@ -12,7 +12,7 @@ void poyo::mapTileUVs(U8 tilesetWidth) {
         tileUVMap[tile][0] = U;
         tileUVMap[tile][1] = V;
 #else
-        tileUVMap[tile] = USVec2{U, V};
+        tileUVMap[tile] = UCVec2{U, V};
 #endif
     }
 }

@@ -53,18 +53,16 @@ namespace poyo {
 
         static void RenderBegin(U16 VertexCount);
         static void RenderEnd();
-
-        static void RenderFace(const CubeFace& face);                           // No Batching
-        static void RenderFaceIndexed(const CubeFace& face);                    // No Batching
-        static void RenderFace(const CubeFace& face, S8 x, S8 y, S8 z);         // Batching
-        static void RenderFaceIndexed(const CubeFace& face, S8 x, S8 y, S8 z);  // Batching
+        
+        static void RenderFace(const CubeFace& face, S8 x = 0, S8 y = 0, S8 z = 0);         // No Batching / Batching
+        static void RenderFaceIndexed(const CubeFace& face, S8 x = 0, S8 y = 0, S8 z = 0);  // No Batching / Batching
         static void RenderCube(const Cubito& cube, cFVec3& worldPos = cFVec3(0), cFVec3& angle = cFVec3(0)); // No Batching
         
         static void RenderCubeVector(const Vector<Cubito>& cubes, U16 validBlocks);                        //Only for Batching
         static void RenderCubeVectorIndexed(const Vector<Cubito>& cubes, U16 validBlocks);                 //Only for Batching
         static void RenderFaceVector(const Vector<Pair<CubeFace, USVec3>>& faces, U16 validBlocks);        //Only for Batching
         static void RenderFaceVectorIndexed(const Vector<Pair<CubeFace, USVec3>>& faces, U16 validBlocks); //Only for Batching
-        static void RenderBoundingBox(S16 originX, S16 originY, S16 originZ, U16 size, cUCVec3& color, bool RenderCross = false);
+        static void RenderBoundingBox(S16 originX, S16 originY, S16 originZ, U16 sizeX, U16 sizeY, cUCVec3& color, bool RenderCross = false);
 
         static void RenderSphere(f32 r, int lats, int longs, bool filled, u32 col);
 

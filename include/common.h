@@ -18,7 +18,7 @@
 #define MAX_HERBS 2
 #define TRUNK_HEIGHT 4
 
-const int CHUNK_LOAD_RADIUS = 2;
+inline int CHUNK_LOAD_RADIUS = 2;
 
 constexpr poyo::U8 CHUNK_RADIUS = 6;
 
@@ -40,6 +40,8 @@ constexpr poyo::U8 CHUNK_RADIUS = 6;
 #define OPTIMIZATION_STRUCTS
 #define OPTIMIZATION_STRUCTS_POS
 #define OPTIMIZATION_MODEL_MATRIX
+
+#define OPTIMIZATION_VERTEX_MEMORY //2415 vs 4572
 //2600 vs 1888
 //todo puesto:  3675 vs 2640
 //todo puesto optimizado 3138 vs 2378
@@ -222,7 +224,7 @@ namespace poyo {
         return (BLOCK_PROPERTIES[blockType] & property) != 0;
     }
 
-    inline constexpr U8 cubeFaces[][4][3] = {
+    inline constexpr U8 cubeFaces[8][4][3] = {
         [DIR_X_FRONT] = {{0, 1, 1}, {0, 1, 0}, {0, 0, 0}, {0, 0, 1}},  //drawn clockwise looking x-
         [DIR_X_BACK] =  {{0, 1, 0}, {0, 1, 1}, {0, 0, 1}, {0, 0, 0}},  //drawn clockwise looking x+
         //[DIR_X_BACK] =  {{1, 1, 1}, {1, 1, 0}, {1, 0, 0}, {1, 0, 1}},  //drawn clockwise looking x+
@@ -240,7 +242,7 @@ namespace poyo {
         [DIR_DIAG_XY_BACK]  = {{0, 1, 0}, {1, 1, 1}, {1, 0, 1}, {0, 0, 0}}  //-X+Y-Z To +X-Y+Z 
     };
     
-    inline constexpr S8 cubeNormals[][3] = {
+    inline constexpr S8 cubeNormals[8][3] = {
         [DIR_X_FRONT] = { 1,  0,  0},  // Front (X+)
         [DIR_X_BACK]  = {-1,  0,  0},  // Back (X-)
         [DIR_Y_FRONT] = { 0,  1,  0},  // Top (Y+)
@@ -251,14 +253,21 @@ namespace poyo {
         [DIR_DIAG_XY_FRONT] ={ 0,  1,  0},  // Normal para la cara superior (Y+)
         [DIR_DIAG_XY_BACK]  ={ 0,  1,  0},  // Normal para la cara superior (Y+)
     };
-    
-#ifdef OPTIMIZATION_MAPS
-    inline U16 tileUVMap[NUM_TILES][2]{};
+
+#ifdef OPTIMIZATION_VERTEX_MEMORY
+    #ifdef OPTIMIZATION_MAPS
+        inline U8 tileUVMap[NUM_TILES][2]{};
+    #else
+        inline Map<U8, UCVec2> tileUVMap;
+    #endif
 #else
-    inline Map<U8, USVec2> tileUVMap;
+    #ifdef OPTIMIZATION_MAPS
+        inline U16 tileUVMap[NUM_TILES][2]{};
+    #else
+        inline Map<U8, USVec2> tileUVMap;
+    #endif
 #endif
-
-
+    
     using Blocks_Faces = USVec2;
 }
 

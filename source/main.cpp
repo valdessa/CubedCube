@@ -34,6 +34,7 @@ GRRLIB (GX Version)
 #include <text_renderer.h>
 
 //TPL and Fonts
+#include <fstream>
 #include <main.h>
 
 using namespace poyo;
@@ -43,10 +44,11 @@ using namespace poyo;
 struct Options {
     bool boundingBox = false;
     bool lightning = false;
-    bool debugUI = false;
+    bool debugUI = true;
     bool VSYNC = true;
     bool helper = false;
-    int helper2 = 0;
+    bool chunksAround = false;
+    int ChunkLoadRadius = CHUNK_LOAD_RADIUS;
 };
 
 void updatePosition(FVec3& point, float radius, float angle) {
@@ -94,6 +96,181 @@ inline constexpr U8 CubeFaces[][4][3] = {
     [DIR_Z_BACK] =  {{1, 1, 0}, {0, 1, 0}, {0, 0, 0}, {1, 0, 0}},  // Cara trasera en el eje Z
 };
 
+float verticesKirby[][3] = {
+    //First Cube:
+    {1.0, 1.0, -1.0},
+    {1.0, -1.0, -1.0},
+    {1.0, 1.0, 1.0},
+    {1.0, -1.0, 1.0},
+    {-1.0, 1.0, -1.0},
+    {-1.0, -1.0, -1.0},
+    {-1.0, 1.0, 1.0},
+    {-1.0, -1.0, 1.0},
+    //Second Cube:
+    {0.357888, 0.531968, 0.735236},
+    {0.357888, -0.148563, 0.371977},
+    {-0.413526, 0.531968, 0.735236},
+    {-0.413526, -0.148563, 0.371977},
+    {-0.413526, -0.632103, 1.277844},
+    {-0.413526, 0.048428, 1.641103},
+    {0.357888, 0.048428, 1.641103},
+    {0.357888, -0.632103, 1.277844},
+    //Third Cube:
+    {0.419377, 0.566375, -0.829788},
+    {0.419377, -0.058052, -0.376831},
+    {-0.352036, 0.566375, -0.829788},
+    {-0.352036, -0.058052, -0.376831},
+    {-0.352036, -0.660991, -1.208016},
+    {-0.352036, -0.036565, -1.660974},
+    {0.419377, -0.036565, -1.660974},
+    {0.419377, -0.660991, -1.208016},
+    //Fourth Cube:
+    {-0.058084, -0.874061, 0.044712},
+    {-0.095024, -1.227608, 0.032654},
+    {-0.165618, -0.893162, 0.934211},
+    {-0.202557, -1.246709, 0.922154},
+    {1.349861, -1.415187, 1.106211},
+    {1.386801, -1.061641, 1.118269},
+    {1.494334, -1.042540, 0.228769},
+    {1.457394, -1.396087, 0.216711},
+    // Fith Cube:
+    {-0.159339, -0.892044, -1.013599},
+    {-0.196472, -1.245625, -1.003257},
+    {-0.067106, -0.875662, -0.122329},
+    {-0.104240, -1.229243, -0.111987},
+    {1.451116, -1.397204, -0.269854},
+    {1.488249, -1.043623, -0.280196},
+    {1.396017, -1.060006, -1.171467},
+    {1.358883, -1.413587, -1.161125}
+};
+
+int facesKirby[][4] = {
+    //First Cube:
+    {0, 4, 6, 2},
+    {3, 2, 6, 7},
+    {7, 6, 4, 5},
+    {5, 1, 3, 7},
+    {1, 0, 2, 3},
+    {5, 4, 0, 1},
+    //Second Cube:
+    {9, 11, 10, 8},
+    {15, 14, 13, 12},
+    {11, 9, 15, 12},
+    {9, 8, 14, 15},
+    {8, 10, 13, 14},
+    {10, 11, 12, 13},
+    // Third Cube:
+    {17, 16, 18, 19},
+    {23, 20, 21, 22},
+    {19, 20, 23, 17},
+    {17, 23, 22, 16},
+    {16, 22, 21, 18},
+    {18, 21, 20, 19},
+    // Fourth Cube:
+    {25, 27, 26, 24},  
+    {31, 30, 29, 28},  
+    {27, 25, 31, 28},  
+    {25, 24, 30, 31}, 
+    {24, 26, 29, 30},  
+    {26, 27, 28, 29},
+    // Fith Cube:
+    {33, 35, 34, 32},  
+    {39, 38, 37, 36},  
+    {35, 33, 39, 36},  
+    {33, 32, 38, 39},  
+    {32, 34, 37, 38},  
+    {34, 35, 36, 37}   
+};
+
+U8 tileTexCoords2[4][2] = {
+    {1, 1},
+    {1, 0},
+    {0, 0},
+    {0, 1},
+};
+
+U8 tileTexCoordsTri[6][2] = {  // Ahora tenemos 6 vértices, ya que son dos triángulos
+    {1, 1},  // Vértice 0 del triángulo 1
+    {1, 0},  // Vértice 1 del triángulo 1
+    {0, 0},  // Vértice 2 del triángulo 1
+    {1, 1},  // Vértice 0 del triángulo 2
+    {0, 0},  // Vértice 2 del triángulo 2
+    {0, 1},  // Vértice 3 del triángulo 2
+};
+
+float normals_1[][3] = {
+    // Primer cubo:
+    // Cara 1
+    {0.0f, 0.0f, 1.0f},
+    // Cara 2
+    {0.0f, 0.0f, -1.0f},
+    // Cara 3
+    {1.0f, 0.0f, 0.0f},
+    // Cara 4
+    {-1.0f, 0.0f, 0.0f},
+    // Cara 5
+    {0.0f, -1.0f, 0.0f},
+    // Cara 6
+    {0.0f, 1.0f, 0.0f},
+    
+    // Segundo cubo:
+    // Cara 1
+    {0.0f, 0.0f, 1.0f},
+    // Cara 2
+    {0.0f, 0.0f, -1.0f},
+    // Cara 3
+    {1.0f, 0.0f, 0.0f},
+    // Cara 4
+    {-1.0f, 0.0f, 0.0f},
+    // Cara 5
+    {0.0f, -1.0f, 0.0f},
+    // Cara 6
+    {0.0f, 1.0f, 0.0f},
+    
+    // Tercer cubo:
+    // Cara 1
+    {0.0f, 0.0f, 1.0f},
+    // Cara 2
+    {0.0f, 0.0f, -1.0f},
+    // Cara 3
+    {1.0f, 0.0f, 0.0f},
+    // Cara 4
+    {-1.0f, 0.0f, 0.0f},
+    // Cara 5
+    {0.0f, -1.0f, 0.0f},
+    // Cara 6
+    {0.0f, 1.0f, 0.0f},
+    
+    // Cuarto cubo:
+    // Cara 1
+    {0.0f, 0.0f, 1.0f},
+    // Cara 2
+    {0.0f, 0.0f, -1.0f},
+    // Cara 3
+    {1.0f, 0.0f, 0.0f},
+    // Cara 4
+    {-1.0f, 0.0f, 0.0f},
+    // Cara 5
+    {0.0f, -1.0f, 0.0f},
+    // Cara 6
+    {0.0f, 1.0f, 0.0f},
+    
+    // Quinto cubo:
+    // Cara 1
+    {0.0f, 0.0f, 1.0f},
+    // Cara 2
+    {0.0f, 0.0f, -1.0f},
+    // Cara 3
+    {1.0f, 0.0f, 0.0f},
+    // Cara 4
+    {-1.0f, 0.0f, 0.0f},
+    // Cara 5
+    {0.0f, -1.0f, 0.0f},
+    // Cara 6
+    {0.0f, 1.0f, 0.0f}
+    
+};
+
 static u8 CalculateFrameRate(void) {
     static u8 frameCount = 0;
     static u32 lastTime;
@@ -109,8 +286,141 @@ static u8 CalculateFrameRate(void) {
     return FPS;
 }
 
-#include "grrlib/grrlib.h"
 
+//xD
+void drawKirby() {
+    Renderer::PrepareToRenderInVX0(true, true, false, true);
+        GX_Begin(GX_QUADS, GX_VTXFMT0, 6 * 4);
+        for (int i = 0; i < 6; i++) {
+            for (int j = 0; j < 4; j++) {
+                int vertexIndex = facesKirby[i][j];
+                GX_Position3f32(verticesKirby[vertexIndex][0], verticesKirby[vertexIndex][1], verticesKirby[vertexIndex][2]);
+                GX_Normal3f32(normals_1[vertexIndex][0], normals_1[vertexIndex][1], normals_1[vertexIndex][2]);
+                GX_TexCoord2u8(tileTexCoords2[j][0] + (i == 4 ? 7 : 6),  tileTexCoords2[j][1] + 4);
+            }
+        }
+        GX_End();
+        GX_Begin(GX_QUADS, GX_VTXFMT0, 6 * 4);
+        for (int i = 6; i < 12; i++) {
+            for (int j = 0; j < 4; j++) {
+                int vertexIndex = facesKirby[i][j];
+                GX_Position3f32(verticesKirby[vertexIndex][0], verticesKirby[vertexIndex][1], verticesKirby[vertexIndex][2]);
+                GX_Normal3f32(normals_1[vertexIndex][0], normals_1[vertexIndex][1], normals_1[vertexIndex][2]);
+                GX_TexCoord2u8(tileTexCoords2[j][0] + 6, tileTexCoords2[j][0] + 4);
+            }
+        }
+        GX_End();
+        GX_Begin(GX_QUADS, GX_VTXFMT0, 6 * 4);
+        for (int i = 12; i < 18; i++) {
+            for (int j = 0; j < 4; j++) {
+                int vertexIndex = facesKirby[i][j];
+                GX_Position3f32(verticesKirby[vertexIndex][0], verticesKirby[vertexIndex][1], verticesKirby[vertexIndex][2]);
+                GX_Normal3f32(normals_1[vertexIndex][0], normals_1[vertexIndex][1], normals_1[vertexIndex][2]);
+                GX_TexCoord2u8(tileTexCoords2[j][0] + 6, tileTexCoords2[j][0] + 4);
+            }
+        }
+        GX_End();
+        Renderer::PrepareToRenderInVX0(true, true, true, false);
+        //Pies:
+        GX_Begin(GX_QUADS, GX_VTXFMT0, 6 * 4);
+        for (int i = 18; i < 24; i++) {
+            for (int j = 0; j < 4; j++) {
+                int vertexIndex = facesKirby[i][j];
+                GX_Position3f32(verticesKirby[vertexIndex][0], verticesKirby[vertexIndex][1], verticesKirby[vertexIndex][2]);
+                GX_Normal3f32(normals_1[vertexIndex][0], normals_1[vertexIndex][1], normals_1[vertexIndex][2]);
+                GX_Color4u8(204, 0, 21, 255);
+            }
+        }
+        GX_End();
+        GX_Begin(GX_QUADS, GX_VTXFMT0, 6 * 4);
+        for (int i = 24; i < 30; i++) {
+            for (int j = 0; j < 4; j++) {
+                int vertexIndex = facesKirby[i][j];
+                GX_Position3f32(verticesKirby[vertexIndex][0], verticesKirby[vertexIndex][1], verticesKirby[vertexIndex][2]);
+                GX_Normal3f32(normals_1[vertexIndex][0], normals_1[vertexIndex][1], normals_1[vertexIndex][2]);
+                GX_Color4u8(204, 0, 21, 255);
+            }
+        }
+        GX_End();
+}
+
+///ayudaaaa
+struct AnimationData {
+    Vector<Vector<FMat4>> boneTransformations;  // Matrices de huesos por fotograma
+    uint8_t numFrames;  // Usamos uint8_t para ahorrar espacio
+};
+
+#define MAX_BONE_INFLUENCE 4
+struct Vertex {
+    // position
+    FVec3 Position;                             //Layout 0
+    // normal
+    FVec3 Normal;                               //Layout 1
+    // texCoords    
+    FVec2 UV;                                   //Layout 2
+    // color
+    FVec3 Color;                                //Layout 3
+    //bone indexes which will influence this vertex
+    int m_BoneIDs[MAX_BONE_INFLUENCE];          //Layout 6
+    //weights from each bone
+    float m_Weights[MAX_BONE_INFLUENCE];        //Layout 7
+};
+
+#include <kirbyinfo.h>
+
+void drawKirbyFINAL() {
+    size_t size = 36;
+    static float currentFrame = 0;
+    auto& finalBonesMatrices = BoneTransformations[(uint32_t)currentFrame % NumFrames];
+
+    
+    for(size_t j = 0; j < 5; j++) {
+        bool texture =  j < 3 ? true : false;
+        Renderer::PrepareToRenderInVX0(true, true, !texture, texture);
+        GX_Begin(GX_TRIANGLES, GX_VTXFMT0, size);
+        for (size_t i = 0; i < size; i++) {
+            unsigned int index = IndicesKirbyFINAL[j][i];
+            const auto& vertex = VerticesKirbyFINAL[j][index];
+
+            glm::vec4 position(vertex.Position[0], vertex.Position[1], vertex.Position[2], 1.0f);
+            glm::vec4 finalPosition = position; // Sin animación
+        
+            glm::vec4 totalPosition(0.0f);
+            for (int b = 0; b < MAX_BONE_INFLUENCE; ++b) {
+                if (vertex.m_BoneIDs[b] == -1)
+                    continue;
+                const auto& boneMatrix = finalBonesMatrices[vertex.m_BoneIDs[b]];
+                glm::vec4 localPosition = boneMatrix * position;
+                totalPosition += localPosition * vertex.m_Weights[b];
+            }
+            finalPosition = totalPosition; // Aplicamos la transformación final
+            auto result = i % 6;
+            int faceIndex = i / 6; 
+            GX_Position3f32(finalPosition[0], finalPosition[1], finalPosition[2]);
+            //GX_Position3f32(vertex.Position[0], vertex.Position[1], vertex.Position[2]);
+            GX_Normal3f32(vertex.Normal[0], vertex.Normal[1], vertex.Normal[2]);
+            switch (j) {
+            case 0: GX_TexCoord2u8(tileTexCoordsTri[result][0] + (faceIndex == 4 ? 7 : 6),  tileTexCoordsTri[result][1] + 4);
+                break;
+            case 1: GX_TexCoord2u8(tileTexCoordsTri[result][0] + 6, tileTexCoordsTri[result][1] + 4);
+                break;
+            case 2: GX_TexCoord2u8(tileTexCoordsTri[result][0] + 6, tileTexCoordsTri[result][1] + 4);
+                break;
+            case 3: GX_Color4u8(204, 0, 21, 255);
+                break;
+            case 4: GX_Color4u8(204, 0, 21, 255);
+                break;
+                
+            }
+            
+        }
+        GX_End();
+    }
+    currentFrame += Engine::getDeltaTime() * 30.0f;
+    currentFrame = fmod(currentFrame, 56.0f);
+}
+
+#include <fat.h>
 //1 ms = 40,500 ticks
 int main(int argc, char **argv) {
     // size_t MemoryUsedAtbeginning = (uintptr_t)SYS_GetArena1Lo() - (uintptr_t)SYS_GetArena1Hi;
@@ -147,10 +457,12 @@ int main(int argc, char **argv) {
     Renderer::SetAlphaTest(true);
     
     World currentWorld;
-    
+
     SYS_Report("N Blocks: %llu\n", 0);
+    SYS_Report("N Blocks: %s\n", "He entrado");
     currentWorld.generateLand(CHUNK_RADIUS);
-    SYS_Report("N Blocks: %llu\n", currentWorld.validBlocks_);
+    SYS_Report("N Blocks: %s\n", "He salido");
+    //SYS_Report("N Blocks: %llu\n", currentWorld.validBlocks_);
     //SYS_Report("Start X Z: %zd %zd\n", startX, startZ);
     
     MemoryUsedByVoxel = Memory::getTotalMemoryUsed() - MemoryUsedByVoxel;
@@ -173,7 +485,37 @@ int main(int argc, char **argv) {
     float textureCounterFloat = 0.0f;
     float TextureTime = 0.33f;
 
-    
+
+    // FILE *file = fopen("saludo.txt", "w");
+    //
+    // // Verifica que el archivo se abrió correctamente
+    // if (file == NULL) {
+    //     perror("Error al abrir el archivo");
+    //     //return 1;
+    // }
+    //
+    // // Escribe la palabra "Hola Mundo" en el archivo
+    // fprintf(file, "Hola Mundo\n");
+    //
+    // // Cierra el archivo
+    // fclose(file);
+
+    std::string helpValue;
+    if(fatInitDefault()) {
+        helpValue = "Working";
+    }else {
+        helpValue = "Not working :/";
+    }
+
+    FILE *file = fopen("hola2.txt", "w");
+    if (file == nullptr) {
+        helpValue = "Error opening file";
+    }
+
+    if(file != nullptr) {
+        fprintf(file, "Hello from GameCube!\n");
+        fclose(file);
+    }
     
     while(1) {
         frameTick.start();
@@ -213,8 +555,13 @@ int main(int argc, char **argv) {
         if(PAD_ButtonsDown(0) & PAD_BUTTON_RIGHT) options.boundingBox = !options.boundingBox;;
         if(PAD_ButtonsDown(0) & PAD_BUTTON_LEFT) options.lightning = !options.lightning;
         if(PAD_ButtonsDown(0) & PAD_BUTTON_DOWN) options.VSYNC = !options.VSYNC;
-        if(PAD_ButtonsDown(0) & PAD_BUTTON_B) options.helper = !options.helper;
-        if(PAD_ButtonsDown(0) & PAD_BUTTON_A) options.helper2++;
+        if(PAD_ButtonsDown(0) & PAD_BUTTON_B) {
+            CHUNK_LOAD_RADIUS++;
+            if(CHUNK_LOAD_RADIUS > CHUNK_RADIUS) {
+                CHUNK_LOAD_RADIUS = 1;
+            }
+        }
+        if(PAD_ButtonsDown(0) & PAD_BUTTON_A) options.chunksAround = !options.chunksAround;
         if(PAD_ButtonsDown(0) & PAD_TRIGGER_R) currentCam.setSpeed(CameraSpeed * 5.0f);
         if(PAD_ButtonsUp(0) & PAD_TRIGGER_R) currentCam.setSpeed(CameraSpeed);
         
@@ -228,42 +575,50 @@ int main(int argc, char **argv) {
             Renderer::RenderSphere(1, 20, 20, true, 0xFFFF00FF);
         }
 
+        Renderer::BindTexture(blocksTexture, 0);
+        Renderer::SetTextureCoordScaling(0, TILE_SIZE, TILE_SIZE);
 
         
-
-        U16 positions[6][3] = {
-            {1, 0, 0},
-            {0, 0, 0},
-            {0, 1, 0},
-            {0, 0, 0},
-            {0, 0, 1},
-            {0, 0, 0}
-        };
-        
-
         if(options.lightning) {
             Renderer::SetLightDiffuse(0, lightPos, 20, 1);
         }
+
+        static int counter = 0;
+        counter ++;
+        //Renderer::ObjectView(0, 15, 0, 0, counter % 360, 0, 0.05, 0.05, 0.05);
+        Renderer::ObjectView(0, 15, 0, 0, -90, 0, 0.05, 0.05, 0.05);
+        //drawKirby();
+        drawKirbyFINAL();
         
         currentTick.start();
-        Renderer::PrepareToRenderInVX2(true, true, true, true);
-        Renderer::BindTexture(blocksTexture, 0);
-        Renderer::SetTextureCoordScaling(0, TILE_SIZE, TILE_SIZE);
-        
-        auto& chunkitos = currentWorld.getChunks();
-        for(auto& chunkito : chunkitos) {
-            chunkito->render();
-        }
-        
         updateWaterTextureCoordinates(textureCounter, 6);
+
+#ifdef OPTIMIZATION_VERTEX_MEMORY
+        Renderer::PrepareToRenderInVX2(true, true, false, true);
+        GX_SetTevOp(GX_TEVSTAGE0, GX_MODULATE);
+#else
+        Renderer::PrepareToRenderInVX2(true, true, true, true);
+#endif
         
-        GX_SetVtxDesc(GX_VA_TEX0, GX_INDEX8);
-        GX_SetArray(GX_VA_TEX0, waterTexCoords, 2 * sizeof(u8));
-        GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_TEX0, GX_TEX_ST, GX_U8, 0);
-        
-        for(auto& chunkito : chunkitos) {
-            chunkito->renderTranslucents();
-        }
+        Renderer::BindTexture(blocksTexture, 0);
+        //Renderer::SetTextureCoordScaling(0, TILE_SIZE, TILE_SIZE);
+        auto& chunkitos = currentWorld.getChunks();
+        // for(auto& chunkito : chunkitos) {
+        //     chunkito->render();
+        // }
+        //
+        // GX_SetVtxDesc(GX_VA_TEX0, GX_INDEX8);
+        // GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_TEX0, GX_TEX_ST, GX_U8, 0);
+        //
+        // GX_SetArray(GX_VA_TEX0, waterTexCoords, 2 * sizeof(u8));
+        // DCStoreRange(waterTexCoords, 8 * sizeof(u8));
+        // GX_InvVtxCache();
+        //
+        // for(auto& chunkito : chunkitos) {
+        //     chunkito->renderTranslucents();
+        // }
+
+        //currentWorld.render(waterTexCoords);
 
 
         // Renderer::PrepareToRenderInVX2(true, false, true, true);
@@ -272,54 +627,14 @@ int main(int argc, char **argv) {
         // GX_SetVtxDesc(GX_VA_TEX0, GX_INDEX8);
         // GX_SetArray(GX_VA_TEX0, waterTexCoords, 2 * sizeof(u8));
         // GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_TEX0, GX_TEX_ST, GX_U8, 0);
-
-
-        // for(int Cubito = 0; Cubito < 10; Cubito++) {
-        //     Renderer::ObjectView(lightPos.x + Cubito, lightPos.y, lightPos.z);
-        //     Renderer::RenderBegin(4);
-        //     int i = 2;
-        //     //for(int i = 0; i < 6; i++) {
-        //     auto& UV = tileUVMap[blockTiles[BLOCK_WATER][i]];
-        //     for (int j = 0; j < 4; j++) {
-        //         GX_Position3u16(CubeFaces[i][j][0] + positions[i][0],
-        //                         CubeFaces[i][j][1] + positions[i][1],
-        //                         CubeFaces[i][j][2] + positions[i][2]);
-        //         GX_Color4u8(255, 255, 255, 255);
-        //         
-        //         //GX_TexCoord2u16(tileTexCoords[j][0] + UV[0], tileTexCoords[j][1]+ UV[1]);
-        //         GX_TexCoord1x8(j);
-        //     }
-        //     //}
-        //     Renderer::RenderEnd();
-        //
-        //
-        //     Renderer::ObjectView(lightPos.x + Cubito, lightPos.y, lightPos.z + 1);
-        //     Renderer::RenderBegin(4);
-        //     for (int j = 0; j < 4; j++) {
-        //         GX_Position3u16(CubeFaces[i][j][0] + positions[i][0],
-        //                         CubeFaces[i][j][1] + positions[i][1],
-        //                         CubeFaces[i][j][2] + positions[i][2]);
-        //         GX_Color4u8(255, 255, 255, 255);
-        //         
-        //         GX_TexCoord1x8(j);
-        //     }
-        //     Renderer::RenderEnd();
-        //
-        //     Renderer::ObjectView(lightPos.x + Cubito, lightPos.y, lightPos.z + 2);
-        //     Renderer::RenderBegin(4);
-        //     for (int j = 0; j < 4; j++) {
-        //         GX_Position3u16(CubeFaces[i][j][0] + positions[i][0],
-        //                         CubeFaces[i][j][1] + positions[i][1],
-        //                         CubeFaces[i][j][2] + positions[i][2]);
-        //         GX_Color4u8(255, 255, 255, 255);
-        //         
-        //         GX_TexCoord1x8(j);
-        //     }
-        //     Renderer::RenderEnd();
-        // }
-
-        //currentWorld.renderChunksAround(currentCam.getPosition().x, currentCam.getPosition().z);
-        //currentWorld.renderChunksAround(-18, -8);
+        if(options.chunksAround) {
+            currentWorld.renderChunksAround(currentCam.getPosition().x, currentCam.getPosition().z, waterTexCoords);
+            //currentWorld.renderChunksAround(-18, -8);
+        }else {
+            currentWorld.render(waterTexCoords);
+        }
+        
+        
         
         // Renderer::ObjectView(lightPos.x, lightPos.y, lightPos.z);
         // GX_Begin(GX_QUADS, GX_VTXFMT2, 8);
@@ -339,14 +654,13 @@ int main(int argc, char **argv) {
         //     }
         // }
         // GX_End();
-        
         if(options.lightning) Renderer::SetLightOff();
         
         if(options.boundingBox) {
             Renderer::PrepareToRenderInVX2(true, false, true, false);
             for(const auto& chunkito : chunkitos) {
-                Renderer::RenderBoundingBox(chunkito->worldPosition_.x, 0, chunkito->worldPosition_.z, CHUNK_SIZE, UCVec3{0, 255, 255}, true);
-            } 
+                Renderer::RenderBoundingBox(chunkito->worldPosition_.x, 0, chunkito->worldPosition_.z, CHUNK_SIZE, CHUNK_HEIGHT, UCVec3{0, 255, 255}, true);
+            }
         }
         
         //std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -389,6 +703,7 @@ int main(int argc, char **argv) {
             text.render(USVec2{400,   95}, fmt::format("Draw Cycles  : {} ts", drawTicks).c_str());
             text.render(USVec2{400,   110}, fmt::format("Frame Cycles : {} ts", frameTicks).c_str());
             text.render(USVec2{400,  125}, fmt::format("Draw Time    : {} ms", Tick::TickToMsfloat(drawTicks)).c_str());
+            text.render(USVec2{400,  140}, fmt::format("Helper      : {}", helpValue).c_str());
             //text.render(USVec2{400,  95}, fmt::format("Helper      : {}", currentWorld.helperCounter).c_str());
             //text.render(USVec2{400, 110}, fmt::format("N Blocks    : {}", currentChunk.validBlocks).c_str());
 

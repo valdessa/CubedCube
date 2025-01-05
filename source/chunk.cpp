@@ -46,8 +46,9 @@ Chunk::~Chunk() {
 
 void Chunk::setCubito(const CubePosition& pos, BLOCK_TYPE block) {
 #ifdef OPTIMIZATION_VECTOR
-    auto index = pos.x + CHUNK_SIZE * (pos.y + CHUNK_SIZE * pos.z); //better
+    //auto index = pos.x + CHUNK_SIZE * (pos.y + CHUNK_SIZE * pos.z); //better
     //auto index = (pos.y * CHUNK_SIZE * CHUNK_SIZE) + (pos.z * CHUNK_SIZE) + pos.x;
+    auto index =  pos.x + CHUNK_SIZE * (pos.z + CHUNK_SIZE * pos.y);
     auto& currentCubito = cubitos_[index];
 #else
     auto& currentCubito = cubitos_[pos.x][pos.y][pos.z];
@@ -175,9 +176,21 @@ void Chunk::createDisplayList() {
 void Chunk::CreateList(U32 entitiesToRender, void*& list) {
     //The GX_DRAW_QUADS command takes up 3 bytes.
     //Each face is a quad with 4 vertexes.
-    //Each Vertex 3->s16 for positions, 3->s8 for normals, 4->u8 for colors and 2->u16 for texture coords.
+    U32 VertexMemory = 0;
+    //Each Vertex:
+#ifdef OPTIMIZATION_VERTEX_MEMORY
+    VertexMemory += 3 * sizeof(s16); // 3->s16 for positions
+    VertexMemory += 3 * sizeof(s8);  // 3->s8 for normals
+    //VertexMemory += 4 * sizeof(u8);  // 4->u8 for colors
+    VertexMemory += 2 * sizeof(u8);  // 2->u8 for texture coords
+#else
+    VertexMemory += 3 * sizeof(s16); // 3->s16 for positions
+    VertexMemory += 3 * sizeof(s8);  // 3->s8 for normals
+    VertexMemory += 4 * sizeof(u8);  // 4->u8 for colors
+    VertexMemory += 2 * sizeof(u16); //2->u16 for texture coords
+#endif
     //Said by GX Documentation, an extra 63 bytes are needed.
-    U32 listSize = 3 + entitiesToRender * (3 * sizeof(s16) + 3 * sizeof(S8) + 4 * sizeof(u8) + 2 * sizeof(u16)) + 63;
+    U32 listSize = 3 + entitiesToRender * VertexMemory + 63;
     //The list size also must be a multiple of 32, so round up to the next multiple of 32.
     //2 Options to Round Up:
     //listSize = round_up(listSize, 32);
@@ -417,7 +430,8 @@ bool Chunk::isSolid(const Cubito& cubito) const {
 }
 
 bool Chunk::isSolid(S16 x, S16 y, S16 z) const {
-    const auto index = x + CHUNK_SIZE * (y + CHUNK_SIZE * z); //better
+    //const auto index = x + CHUNK_SIZE * (y + CHUNK_SIZE * z); //better
+    auto index =  x + CHUNK_SIZE * (z + CHUNK_SIZE * y);
     //return cubitos_[index].type != BLOCK_AIR; //&& cubitos_[index].type != BLOCK_WATER; 
     //return cubitos_[index].type != BLOCK_AIR && cubitos_[index].type != BLOCK_DANDELION && cubitos_[index].type != BLOCK_WATER; 
     return hasProperty(cubitos_[index].type, SOLID);
@@ -526,7 +540,8 @@ void Chunk::fillCubito(Cubito& cubito, U8 face, U8 x, U8 y, U8 z, U8 direction, 
 
 Cubito& Chunk::getCubito(const CubePosition& pos) {
 #ifdef OPTIMIZATION_VECTOR
-    auto index = pos.x + CHUNK_SIZE * (pos.y + CHUNK_SIZE * pos.z);
+    //auto index = pos.x + CHUNK_SIZE * (pos.y + CHUNK_SIZE * pos.z);
+    auto index =  pos.x + CHUNK_SIZE * (pos.z + CHUNK_SIZE * pos.y);
     return cubitos_[index];
 #else
     return cubitos_[pos.x][pos.y][pos.z];

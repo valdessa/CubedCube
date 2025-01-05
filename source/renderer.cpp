@@ -14,7 +14,7 @@ using namespace poyo;
 extern U16 vertices[8][3];
 extern U16 edges[12][2];
 extern U16 diagonals[12][2];
-extern U16 tileTexCoords[4][2];
+extern u16 tileTexCoords[4][2];
 extern U8  positionsCoords[6][3];
 
 //GX Stuff
@@ -204,7 +204,7 @@ void Renderer::Set2DMode() {
     SetDepth(GX_FALSE, DEPTH_MODE::LEQUAL, GX_TRUE);
 
     GX_SetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_CLEAR);
-
+    
     guOrtho(m, 0, videoMode->efbHeight, 0, videoMode->fbWidth, 0, 1000.0f);
     GX_LoadProjectionMtx(m, GX_ORTHOGRAPHIC);
 
@@ -435,7 +435,7 @@ void Renderer::PrepareToRenderInVX0(bool pos, bool nrm, bool clr, bool tex) {
     if(pos)     GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);     //Positions -> F32
     if(nrm)     GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_NRM, GX_NRM_XYZ, GX_F32, 0);     //Normals   -> F32
     if(clr)     GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0); //Color     -> UChar
-    if(tex)     GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_U16, 0);     //Textures  -> U16
+    if(tex)     GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_U8, 0);     //Textures  -> F32
     
     tex ? GX_SetTevOp(GX_TEVSTAGE0, GX_MODULATE) : GX_SetTevOp(GX_TEVSTAGE0, GX_PASSCLR);
 }
@@ -452,7 +452,12 @@ void Renderer::PrepareToRenderInVX2(bool pos, bool nrm, bool clr, bool tex) {
     if(pos)     GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_POS, GX_POS_XYZ, GX_U16, 0);     //Positions -> U16
     if(nrm)     GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_NRM, GX_NRM_XYZ, GX_S8, 0);      //Normals   -> S8
     if(clr)     GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0); //Color     -> UChar
+
+#ifdef OPTIMIZATION_VERTEX_MEMORY
+    if(tex)     GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_TEX0, GX_TEX_ST, GX_U8, 0);      //Textures  -> U8
+#else
     if(tex)     GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_TEX0, GX_TEX_ST, GX_U16, 0);     //Textures  -> U16
+#endif
 
     tex ? GX_SetTevOp(GX_TEVSTAGE0, GX_MODULATE) : GX_SetTevOp(GX_TEVSTAGE0, GX_PASSCLR);
 }
@@ -464,54 +469,6 @@ void Renderer::RenderBegin(U16 VertexCount) {
 
 void Renderer::RenderEnd() {
     GX_End();
-}
-
-void Renderer::RenderFace(const CubeFace& face) {
-    nFacesRendered++;
-
-    auto& UV = tileUVMap[face.tile];
-    
-    for (int j = 0; j < 4; j++) {
-#ifdef OPTIMIZATION_STRUCTS_POS
-        GX_Position3u16(positionsCoords[face.direction][0] + cubeFaces[face.direction][j][0],
-                        positionsCoords[face.direction][1] + cubeFaces[face.direction][j][1],
-                        positionsCoords[face.direction][2] + cubeFaces[face.direction][j][2]);
-#else
-        GX_Position3u16(face.x + cubeFaces[face.direction][j][0],
-                        face.y + cubeFaces[face.direction][j][1],
-                        face.z + cubeFaces[face.direction][j][2]);
-#endif
-        GX_Normal3s8(cubeNormals[face.direction][0],
-                     cubeNormals[face.direction][1],
-                     cubeNormals[face.direction][2]);
-        GX_Color4u8(255, 255, 255, 255);
-
-#ifdef OPTIMIZATION_MAPS
-        GX_TexCoord2u16(UV[0] + tileTexCoords[j][0], UV[1] + tileTexCoords[j][1]);
-#else
-        GX_TexCoord2u16(UV.x + tileTexCoords[j][0], UV.y + tileTexCoords[j][1]);
-#endif
-    }
-}
-
-void Renderer::RenderFaceIndexed(const CubeFace& face) {
-    nFacesRendered++;
-    for (U8 j = 0; j < 4; j++) {
-#ifdef OPTIMIZATION_STRUCTS_POS
-        GX_Position3u16(positionsCoords[face.direction][0] + cubeFaces[face.direction][j][0],
-                        positionsCoords[face.direction][1] + cubeFaces[face.direction][j][1],
-                        positionsCoords[face.direction][2] + cubeFaces[face.direction][j][2]);
-#else
-        GX_Position3u16(face.x + cubeFaces[face.direction][j][0] + x,
-                        face.y + cubeFaces[face.direction][j][1] + y,
-                        face.z + cubeFaces[face.direction][j][2] + z);
-#endif
-        GX_Normal3s8(cubeNormals[face.direction][0],
-                     cubeNormals[face.direction][1],
-                     cubeNormals[face.direction][2]);
-        GX_Color4u8(255, 255, 255, 255);
-        GX_TexCoord1x8(j);
-    }
 }
 
 void Renderer::RenderFace(const CubeFace& face, S8 x, S8 y, S8 z) {
@@ -532,18 +489,28 @@ void Renderer::RenderFace(const CubeFace& face, S8 x, S8 y, S8 z) {
         GX_Normal3s8(cubeNormals[face.direction][0],
                      cubeNormals[face.direction][1],
                      cubeNormals[face.direction][2]);
-        GX_Color4u8(255, 255, 255, 255);
 
-#ifdef OPTIMIZATION_MAPS
-        GX_TexCoord2u16(UV[0] + tileTexCoords[j][0], UV[1] + tileTexCoords[j][1]);
+#ifdef OPTIMIZATION_VERTEX_MEMORY
+        //GX_Color4u8(255, 255, 255, 255);
+        u8 resultInX = UV[0] + static_cast<u8>(tileTexCoords[j][0]);
+        u8 resultInY = UV[1] + static_cast<u8>(tileTexCoords[j][1]);
+        GX_TexCoord2u8(resultInX, resultInY);
 #else
-        GX_TexCoord2u16(UV.x + tileTexCoords[j][0], UV.y + tileTexCoords[j][1]);
+        GX_Color4u8(255, 255, 255, 255);
+        GX_TexCoord2u16(UV[0] + tileTexCoords[j][0], UV[1] + tileTexCoords[j][1]);
 #endif
+
+// #ifdef OPTIMIZATION_MAPS
+//         GX_TexCoord2u16(UV[0] + tileTexCoords[j][0], UV[1] + tileTexCoords[j][1]);
+// #else
+//         GX_TexCoord2u16(UV.x + tileTexCoords[j][0], UV.y + tileTexCoords[j][1]);
+// #endif
     }
 }
 
 void Renderer::RenderFaceIndexed(const CubeFace& face, S8 x, S8 y, S8 z) {
     nFacesRendered++;
+
     for (U8 j = 0; j < 4; j++) {
 #ifdef OPTIMIZATION_STRUCTS_POS
         GX_Position3u16(positionsCoords[face.direction][0] + cubeFaces[face.direction][j][0] + x,
@@ -557,7 +524,13 @@ void Renderer::RenderFaceIndexed(const CubeFace& face, S8 x, S8 y, S8 z) {
         GX_Normal3s8(cubeNormals[face.direction][0],
                      cubeNormals[face.direction][1],
                      cubeNormals[face.direction][2]);
+        
+#ifdef OPTIMIZATION_VERTEX_MEMORY
+        //GX_Color4u8(255, 255, 255, 255);
+#else
         GX_Color4u8(255, 255, 255, 255);
+#endif
+        
         GX_TexCoord1x8(j);
     }
 }
@@ -632,10 +605,10 @@ void Renderer::RenderFaceVectorIndexed(const Vector<Pair<CubeFace, USVec3>>& fac
     RenderEnd();
 }
 
-void Renderer::RenderBoundingBox(S16 originX, S16 originY, S16 originZ, U16 size, cUCVec3& color, bool RenderCross) {
+void Renderer::RenderBoundingBox(S16 originX, S16 originY, S16 originZ, U16 sizeX, U16 sizeY, cUCVec3& color, bool RenderCross) {
     // Set the view for the cube based on origin and size
     //GRRLIB_ObjectView(originX, originY, originZ, 0, 0, 0.0f, size, size, size);
-    ObjectView(originX, originY, originZ, 0, 0, 0.0f, size, size, size);
+    ObjectView(originX, originY, originZ, 0, 0, 0.0f, sizeX, sizeY, sizeX);
 
     GX_Begin(GX_LINES, GX_VTXFMT2, RenderCross ? 48 : 24);
 
@@ -738,12 +711,13 @@ void Renderer::RenderGX(bool VSYNC) {
     // }
 }
 
-U16 tileTexCoords[4][2] = {
+u16 tileTexCoords[4][2] = {
     {0, 0},
     {1, 0},
     {1, 1},
     {0, 1}
 };
+
 
 U8 positionsCoords[6][3] = {
     {1, 0, 0},
