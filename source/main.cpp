@@ -85,110 +85,6 @@ void updateWaterTextureCoordinates(int textureCounter, u8 offset = 5) {
     waterTexCoords[6] = 0 + baseOffset;     waterTexCoords[7] = 1 + offset;
 }
 
-inline constexpr U8 CubeFaces[][4][3] = {
-    [DIR_X_FRONT] = {{0, 1, 1}, {0, 1, 0}, {0, 0, 0}, {0, 0, 1}},  // Cara frontal en el eje X
-    [DIR_X_BACK] =  {{0, 1, 0}, {0, 1, 1}, {0, 0, 1}, {0, 0, 0}},  // Cara trasera en el eje X
-
-    [DIR_Y_FRONT] = {{0, 0, 0}, {1, 0, 0}, {1, 0, 1}, {0, 0, 1}},  // Cara frontal en el eje Y
-    [DIR_Y_BACK] =  {{0, 0, 0}, {0, 0, 1}, {1, 0, 1}, {1, 0, 0}},  // Cara trasera en el eje Y
-
-    [DIR_Z_FRONT] = {{0, 1, 0}, {1, 1, 0}, {1, 0, 0}, {0, 0, 0}},  // Cara frontal en el eje Z
-    [DIR_Z_BACK] =  {{1, 1, 0}, {0, 1, 0}, {0, 0, 0}, {1, 0, 0}},  // Cara trasera en el eje Z
-};
-
-float verticesKirby[][3] = {
-    //First Cube:
-    {1.0, 1.0, -1.0},
-    {1.0, -1.0, -1.0},
-    {1.0, 1.0, 1.0},
-    {1.0, -1.0, 1.0},
-    {-1.0, 1.0, -1.0},
-    {-1.0, -1.0, -1.0},
-    {-1.0, 1.0, 1.0},
-    {-1.0, -1.0, 1.0},
-    //Second Cube:
-    {0.357888, 0.531968, 0.735236},
-    {0.357888, -0.148563, 0.371977},
-    {-0.413526, 0.531968, 0.735236},
-    {-0.413526, -0.148563, 0.371977},
-    {-0.413526, -0.632103, 1.277844},
-    {-0.413526, 0.048428, 1.641103},
-    {0.357888, 0.048428, 1.641103},
-    {0.357888, -0.632103, 1.277844},
-    //Third Cube:
-    {0.419377, 0.566375, -0.829788},
-    {0.419377, -0.058052, -0.376831},
-    {-0.352036, 0.566375, -0.829788},
-    {-0.352036, -0.058052, -0.376831},
-    {-0.352036, -0.660991, -1.208016},
-    {-0.352036, -0.036565, -1.660974},
-    {0.419377, -0.036565, -1.660974},
-    {0.419377, -0.660991, -1.208016},
-    //Fourth Cube:
-    {-0.058084, -0.874061, 0.044712},
-    {-0.095024, -1.227608, 0.032654},
-    {-0.165618, -0.893162, 0.934211},
-    {-0.202557, -1.246709, 0.922154},
-    {1.349861, -1.415187, 1.106211},
-    {1.386801, -1.061641, 1.118269},
-    {1.494334, -1.042540, 0.228769},
-    {1.457394, -1.396087, 0.216711},
-    // Fith Cube:
-    {-0.159339, -0.892044, -1.013599},
-    {-0.196472, -1.245625, -1.003257},
-    {-0.067106, -0.875662, -0.122329},
-    {-0.104240, -1.229243, -0.111987},
-    {1.451116, -1.397204, -0.269854},
-    {1.488249, -1.043623, -0.280196},
-    {1.396017, -1.060006, -1.171467},
-    {1.358883, -1.413587, -1.161125}
-};
-
-int facesKirby[][4] = {
-    //First Cube:
-    {0, 4, 6, 2},
-    {3, 2, 6, 7},
-    {7, 6, 4, 5},
-    {5, 1, 3, 7},
-    {1, 0, 2, 3},
-    {5, 4, 0, 1},
-    //Second Cube:
-    {9, 11, 10, 8},
-    {15, 14, 13, 12},
-    {11, 9, 15, 12},
-    {9, 8, 14, 15},
-    {8, 10, 13, 14},
-    {10, 11, 12, 13},
-    // Third Cube:
-    {17, 16, 18, 19},
-    {23, 20, 21, 22},
-    {19, 20, 23, 17},
-    {17, 23, 22, 16},
-    {16, 22, 21, 18},
-    {18, 21, 20, 19},
-    // Fourth Cube:
-    {25, 27, 26, 24},  
-    {31, 30, 29, 28},  
-    {27, 25, 31, 28},  
-    {25, 24, 30, 31}, 
-    {24, 26, 29, 30},  
-    {26, 27, 28, 29},
-    // Fith Cube:
-    {33, 35, 34, 32},  
-    {39, 38, 37, 36},  
-    {35, 33, 39, 36},  
-    {33, 32, 38, 39},  
-    {32, 34, 37, 38},  
-    {34, 35, 36, 37}   
-};
-
-U8 tileTexCoords2[4][2] = {
-    {1, 1},
-    {1, 0},
-    {0, 0},
-    {0, 1},
-};
-
 U8 tileTexCoordsTri[6][2] = {  // Ahora tenemos 6 vértices, ya que son dos triángulos
     {1, 1},  // Vértice 0 del triángulo 1
     {1, 0},  // Vértice 1 del triángulo 1
@@ -196,79 +92,6 @@ U8 tileTexCoordsTri[6][2] = {  // Ahora tenemos 6 vértices, ya que son dos tri�
     {1, 1},  // Vértice 0 del triángulo 2
     {0, 0},  // Vértice 2 del triángulo 2
     {0, 1},  // Vértice 3 del triángulo 2
-};
-
-float normals_1[][3] = {
-    // Primer cubo:
-    // Cara 1
-    {0.0f, 0.0f, 1.0f},
-    // Cara 2
-    {0.0f, 0.0f, -1.0f},
-    // Cara 3
-    {1.0f, 0.0f, 0.0f},
-    // Cara 4
-    {-1.0f, 0.0f, 0.0f},
-    // Cara 5
-    {0.0f, -1.0f, 0.0f},
-    // Cara 6
-    {0.0f, 1.0f, 0.0f},
-    
-    // Segundo cubo:
-    // Cara 1
-    {0.0f, 0.0f, 1.0f},
-    // Cara 2
-    {0.0f, 0.0f, -1.0f},
-    // Cara 3
-    {1.0f, 0.0f, 0.0f},
-    // Cara 4
-    {-1.0f, 0.0f, 0.0f},
-    // Cara 5
-    {0.0f, -1.0f, 0.0f},
-    // Cara 6
-    {0.0f, 1.0f, 0.0f},
-    
-    // Tercer cubo:
-    // Cara 1
-    {0.0f, 0.0f, 1.0f},
-    // Cara 2
-    {0.0f, 0.0f, -1.0f},
-    // Cara 3
-    {1.0f, 0.0f, 0.0f},
-    // Cara 4
-    {-1.0f, 0.0f, 0.0f},
-    // Cara 5
-    {0.0f, -1.0f, 0.0f},
-    // Cara 6
-    {0.0f, 1.0f, 0.0f},
-    
-    // Cuarto cubo:
-    // Cara 1
-    {0.0f, 0.0f, 1.0f},
-    // Cara 2
-    {0.0f, 0.0f, -1.0f},
-    // Cara 3
-    {1.0f, 0.0f, 0.0f},
-    // Cara 4
-    {-1.0f, 0.0f, 0.0f},
-    // Cara 5
-    {0.0f, -1.0f, 0.0f},
-    // Cara 6
-    {0.0f, 1.0f, 0.0f},
-    
-    // Quinto cubo:
-    // Cara 1
-    {0.0f, 0.0f, 1.0f},
-    // Cara 2
-    {0.0f, 0.0f, -1.0f},
-    // Cara 3
-    {1.0f, 0.0f, 0.0f},
-    // Cara 4
-    {-1.0f, 0.0f, 0.0f},
-    // Cara 5
-    {0.0f, -1.0f, 0.0f},
-    // Cara 6
-    {0.0f, 1.0f, 0.0f}
-    
 };
 
 static u8 CalculateFrameRate(void) {
@@ -286,63 +109,6 @@ static u8 CalculateFrameRate(void) {
     return FPS;
 }
 
-
-//xD
-void drawKirby() {
-    Renderer::PrepareToRenderInVX0(true, true, false, true);
-        GX_Begin(GX_QUADS, GX_VTXFMT0, 6 * 4);
-        for (int i = 0; i < 6; i++) {
-            for (int j = 0; j < 4; j++) {
-                int vertexIndex = facesKirby[i][j];
-                GX_Position3f32(verticesKirby[vertexIndex][0], verticesKirby[vertexIndex][1], verticesKirby[vertexIndex][2]);
-                GX_Normal3f32(normals_1[vertexIndex][0], normals_1[vertexIndex][1], normals_1[vertexIndex][2]);
-                GX_TexCoord2u8(tileTexCoords2[j][0] + (i == 4 ? 7 : 6),  tileTexCoords2[j][1] + 4);
-            }
-        }
-        GX_End();
-        GX_Begin(GX_QUADS, GX_VTXFMT0, 6 * 4);
-        for (int i = 6; i < 12; i++) {
-            for (int j = 0; j < 4; j++) {
-                int vertexIndex = facesKirby[i][j];
-                GX_Position3f32(verticesKirby[vertexIndex][0], verticesKirby[vertexIndex][1], verticesKirby[vertexIndex][2]);
-                GX_Normal3f32(normals_1[vertexIndex][0], normals_1[vertexIndex][1], normals_1[vertexIndex][2]);
-                GX_TexCoord2u8(tileTexCoords2[j][0] + 6, tileTexCoords2[j][0] + 4);
-            }
-        }
-        GX_End();
-        GX_Begin(GX_QUADS, GX_VTXFMT0, 6 * 4);
-        for (int i = 12; i < 18; i++) {
-            for (int j = 0; j < 4; j++) {
-                int vertexIndex = facesKirby[i][j];
-                GX_Position3f32(verticesKirby[vertexIndex][0], verticesKirby[vertexIndex][1], verticesKirby[vertexIndex][2]);
-                GX_Normal3f32(normals_1[vertexIndex][0], normals_1[vertexIndex][1], normals_1[vertexIndex][2]);
-                GX_TexCoord2u8(tileTexCoords2[j][0] + 6, tileTexCoords2[j][0] + 4);
-            }
-        }
-        GX_End();
-        Renderer::PrepareToRenderInVX0(true, true, true, false);
-        //Pies:
-        GX_Begin(GX_QUADS, GX_VTXFMT0, 6 * 4);
-        for (int i = 18; i < 24; i++) {
-            for (int j = 0; j < 4; j++) {
-                int vertexIndex = facesKirby[i][j];
-                GX_Position3f32(verticesKirby[vertexIndex][0], verticesKirby[vertexIndex][1], verticesKirby[vertexIndex][2]);
-                GX_Normal3f32(normals_1[vertexIndex][0], normals_1[vertexIndex][1], normals_1[vertexIndex][2]);
-                GX_Color4u8(204, 0, 21, 255);
-            }
-        }
-        GX_End();
-        GX_Begin(GX_QUADS, GX_VTXFMT0, 6 * 4);
-        for (int i = 24; i < 30; i++) {
-            for (int j = 0; j < 4; j++) {
-                int vertexIndex = facesKirby[i][j];
-                GX_Position3f32(verticesKirby[vertexIndex][0], verticesKirby[vertexIndex][1], verticesKirby[vertexIndex][2]);
-                GX_Normal3f32(normals_1[vertexIndex][0], normals_1[vertexIndex][1], normals_1[vertexIndex][2]);
-                GX_Color4u8(204, 0, 21, 255);
-            }
-        }
-        GX_End();
-}
 
 ///ayudaaaa
 struct AnimationData {
@@ -369,10 +135,9 @@ struct Vertex {
 #include <kirbyinfo.h>
 
 void drawKirbyFINAL() {
-    size_t size = 36;
+    constexpr size_t size = 36;
     static float currentFrame = 0;
-    auto& finalBonesMatrices = BoneTransformations[(uint32_t)currentFrame % NumFrames];
-
+    auto& finalBonesMatrices = BoneTransformations[static_cast<uint32_t>(currentFrame) % NumFrames];
     
     for(size_t j = 0; j < 5; j++) {
         bool texture =  j < 3 ? true : false;
@@ -382,10 +147,10 @@ void drawKirbyFINAL() {
             unsigned int index = IndicesKirbyFINAL[j][i];
             const auto& vertex = VerticesKirbyFINAL[j][index];
 
-            glm::vec4 position(vertex.Position[0], vertex.Position[1], vertex.Position[2], 1.0f);
-            glm::vec4 finalPosition = position; // Sin animación
+            FVec4 position(vertex.Position[0], vertex.Position[1], vertex.Position[2], 1.0f);
+            FVec4 finalPosition = position;
         
-            glm::vec4 totalPosition(0.0f);
+            FVec4 totalPosition(0.0f);
             for (int b = 0; b < MAX_BONE_INFLUENCE; ++b) {
                 if (vertex.m_BoneIDs[b] == -1)
                     continue;
@@ -393,24 +158,24 @@ void drawKirbyFINAL() {
                 glm::vec4 localPosition = boneMatrix * position;
                 totalPosition += localPosition * vertex.m_Weights[b];
             }
-            finalPosition = totalPosition; // Aplicamos la transformación final
+            finalPosition = totalPosition;
             auto result = i % 6;
-            int faceIndex = i / 6; 
+            size_t faceIndex = i / 6; 
             GX_Position3f32(finalPosition[0], finalPosition[1], finalPosition[2]);
             //GX_Position3f32(vertex.Position[0], vertex.Position[1], vertex.Position[2]);
             GX_Normal3f32(vertex.Normal[0], vertex.Normal[1], vertex.Normal[2]);
             switch (j) {
-            case 0: GX_TexCoord2u8(tileTexCoordsTri[result][0] + (faceIndex == 4 ? 7 : 6),  tileTexCoordsTri[result][1] + 4);
-                break;
-            case 1: GX_TexCoord2u8(tileTexCoordsTri[result][0] + 6, tileTexCoordsTri[result][1] + 4);
-                break;
-            case 2: GX_TexCoord2u8(tileTexCoordsTri[result][0] + 6, tileTexCoordsTri[result][1] + 4);
-                break;
-            case 3: GX_Color4u8(204, 0, 21, 255);
-                break;
-            case 4: GX_Color4u8(204, 0, 21, 255);
-                break;
-                
+                case 0: GX_TexCoord2u8(tileTexCoordsTri[result][0] + (faceIndex == 4 ? 7 : 6),  tileTexCoordsTri[result][1] + 4);
+                    break;
+                case 1: GX_TexCoord2u8(tileTexCoordsTri[result][0] + 6, tileTexCoordsTri[result][1] + 4);
+                    break;
+                case 2: GX_TexCoord2u8(tileTexCoordsTri[result][0] + 6, tileTexCoordsTri[result][1] + 4);
+                    break;
+                case 3: GX_Color4u8(204, 0, 21, 255);
+                    break;
+                case 4: GX_Color4u8(204, 0, 21, 255);
+                    break;
+                default: ;
             }
             
         }
@@ -516,6 +281,8 @@ int main(int argc, char **argv) {
         fprintf(file, "Hello from GameCube!\n");
         fclose(file);
     }
+
+    kirbyInfo info;
     
     while(1) {
         frameTick.start();
@@ -564,6 +331,8 @@ int main(int argc, char **argv) {
         if(PAD_ButtonsDown(0) & PAD_BUTTON_A) options.chunksAround = !options.chunksAround;
         if(PAD_ButtonsDown(0) & PAD_TRIGGER_R) currentCam.setSpeed(CameraSpeed * 5.0f);
         if(PAD_ButtonsUp(0) & PAD_TRIGGER_R) currentCam.setSpeed(CameraSpeed);
+
+        updateKirbyPosition(info, deltaTime, 15.0, 1);
         
         currentCam.updateCamera(deltaTime); //deltaTime
         //-----
@@ -586,7 +355,11 @@ int main(int argc, char **argv) {
         static int counter = 0;
         counter ++;
         //Renderer::ObjectView(0, 15, 0, 0, counter % 360, 0, 0.05, 0.05, 0.05);
-        Renderer::ObjectView(0, 15, 0, 0, -90, 0, 0.05, 0.05, 0.05);
+        cfloat kirbyScale = 0.0075f;
+        Renderer::ObjectView(info.Position.x, info.Position.y, info.Position.z,
+                                info.Rotation.x, info.Rotation.y, info.Rotation.z,
+                                kirbyScale, kirbyScale, kirbyScale);
+        //Renderer::ObjectView(0, 15, 0, 0, -90, 0, 0.05, 0.05, 0.05);
         //drawKirby();
         drawKirbyFINAL();
         
