@@ -100,7 +100,9 @@ static u8 CalculateFrameRate(void) {
     return FPS;
 }
 
+#ifdef KIRBY_EASTER_EGG
 #include <kirbyinfo.h>
+#endif
 
 #include <fat.h>
 //1 ms = 40,500 ticks
@@ -183,8 +185,10 @@ int main(int argc, char **argv) {
         fprintf(file, "Hello from GameCube!\n");
         fclose(file);
     }
-
+    
+#ifdef KIRBY_EASTER_EGG
     kirbyInfo info;
+#endif
     
     while(1) {
         frameTick.start();
@@ -234,7 +238,9 @@ int main(int argc, char **argv) {
         if(PAD_ButtonsDown(0) & PAD_TRIGGER_R) currentCam.setSpeed(CameraSpeed * 5.0f);
         if(PAD_ButtonsUp(0) & PAD_TRIGGER_R) currentCam.setSpeed(CameraSpeed);
 
+#ifdef KIRBY_EASTER_EGG
         updateKirbyPosition(info, deltaTime, 15.0, 1);
+#endif
         
         currentCam.updateCamera(deltaTime); //deltaTime
         //-----
@@ -254,6 +260,7 @@ int main(int argc, char **argv) {
             Renderer::SetLightDiffuse(0, lightPos, 20, 1);
         }
 
+#ifdef KIRBY_EASTER_EGG
         static int counter = 0;
         counter ++;
         //Renderer::ObjectView(0, 15, 0, 0, counter % 360, 0, 0.05, 0.05, 0.05);
@@ -264,6 +271,7 @@ int main(int argc, char **argv) {
         //Renderer::ObjectView(0, 15, 0, 0, -90, 0, 0.05, 0.05, 0.05);
         //drawKirby();
         drawKirbyFINAL();
+#endif
         
         currentTick.start();
         updateWaterTextureCoordinates(textureCounter, 6);

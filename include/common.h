@@ -48,6 +48,8 @@ constexpr poyo::U8 CHUNK_RADIUS = 6;
 
 #define SEPARATED_SOLIDS_TRANSPARENTS
 
+//#define KIRBY_EASTER_EGG
+
 /*  
 =============================================================== BENCHMARKING ==================================================================|
                                                                                                                                                |

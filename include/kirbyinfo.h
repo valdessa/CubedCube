@@ -1,3 +1,6 @@
+#ifndef INCLUDE_KIRBY_INFO_H_
+#define INCLUDE_KIRBY_INFO_H_ 1
+
 #define MAX_BONE_INFLUENCE 4
 struct Vertex {
     // position
@@ -200,8 +203,9 @@ static const uint32_t* IndicesKirbyFINAL[] = {
     MeshIndices4,
 };
 
-static const uint8_t NumFrames = 56;
-static const uint8_t MAX_BONES = 3;
+static constexpr uint8_t NumFrames = 56;
+static constexpr uint8_t MAX_BONES = 3;
+static constexpr size_t N_INDICES = 36;
 
 static const FMat4 BoneTransformations[56][MAX_BONES] = {
     { // Frame 0
@@ -496,25 +500,24 @@ struct AnimationData {
     uint8_t numFrames;  
 };
 
-U8 tileTexCoordsTriangle[6][2] = {  // Ahora tenemos 6 vértices, ya que son dos triángulos
-    {1, 1},  // Vértice 0 del triángulo 1
-    {1, 0},  // Vértice 1 del triángulo 1
-    {0, 0},  // Vértice 2 del triángulo 1
-    {1, 1},  // Vértice 0 del triángulo 2
-    {0, 0},  // Vértice 2 del triángulo 2
-    {0, 1},  // Vértice 3 del triángulo 2
+static U8 tileTexCoordsTriangle[6][2] = {  
+    {1, 1},  // V 0 of Tri 1
+    {1, 0},  // V 1 of Tri 1
+    {0, 0},  // V 2 of Tri 1
+    {1, 1},  // V 0 of Tri 2
+    {0, 0},  // V 2 of Tri 2
+    {0, 1},  // V 3 of Tri 2
 };
 
-void drawKirbyFINAL() {
-    constexpr size_t size = 36;
+static void drawKirbyFINAL() {
     static float currentFrame = 0;
     auto& finalBonesMatrices = BoneTransformations[static_cast<uint32_t>(currentFrame) % NumFrames];
     
     for(size_t j = 0; j < 5; j++) {
         bool texture =  j < 3 ? true : false;
         Renderer::PrepareToRenderInVX0(true, true, !texture, texture);
-        GX_Begin(GX_TRIANGLES, GX_VTXFMT0, size);
-        for (size_t i = 0; i < size; i++) {
+        GX_Begin(GX_TRIANGLES, GX_VTXFMT0, N_INDICES);
+        for (size_t i = 0; i < N_INDICES; i++) {
             unsigned int index = IndicesKirbyFINAL[j][i];
             const auto& vertex = VerticesKirbyFINAL[j][index];
 
@@ -556,7 +559,7 @@ void drawKirbyFINAL() {
     currentFrame = fmod(currentFrame, 56.0f);
 }
 
-void updateKirbyPosition(kirbyInfo& info, cfloat dt, cfloat speed = 2.5f, uint8_t controller = 1) {
+static void updateKirbyPosition(kirbyInfo& info, cfloat dt, cfloat speed = 2.5f, uint8_t controller = 1) {
     if(PAD_ButtonsHeld(controller) & PAD_BUTTON_UP)     info.Position.z-= dt * speed;
     if(PAD_ButtonsHeld(controller) & PAD_BUTTON_DOWN)   info.Position.z+= dt * speed;
     if(PAD_ButtonsHeld(controller) & PAD_BUTTON_RIGHT)  info.Position.x+= dt * speed;
@@ -577,7 +580,8 @@ void updateKirbyPosition(kirbyInfo& info, cfloat dt, cfloat speed = 2.5f, uint8_
     if(PAD_ButtonsHeld(controller) & PAD_TRIGGER_R) info.Rotation.y+= dt * speed * 1.5f;
     
     if(PAD_ButtonsDown(controller) & PAD_BUTTON_START) info.Rotation = FVec3(0, -90, 0);
-    
 }
+
+#endif
 
 
