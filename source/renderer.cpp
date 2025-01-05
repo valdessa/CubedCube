@@ -486,9 +486,12 @@ void Renderer::RenderFace(const CubeFace& face, S8 x, S8 y, S8 z) {
                         face.y + cubeFaces[face.direction][j][1] + y,
                         face.z + cubeFaces[face.direction][j][2] + z);
 #endif
+
+#ifndef OPTIMIZATION_NO_LIGHTNING_DATA
         GX_Normal3s8(cubeNormals[face.direction][0],
                      cubeNormals[face.direction][1],
                      cubeNormals[face.direction][2]);
+#endif
 
 #ifdef OPTIMIZATION_VERTEX_MEMORY
         //GX_Color4u8(255, 255, 255, 255);
@@ -521,9 +524,12 @@ void Renderer::RenderFaceIndexed(const CubeFace& face, S8 x, S8 y, S8 z) {
                         face.y + cubeFaces[face.direction][j][1] + y,
                         face.z + cubeFaces[face.direction][j][2] + z);
 #endif
+
+#ifndef OPTIMIZATION_NO_LIGHTNING_DATA
         GX_Normal3s8(cubeNormals[face.direction][0],
                      cubeNormals[face.direction][1],
                      cubeNormals[face.direction][2]);
+#endif
         
 #ifdef OPTIMIZATION_VERTEX_MEMORY
         //GX_Color4u8(255, 255, 255, 255);

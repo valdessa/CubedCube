@@ -180,12 +180,16 @@ void Chunk::CreateList(U32 entitiesToRender, void*& list) {
     //Each Vertex:
 #ifdef OPTIMIZATION_VERTEX_MEMORY
     VertexMemory += 3 * sizeof(s16); // 3->s16 for positions
-    VertexMemory += 3 * sizeof(s8);  // 3->s8 for normals
+    #ifndef OPTIMIZATION_NO_LIGHTNING_DATA
+        VertexMemory += 3 * sizeof(s8);  // 3->s8 for normals
+    #endif
     //VertexMemory += 4 * sizeof(u8);  // 4->u8 for colors
     VertexMemory += 2 * sizeof(u8);  // 2->u8 for texture coords
 #else
     VertexMemory += 3 * sizeof(s16); // 3->s16 for positions
-    VertexMemory += 3 * sizeof(s8);  // 3->s8 for normals
+    #ifndef OPTIMIZATION_NO_LIGHTNING_DATA
+        VertexMemory += 3 * sizeof(s8);  // 3->s8 for normals
+    #endif
     VertexMemory += 4 * sizeof(u8);  // 4->u8 for colors
     VertexMemory += 2 * sizeof(u16); //2->u16 for texture coords
 #endif

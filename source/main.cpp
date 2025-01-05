@@ -43,7 +43,9 @@ using namespace poyo;
 
 struct Options {
     bool boundingBox = false;
+#ifndef OPTIMIZATION_NO_LIGHTNING_DATA
     bool lightning = false;
+#endif
     bool debugUI = true;
     bool VSYNC = true;
     bool helper = false;
@@ -195,10 +197,12 @@ int main(int argc, char **argv) {
         Engine::UpdateEngine();
         auto deltaTime = Engine::getDeltaTime();
         Renderer::ResetDrawCalls();
+#ifndef OPTIMIZATION_NO_LIGHTNING_DATA
         if(options.lightning) {
             angle+=deltaTime;
             updatePosition(lightPos, 20, angle);
         }
+#endif
 
         textureCounterFloat += deltaTime;
     
@@ -226,7 +230,9 @@ int main(int argc, char **argv) {
         if(PAD_ButtonsDown(0) & PAD_TRIGGER_Z) currentCam.setPosition(FVec3(0));
         if(PAD_ButtonsDown(0) & PAD_BUTTON_UP) options.debugUI = !options.debugUI;;
         if(PAD_ButtonsDown(0) & PAD_BUTTON_RIGHT) options.boundingBox = !options.boundingBox;;
+#ifndef OPTIMIZATION_NO_LIGHTNING_DATA
         if(PAD_ButtonsDown(0) & PAD_BUTTON_LEFT) options.lightning = !options.lightning;
+#endif
         if(PAD_ButtonsDown(0) & PAD_BUTTON_DOWN) options.VSYNC = !options.VSYNC;
         if(PAD_ButtonsDown(0) & PAD_BUTTON_B) {
             CHUNK_LOAD_RADIUS++;
@@ -246,20 +252,23 @@ int main(int argc, char **argv) {
         //-----
         Renderer::Set3DMode(currentCam); // Configura el modo 3D //Projection
 
+#ifndef OPTIMIZATION_NO_LIGHTNING_DATA
         if(options.lightning) {
             Renderer::PrepareToRenderInVX0(true, true, true, false);
             Renderer::ObjectView(lightPos.x, lightPos.y, lightPos.z);
             Renderer::RenderSphere(1, 20, 20, true, 0xFFFF00FF);
         }
+#endif
 
         Renderer::BindTexture(blocksTexture, 0);
         Renderer::SetTextureCoordScaling(0, TILE_SIZE, TILE_SIZE);
 
-        
+#ifndef OPTIMIZATION_NO_LIGHTNING_DATA      
         if(options.lightning) {
             Renderer::SetLightDiffuse(0, lightPos, 20, 1);
         }
-
+#endif
+        
 #ifdef KIRBY_EASTER_EGG
         static int counter = 0;
         counter ++;
@@ -277,10 +286,18 @@ int main(int argc, char **argv) {
         updateWaterTextureCoordinates(textureCounter, 6);
 
 #ifdef OPTIMIZATION_VERTEX_MEMORY
-        Renderer::PrepareToRenderInVX2(true, true, false, true);
+    #ifndef OPTIMIZATION_NO_LIGHTNING_DATA
+            Renderer::PrepareToRenderInVX2(true, true, false, true);
+    #else
+            Renderer::PrepareToRenderInVX2(true, false, false, true);
+    #endif
         GX_SetTevOp(GX_TEVSTAGE0, GX_MODULATE);
 #else
+    #ifndef OPTIMIZATION_NO_LIGHTNING_DATA
+        Renderer::PrepareToRenderInVX2(true, false, true, true);
+    #else
         Renderer::PrepareToRenderInVX2(true, true, true, true);
+    #endif
 #endif
         
         Renderer::BindTexture(blocksTexture, 0);
@@ -337,7 +354,10 @@ int main(int argc, char **argv) {
         //     }
         // }
         // GX_End();
+
+#ifndef OPTIMIZATION_NO_LIGHTNING_DATA
         if(options.lightning) Renderer::SetLightOff();
+#endif
         
         if(options.boundingBox) {
             Renderer::PrepareToRenderInVX2(true, false, true, false);
