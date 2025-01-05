@@ -20,7 +20,7 @@
 
 inline int CHUNK_LOAD_RADIUS = 2;
 
-constexpr poyo::U8 CHUNK_RADIUS = 6;
+constexpr poyo::U8 CHUNK_RADIUS = 8;
 
 /***** OCCLUSION CULLING OPTIMIZATIONS *****/                                              
 //0 -> NO OCCLUSION CULLING :(                          
@@ -37,9 +37,38 @@ constexpr poyo::U8 CHUNK_RADIUS = 6;
 #define OPTIMIZATION_OCCLUSION 4
 #define OPTIMIZATION_BATCHING       
 #define OPTIMIZATION_DISPLAY_LIST
-#define OPTIMIZATION_STRUCTS
-#define OPTIMIZATION_STRUCTS_POS
+#define OPTIMIZATION_STRUCTS 2
 #define OPTIMIZATION_MODEL_MATRIX
+
+//1 CHUNK
+//0 : 6873
+//1 : 6081
+//2 : 5865
+
+//4 CHUNK
+//0 : 19439
+//1 : 12311
+//2 : 10367
+
+//5 CHUNK
+//0 : crash
+//1 : 15759
+//2 : 12854
+
+//6 CHUNK
+//0 : crash
+//1 : 20060
+//2 : 16004
+
+//7 CHUNK
+//0 : crash
+//1 : crash
+//2 : 19513
+
+//8 CHUNK
+//0 : crash
+//1 : crash
+//2 : 23510
 
 #define OPTIMIZATION_VERTEX_MEMORY //2415 vs 4572
 //2600 vs 1888
@@ -136,10 +165,10 @@ namespace poyo {
         TILE_ICE         = 20,      //Fixed
         TILE_WATER       = 21,      //Fixed
 
+        TILE_HERB        = 22,      //Fixed 34
+        TILE_ORCHID      = 23,      //Fixed 32
+        TILE_DANDELION   = 25,      //Fixed 33
         TILE_POPPY       = 28,      //Fixed
-        TILE_ORCHID      = 32,      //Fixed
-        TILE_DANDELION   = 33,      //Fixed
-        TILE_HERB        = 34,      //Fixed
         
         NUM_TILES,                  //ALSO A INVALID TILE
     };
@@ -151,25 +180,7 @@ namespace poyo {
         FOLIAGE = 1 << 3   // 00001000
     };
 
-#ifdef OPTIMIZATION_STRUCTS
-    struct CubeFace {   //Size = 2 bytes
-        U8 x : 1;           // 1 bit for x (0-1)
-        U8 y : 1;           // 1 bit for y (0-1)
-        U8 z : 1;           // 1 bit for z (0-1)
-        U8 direction : 4;   // 4 bits for direction (0-15)
-        U8 tile : 8;        // 1 byte for tile (0-255)
-    };
-    struct Cubito {     //Size = 16 bytes
-        CubeFace face[6];   // 6 CubeFace (12 bytes total, packed)
-        S8 x, y, z;         // 3 bytes (total 24 bits)
-        U8 type : 7;        // 7 bits for the block type (0-127)
-        U8 visible : 1;     // 1 bit for visibility (0-1)
-
-        Cubito() : face{}, x(0), y(0), z(0), type(BLOCK_AIR), visible(false) {
-            
-        }
-    };
-#else
+#if OPTIMIZATION_STRUCTS == 0
     struct CubeFace {   //Size = 5 bytes
         U8 x, y, z;           
         U8 direction;   
@@ -181,8 +192,43 @@ namespace poyo {
         U8 type = BLOCK_AIR;
         bool visible = false;
     };
-#endif
+#elif OPTIMIZATION_STRUCTS == 1
+    struct CubeFace {   //Size = 2 bytes
+        U8 x : 1;           // 1 bit for x (0-1)
+        U8 y : 1;           // 1 bit for y (0-1)
+        U8 z : 1;           // 1 bit for z (0-1)
+        U8 direction : 4;   // 4 bits for direction (0-15)
+        U8 tile : 8;        // 1 byte for tile (0-255)
+    };
+    
+    struct Cubito {     //Size = 16 bytes
+        CubeFace face[6];   // 6 CubeFace (12 bytes total, packed)
+        S8 x, y, z;         // 3 bytes (total 24 bits)
+        U8 type : 7;        // 7 bits for the block type (0-127)
+        U8 visible : 1;     // 1 bit for visibility (0-1)
 
+        Cubito() : face{}, x(0), y(0), z(0), type(BLOCK_AIR), visible(false) {
+            
+        }
+    };
+#elif OPTIMIZATION_STRUCTS == 2
+    struct CubeFace {   //Size = 2 bytes
+        U8 direction : 3;   // 3 bits for direction (0-7)
+        U8 tile : 5;        // 5 bits for tile (0-31)
+    };
+    
+    struct Cubito {     //Size = 16 bytes
+        CubeFace face[6];   // 6 CubeFace (6 bytes total, packed)
+        S8 x, y, z;         // 3 bytes (total 24 bits)
+        U8 type : 7;        // 7 bits for the block type (0-127)
+        U8 visible : 1;     // 1 bit for visibility (0-1)
+
+        Cubito() : face{}, x(0), y(0), z(0), type(BLOCK_AIR), visible(false) {
+            
+        }
+    };
+#endif
+    
     inline constexpr U8 blockTiles[][6] = {
         [BLOCK_STONE]       = {TILE_STONE,       TILE_STONE,       TILE_STONE,      TILE_STONE,      TILE_STONE,       TILE_STONE},
         [BLOCK_SAND]        = {TILE_SAND,        TILE_SAND,        TILE_SAND,       TILE_SAND,       TILE_SAND,        TILE_SAND},

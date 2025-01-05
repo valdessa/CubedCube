@@ -521,10 +521,12 @@ bool Chunk::isCompletelyOccluded(S16 x, S16 y, S16 z, const ChunkPosition& curre
 }
 
 void Chunk::fillCubito(Cubito& cubito, U8 face, U8 x, U8 y, U8 z, U8 direction, S32 block) {
-    auto& currentFace = cubito.face[face]; 
-    // currentFace.x = x;
-    // currentFace.y = y;
-    // currentFace.z = z;
+    auto& currentFace = cubito.face[face];
+#if OPTIMIZATION_STRUCTS == 0
+    currentFace.x = x;
+    currentFace.y = y;
+    currentFace.z = z;
+#endif
     currentFace.direction = direction;
     if(direction != DIR_DIAG_XY_BACK && direction != DIR_DIAG_XY_FRONT) {
         currentFace.tile = blockTiles[block][direction];

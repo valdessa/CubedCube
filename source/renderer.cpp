@@ -477,7 +477,7 @@ void Renderer::RenderFace(const CubeFace& face, S8 x, S8 y, S8 z) {
     auto& UV = tileUVMap[face.tile];
     
     for (int j = 0; j < 4; j++) {
-#ifdef OPTIMIZATION_STRUCTS_POS
+#if OPTIMIZATION_STRUCTS != 0
         GX_Position3u16(positionsCoords[face.direction][0] + cubeFaces[face.direction][j][0] + x,
                         positionsCoords[face.direction][1] + cubeFaces[face.direction][j][1] + y,
                         positionsCoords[face.direction][2] + cubeFaces[face.direction][j][2] + z);
@@ -512,7 +512,7 @@ void Renderer::RenderFaceIndexed(const CubeFace& face, S8 x, S8 y, S8 z) {
     nFacesRendered++;
 
     for (U8 j = 0; j < 4; j++) {
-#ifdef OPTIMIZATION_STRUCTS_POS
+#if OPTIMIZATION_STRUCTS != 0
         GX_Position3u16(positionsCoords[face.direction][0] + cubeFaces[face.direction][j][0] + x,
                         positionsCoords[face.direction][1] + cubeFaces[face.direction][j][1] + y,
                         positionsCoords[face.direction][2] + cubeFaces[face.direction][j][2] + z);
