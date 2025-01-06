@@ -268,6 +268,12 @@ void Renderer::CalculateModelMatrix(Mtx& modelToFill, f32 posx, f32 posy, f32 po
     guMtxTransApply(modelToFill, modelToFill, posx, posy, posz);
 }
 
+void Renderer::ObjectView(const Transform& trans) {
+    ObjectView(trans.Position.x, trans.Position.y, trans.Position.z,
+        trans.Rotation.x, trans.Rotation.y, trans.Rotation.z,
+        trans.Scale.x, trans.Scale.y, trans.Scale.z);
+}
+
 void Renderer::ObjectView(f32 posx, f32 posy, f32 posz, f32 angx, f32 angy, f32 angz, f32 scalx, f32 scaly, f32 scalz) {
     Mtx modelMatrix;
     Mtx m;
@@ -679,6 +685,8 @@ void Renderer::CallDisplayList(void* list, U32 size) {
     GX_CallDispList(list, size);
 }
 
+//Start from the first GX command after VSync, and end after GX_DrawDone().
+// GX_SetDrawDone();
 void Renderer::RenderGX(bool VSYNC) {
     //GX_DrawDone();         
     //GX_InvalidateTexAll();

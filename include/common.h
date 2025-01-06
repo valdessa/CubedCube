@@ -303,6 +303,14 @@ namespace poyo {
         [DIR_DIAG_XY_BACK]  ={ 0,  1,  0},  // Normal para la cara superior (Y+)
     };
 
+    struct Transform {
+        FVec3 Position;
+        FVec3 Rotation;
+        FVec3 Scale;
+
+        Transform(cFVec3& pos, cFVec3& rot, cFVec3& sca) : Position(pos), Rotation(rot), Scale(sca) {}
+    };
+
 #ifdef OPTIMIZATION_VERTEX_MEMORY
     #ifdef OPTIMIZATION_MAPS
         inline U8 tileUVMap[NUM_TILES][2]{};

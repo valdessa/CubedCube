@@ -12,9 +12,6 @@ namespace poyo {
 
         void generateLand(S16 Radius = 1);
 
-        bool shouldPlaceTree(int localX, int baseY, int localZ, Chunk& chunk) const;
-        void placeTree(Chunk& chunk, int x, int y, int z);
-
         int getGroundHeight(int worldX, int worldZ) const;
 
         static bool isValidPosition(S16 x, S16 y, S16 z) {
@@ -51,6 +48,17 @@ namespace poyo {
 
         void generateLandChunk(Chunk& chunk, S16 chunkX, S16 chunkZ);
         Chunk& getOrCreateChunkForLand(S16 chunkX, S16 chunkZ);
+
+        //Trees Stuff
+        bool shouldPlaceTree(int localX, int baseY, int localZ, Chunk& chunk) const;
+        void placeTree(Chunk& chunk, int x, int y, int z);
+
+#ifdef KIRBY_EASTER_EGG
+        //Kirby Stuff
+        bool shouldPlaceKirby(int localX, int baseY, int localZ, Chunk& chunk) const;
+     public:
+        Vector<struct Transform> kirbyPositions_;
+#endif
     };
 }
 

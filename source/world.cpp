@@ -31,7 +31,10 @@ World::World() {
 }
 
 World::~World() {
-    //todo: destroy display lists
+    //Delete all display lists 
+    for(auto& chunk : chunks_) {
+        chunk.reset(); 
+    }
 }
 
 void World::generateLand(S16 radius) {
@@ -178,6 +181,26 @@ void World::generateLandChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
         }
     }
 
+#ifdef KIRBY_EASTER_EGG
+    // Generate a random position within the chunk
+    int x = rand() % CHUNK_SIZE;
+    int z = rand() % CHUNK_SIZE;
+
+    // Calculate the global position in the world
+    int worldX = x + (chunkX * CHUNK_SIZE);
+    int worldZ = z + (chunkZ * CHUNK_SIZE);
+    // Get the terrain height at (worldX, worldZ)
+    int randY = getGroundHeight(worldX, worldZ);
+
+    // Check if we can place a kirby at this position
+    if (shouldPlaceKirby(x, randY + 1, z, chunk)) {
+        // Place the tree if possible
+        float kirbyPosX = x + chunk.worldPosition_.x;
+        float kirbyPosZ = z + chunk.worldPosition_.z;
+        kirbyPositions_.emplace_back(FVec3{kirbyPosX + 0.5f, randY + 1, kirbyPosZ + 0.5f}, FVec3{0, rand()%360, 0}, FVec3{0.005f});
+    }
+#endif
+
     chunk.updateVisibilityCount();
 }
 
@@ -191,6 +214,37 @@ Chunk& World::getOrCreateChunkForLand(S16 chunkX, S16 chunkZ) {
         return *currentChunk;
     }
     return *chunks_[it->second];
+}
+
+bool World::shouldPlaceKirby(int localX, int baseY, int localZ, Chunk& chunk) const {
+    // Check if the kirby position is within the horizontal bounds of the chunk
+    if (localX < 2 || localX >= CHUNK_SIZE - 2 || localZ < 2 || localZ >= CHUNK_SIZE - 2) {
+        return false;  // The tree would extend beyond chunk boundaries
+    }
+
+    // Check if there is enough height in the chunk to place the kirby
+    if (baseY + 2 >= CHUNK_HEIGHT) {
+        return false;  // Not enough vertical space for kirby
+    }
+
+    // Check No kirby above other block that is not Dirt or Grass
+    auto currentCubitoType = chunk.getCubito(CubePosition(localX, baseY - 1, localZ)).type;
+    if (currentCubitoType != BLOCK_GRASS && currentCubitoType != BLOCK_DIRT) return false;
+
+    // Check around a 3x3 area to check if kirby can fit in it
+    for (s8 x = -1; x <= 1; ++x) {
+        for (s8 z = -1; z <= 1; ++z) {
+            if(isValidPosition(localX + x, baseY, localZ + z)) {
+                auto currentCubitoType2 = chunk.getCubito(CubePosition(localX + x, baseY, localZ + z)).type;
+                if (currentCubitoType2 != BLOCK_AIR) return false;
+            }else {
+                return false;
+            }
+        }
+    }
+
+    // If all checks pass, there is enough space to place the kirby
+    return true;
 }
 
 bool World::shouldPlaceTree(int localX, int baseY, int localZ, Chunk& chunk) const {

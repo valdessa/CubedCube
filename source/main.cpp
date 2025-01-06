@@ -33,9 +33,7 @@ GRRLIB (GX Version)
 #include <world.h>
 #include <text_renderer.h>
 
-//TPL and Fonts
 #include <fstream>
-#include <main.h>
 
 using namespace poyo;
 
@@ -53,11 +51,18 @@ struct Options {
     int ChunkLoadRadius = CHUNK_LOAD_RADIUS;
 };
 
-void updatePosition(FVec3& point, float radius, float angle) {
+float CameraSpeed = 15.0f;
+
+#ifndef OPTIMIZATION_NO_LIGHTNING_DATA
+float angle = 0.0f;
+FVec3 lightPos{0, 25, 0};
+
+void updateLightPosition(FVec3& point, float radius, float angle) {
     // Actualiza las coordenadas X y Z para que el punto se mueva en un círculo
     point.x = radius * cos(angle); // Movimiento circular en el eje X
     point.z = radius * sin(angle); // Movimiento circular en el eje Z
 }
+#endif
 
 //TODO: El lesson 8 tiene transparencias
 //Lesson 9 una luz toh guapa
@@ -75,36 +80,12 @@ void updatePosition(FVec3& point, float radius, float angle) {
 
 //Lesson 19, Particles!!
 
-u8 waterTexCoords[8];
-
-void updateWaterTextureCoordinates(int textureCounter, u8 offset = 5) {
-    // Calculamos el desplazamiento base de las coordenadas en función de textureCounter
-    u8 baseOffset = static_cast<u8>(textureCounter / 4);  // Los niveles cambian en 4, es decir, 0, 4, 8, 12, ...
-
-    waterTexCoords[0] = 0 + baseOffset;     waterTexCoords[1] = 0 + offset;
-    waterTexCoords[2] = 1 + baseOffset;     waterTexCoords[3] = 0 + offset;
-    waterTexCoords[4] = 1 + baseOffset;     waterTexCoords[5] = 1 + offset;
-    waterTexCoords[6] = 0 + baseOffset;     waterTexCoords[7] = 1 + offset;
-}
-
-static u8 CalculateFrameRate(void) {
-    static u8 frameCount = 0;
-    static u32 lastTime;
-    static u8 FPS = 0;
-    const u32 currentTime = Tick::TickToMs(gettime());
-
-    frameCount++;
-    if(currentTime - lastTime > 1000) {
-        lastTime = currentTime;
-        FPS = frameCount;
-        frameCount = 0;
-    }
-    return FPS;
-}
-
 #ifdef KIRBY_EASTER_EGG
 #include <kirbyinfo.h>
 #endif
+
+//TPL and Fonts and Inputs
+#include <main.h>
 
 #include <fat.h>
 //1 ms = 40,500 ticks
@@ -113,7 +94,7 @@ int main(int argc, char **argv) {
     // MemoryUsedAtbeginning += SYS_GetArena1Size();
     Options options;
     //srand(time(nullptr));
-    float angle = 0.0f;
+
     size_t MemoryUsedBySystem = Memory::getTotalMemoryUsed();
     
     // Initialise the Graphics & Video subsystem
@@ -133,12 +114,10 @@ int main(int argc, char **argv) {
     Renderer::Initialize();
     
     TextRenderer text;
-    float CameraSpeed = 15.0f;
     Camera currentCam(FVec3{0.0f, 30.0f, 50.0f}, -20, -90, CameraSpeed);
 
 
     auto MemoryUsedByVoxel = Memory::getTotalMemoryUsed();
-    //GX_SetZCompLoc(GX_FALSE);
     
     Renderer::SetAlphaTest(true);
     
@@ -156,20 +135,6 @@ int main(int argc, char **argv) {
     Tick currentTick;
     Tick frameTick;
     U64 frameTicks = 0;
-    FVec3 lightPos{0, 25, 0};
-
-
-    // auto memoryUsedByStruct = Memory::getTotalMemoryUsed();
-    // auto cubeFacePointer = (CubeFace*)calloc(32, sizeof(CubeFace));
-    // cubeFacePointer->tile = 4;
-    // memoryUsedByStruct = Memory::getTotalMemoryUsed() - memoryUsedByStruct;
-    
-    //Start from the first GX command after VSync, and end after GX_DrawDone().
-    // GX_SetDrawDone();
-    // Loop forever
-    int textureCounter = 0;
-    float textureCounterFloat = 0.0f;
-    float TextureTime = 0.33f;
 
     std::string helpValue;
     if(fatInitDefault()) {
@@ -192,7 +157,7 @@ int main(int argc, char **argv) {
     kirbyInfo info;
 #endif
     
-    while(1) {
+    while(true) {
         frameTick.start();
         Engine::UpdateEngine();
         auto deltaTime = Engine::getDeltaTime();
@@ -200,49 +165,12 @@ int main(int argc, char **argv) {
 #ifndef OPTIMIZATION_NO_LIGHTNING_DATA
         if(options.lightning) {
             angle+=deltaTime;
-            updatePosition(lightPos, 20, angle);
+            updateLightPosition(lightPos, 20, angle);
         }
 #endif
-
-        textureCounterFloat += deltaTime;
-    
-        // Cada vez que textureCounterFloat alcanza o supera 2
-        if (textureCounterFloat >= TextureTime) {
-            // Incrementa textureCounter en 4
-            textureCounter += 4;
-        
-            // Resetea textureCounterFloat para comenzar un nuevo ciclo
-            textureCounterFloat = 0.0f;
-        
-            // Mantiene textureCounter en el rango 0, 4, 8
-            if (textureCounter > 28) {
-                textureCounter = 0;
-            }
-        }
-
-        
         
         Renderer::Set2DMode();
-        PAD_ScanPads(); // Scan the GameCube controllers
-
-        // If [START/PAUSE] was pressed on the first GameCube controller, break out of the loop
-        if(PAD_ButtonsDown(0) & PAD_BUTTON_START) break;
-        if(PAD_ButtonsDown(0) & PAD_TRIGGER_Z) currentCam.setPosition(FVec3(0));
-        if(PAD_ButtonsDown(0) & PAD_BUTTON_UP) options.debugUI = !options.debugUI;;
-        if(PAD_ButtonsDown(0) & PAD_BUTTON_RIGHT) options.boundingBox = !options.boundingBox;;
-#ifndef OPTIMIZATION_NO_LIGHTNING_DATA
-        if(PAD_ButtonsDown(0) & PAD_BUTTON_LEFT) options.lightning = !options.lightning;
-#endif
-        if(PAD_ButtonsDown(0) & PAD_BUTTON_DOWN) options.VSYNC = !options.VSYNC;
-        if(PAD_ButtonsDown(0) & PAD_BUTTON_B) {
-            CHUNK_LOAD_RADIUS++;
-            if(CHUNK_LOAD_RADIUS > CHUNK_RADIUS) {
-                CHUNK_LOAD_RADIUS = 1;
-            }
-        }
-        if(PAD_ButtonsDown(0) & PAD_BUTTON_A) options.chunksAround = !options.chunksAround;
-        if(PAD_ButtonsDown(0) & PAD_TRIGGER_R) currentCam.setSpeed(CameraSpeed * 5.0f);
-        if(PAD_ButtonsUp(0) & PAD_TRIGGER_R) currentCam.setSpeed(CameraSpeed);
+        if(updateInput(options, currentCam)) break;
 
 #ifdef KIRBY_EASTER_EGG
         updateKirbyPosition(info, deltaTime, 15.0, 1);
@@ -268,22 +196,25 @@ int main(int argc, char **argv) {
             Renderer::SetLightDiffuse(0, lightPos, 20, 1);
         }
 #endif
-        
+
 #ifdef KIRBY_EASTER_EGG
-        static int counter = 0;
-        counter ++;
         //Renderer::ObjectView(0, 15, 0, 0, counter % 360, 0, 0.05, 0.05, 0.05);
-        cfloat kirbyScale = 0.0075f;
-        Renderer::ObjectView(info.Position.x, info.Position.y, info.Position.z,
-                                info.Rotation.x, info.Rotation.y, info.Rotation.z,
-                                kirbyScale, kirbyScale, kirbyScale);
-        //Renderer::ObjectView(0, 15, 0, 0, -90, 0, 0.05, 0.05, 0.05);
-        //drawKirby();
-        drawKirbyFINAL();
+        constexpr float kirbyScale = 0.0075f;
+        auto& kirbys = currentWorld.kirbyPositions_;
+        updateKirbyAnimation();
+        for(auto& kirby : kirbys) {
+            Renderer::ObjectView(kirby);
+            drawKirbyFINAL();
+        }
+        
+        // Renderer::ObjectView(info.Position.x + 0.5f, info.Position.y, info.Position.z + 0.5f,
+        //                         info.Rotation.x, info.Rotation.y, info.Rotation.z,
+        //                         kirbyScale, kirbyScale, kirbyScale);
+        // drawKirbyFINAL();
 #endif
         
         currentTick.start();
-        updateWaterTextureCoordinates(textureCounter, 6);
+        updateWaterTextureCoordinates(deltaTime, 6);
 
 #ifdef OPTIMIZATION_VERTEX_MEMORY
     #ifndef OPTIMIZATION_NO_LIGHTNING_DATA
@@ -300,33 +231,6 @@ int main(int argc, char **argv) {
     #endif
 #endif
         
-        Renderer::BindTexture(blocksTexture, 0);
-        //Renderer::SetTextureCoordScaling(0, TILE_SIZE, TILE_SIZE);
-        auto& chunkitos = currentWorld.getChunks();
-        // for(auto& chunkito : chunkitos) {
-        //     chunkito->render();
-        // }
-        //
-        // GX_SetVtxDesc(GX_VA_TEX0, GX_INDEX8);
-        // GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_TEX0, GX_TEX_ST, GX_U8, 0);
-        //
-        // GX_SetArray(GX_VA_TEX0, waterTexCoords, 2 * sizeof(u8));
-        // DCStoreRange(waterTexCoords, 8 * sizeof(u8));
-        // GX_InvVtxCache();
-        //
-        // for(auto& chunkito : chunkitos) {
-        //     chunkito->renderTranslucents();
-        // }
-
-        //currentWorld.render(waterTexCoords);
-
-
-        // Renderer::PrepareToRenderInVX2(true, false, true, true);
-        // updateWaterTextureCoordinates(textureCounter, 6);
-        //
-        // GX_SetVtxDesc(GX_VA_TEX0, GX_INDEX8);
-        // GX_SetArray(GX_VA_TEX0, waterTexCoords, 2 * sizeof(u8));
-        // GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_TEX0, GX_TEX_ST, GX_U8, 0);
         if(options.chunksAround) {
             currentWorld.renderChunksAround(currentCam.getPosition().x, currentCam.getPosition().z, waterTexCoords);
             //currentWorld.renderChunksAround(-18, -8);
@@ -334,33 +238,13 @@ int main(int argc, char **argv) {
             currentWorld.render(waterTexCoords);
         }
         
-        
-        
-        // Renderer::ObjectView(lightPos.x, lightPos.y, lightPos.z);
-        // GX_Begin(GX_QUADS, GX_VTXFMT2, 8);
-        // for (int i = 0; i < 2; ++i) {
-        //     // Dibujar un quad (triángulo) en la cara superior
-        //     for (int j = 0; j < 4; j++) {
-        //         GX_Position3u16(grassQuadFaces[i][j][0],
-        //                         grassQuadFaces[i][j][1],
-        //                         grassQuadFaces[i][j][2]);
-        //         GX_Normal3s8(grassNormals[i][0],
-        //                      grassNormals[i][1],
-        //                      grassNormals[i][2]);
-        //         GX_Color4u8(255, 255, 255, 255);  // Color blanco
-        //
-        //
-        //         GX_TexCoord2u16(tileTexCoords[j][0] + 1, tileTexCoords[j][1] + 4);
-        //     }
-        // }
-        // GX_End();
-
 #ifndef OPTIMIZATION_NO_LIGHTNING_DATA
         if(options.lightning) Renderer::SetLightOff();
 #endif
         
         if(options.boundingBox) {
             Renderer::PrepareToRenderInVX2(true, false, true, false);
+            auto& chunkitos = currentWorld.getChunks();
             for(const auto& chunkito : chunkitos) {
                 Renderer::RenderBoundingBox(chunkito->worldPosition_.x, 0, chunkito->worldPosition_.z, CHUNK_SIZE, CHUNK_HEIGHT, UCVec3{0, 255, 255}, true);
             }
@@ -409,8 +293,6 @@ int main(int argc, char **argv) {
             text.render(USVec2{400,  140}, fmt::format("Helper      : {}", helpValue).c_str());
             //text.render(USVec2{400,  95}, fmt::format("Helper      : {}", currentWorld.helperCounter).c_str());
             //text.render(USVec2{400, 110}, fmt::format("N Blocks    : {}", currentChunk.validBlocks).c_str());
-
-
         }
         
         //GRRLIB_PrintfTTF(50, 50, myFont, "MINECRAFT", 16, 0x000000FF);

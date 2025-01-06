@@ -547,18 +547,23 @@ inline Vector<FrameInterval> intervals = {
 // else if (currentFrame >= 15.0f && currentFrame < 18.0f) frameToUse = 4;
 // else if (currentFrame >= 18.0f && currentFrame < 55.0f) frameToUse = 5; // Frame 5 mucho más largo
 // else if (currentFrame >= 55.0f && currentFrame < NumFrames) frameToUse = 6;
-
-static void drawKirbyFINAL() {
-    static float currentFrame = 0;
-    auto& finalBonesMatrices = BoneTransformations[static_cast<uint32_t>(currentFrame) % NumFrames];
-    
-    unsigned frameToUse = 0;
+static float currentFrame = 0;
+static unsigned frameToUse = 0;
+static void updateKirbyAnimation() {
     for (const auto& interval : intervals) {
         if (currentFrame >= interval.start && currentFrame < interval.end) {
             frameToUse = interval.frame;
             break;
         }
     }
+
+    currentFrame += Engine::getDeltaTime() * 30.0f;
+    currentFrame = fmod(currentFrame, 56.0f);
+}
+
+static void drawKirbyFINAL() {
+    
+    auto& finalBonesMatrices = BoneTransformations[static_cast<uint32_t>(currentFrame) % NumFrames];
     
     for(size_t j = 0; j < 5; j++) {
         bool texture =  j < 1 ? true : false;
@@ -602,8 +607,6 @@ static void drawKirbyFINAL() {
         }
         GX_End();
     }
-    currentFrame += Engine::getDeltaTime() * 30.0f;
-    currentFrame = fmod(currentFrame, 56.0f);
 }
 
 static void updateKirbyPosition(kirbyInfo& info, cfloat dt, cfloat speed = 2.5f, uint8_t controller = 1) {
