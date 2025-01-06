@@ -20,7 +20,7 @@
 
 inline int CHUNK_LOAD_RADIUS = 2;
 
-constexpr poyo::U8 CHUNK_RADIUS = 8;
+constexpr poyo::U8 CHUNK_RADIUS = 6;
 
 /***** OCCLUSION CULLING OPTIMIZATIONS *****/                                              
 //0 -> NO OCCLUSION CULLING :(                          
@@ -78,7 +78,7 @@ constexpr poyo::U8 CHUNK_RADIUS = 8;
 
 #define SEPARATED_SOLIDS_TRANSPARENTS
 
-//#define KIRBY_EASTER_EGG
+#define KIRBY_EASTER_EGG
 
 /*  
 =============================================================== BENCHMARKING ==================================================================|

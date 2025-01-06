@@ -509,12 +509,59 @@ static U8 tileTexCoordsTriangle[6][2] = {
     {0, 1},  // V 3 of Tri 2
 };
 
+struct FrameInterval {
+    float start;
+    float end;
+    unsigned frame;
+};
+
+// Lista de intervalos
+// inline Vector<FrameInterval> intervals = {
+//     {0.0f, 2.0f, 0},
+//     {2.0f, 4.0f, 1},
+//     {4.0f, 6.0f, 2},
+//     {6.0f, 8.0f, 3},
+//     {8.0f, 10.0f, 2},
+//     {10.0f, 12.0f, 4},
+//     {12.0f, 54.0f, 5},
+//     {54.0f, NumFrames, 6},
+// };
+
+inline Vector<FrameInterval> intervals = {
+    {0.0f, 2.0f, 0},
+    {2.0f, 3.0f, 1},
+    {3.0f, 4.0f, 2},
+    {4.0f, 5.0f, 3},
+    {5.0f, 6.0f, 2},
+    {6.0f, 7.0f, 4},
+    {7.0f, 54.0f, 5},
+    {54.0f, NumFrames, 6},
+};
+
+// // Escalas de tiempo personalizadas para cada intervalo
+// if (currentFrame > 0.0f && currentFrame < 3.0f)        frameToUse = 0;
+// else if (currentFrame >= 3.0f && currentFrame < 6.0f) frameToUse = 1;
+// else if (currentFrame >= 6.0f && currentFrame < 9.0f) frameToUse = 2;
+// else if (currentFrame >= 9.0f && currentFrame < 12.0f) frameToUse = 3;
+// else if (currentFrame >= 12.0f && currentFrame < 15.0f) frameToUse = 2; 
+// else if (currentFrame >= 15.0f && currentFrame < 18.0f) frameToUse = 4;
+// else if (currentFrame >= 18.0f && currentFrame < 55.0f) frameToUse = 5; // Frame 5 mucho más largo
+// else if (currentFrame >= 55.0f && currentFrame < NumFrames) frameToUse = 6;
+
 static void drawKirbyFINAL() {
     static float currentFrame = 0;
     auto& finalBonesMatrices = BoneTransformations[static_cast<uint32_t>(currentFrame) % NumFrames];
     
+    unsigned frameToUse = 0;
+    for (const auto& interval : intervals) {
+        if (currentFrame >= interval.start && currentFrame < interval.end) {
+            frameToUse = interval.frame;
+            break;
+        }
+    }
+    
     for(size_t j = 0; j < 5; j++) {
-        bool texture =  j < 3 ? true : false;
+        bool texture =  j < 1 ? true : false;
         Renderer::PrepareToRenderInVX0(true, true, !texture, texture);
         GX_Begin(GX_TRIANGLES, GX_VTXFMT0, N_INDICES);
         for (size_t i = 0; i < N_INDICES; i++) {
@@ -539,11 +586,11 @@ static void drawKirbyFINAL() {
             //GX_Position3f32(vertex.Position[0], vertex.Position[1], vertex.Position[2]);
             GX_Normal3f32(vertex.Normal[0], vertex.Normal[1], vertex.Normal[2]);
             switch (j) {
-                case 0: GX_TexCoord2u8(tileTexCoordsTriangle[result][0] + (faceIndex == 4 ? 7 : 6),  tileTexCoordsTriangle[result][1] + 4);
+                case 0: GX_TexCoord2u8(tileTexCoordsTriangle[result][0] + (faceIndex == 4 ? frameToUse : 7),  tileTexCoordsTriangle[result][1] + 4);
                     break;
-                case 1: GX_TexCoord2u8(tileTexCoordsTriangle[result][0] + 6, tileTexCoordsTriangle[result][1] + 4);
+                case 1: GX_Color4u8(255, 171, 224, 255);
                     break;
-                case 2: GX_TexCoord2u8(tileTexCoordsTriangle[result][0] + 6, tileTexCoordsTriangle[result][1] + 4);
+                case 2: GX_Color4u8(255, 171, 224, 255);
                     break;
                 case 3: GX_Color4u8(204, 0, 21, 255);
                     break;
