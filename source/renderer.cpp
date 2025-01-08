@@ -262,6 +262,24 @@ const Mtx& Renderer::ViewMatrix() {
     return viewMatrix;
 }
 
+void Renderer::CalculateModelMatrix(Mtx& modelToFill, const Transform& trans) {
+    guMtxIdentity(modelToFill);
+    guMtxScaleApply(modelToFill, modelToFill, trans.Scale.x, trans.Scale.y, trans.Scale.z);
+
+    Mtx m;
+    Mtx rx, ry, rz;
+    guMtxIdentity(m);
+    guMtxRotAxisDeg(rx, &AxisX, trans.Rotation.x);
+    guMtxRotAxisDeg(ry, &AxisY, trans.Rotation.y);
+    guMtxRotAxisDeg(rz, &AxisZ, trans.Rotation.z);
+    guMtxConcat(ry, rx, m);
+    guMtxConcat(m, rz, m);
+
+    guMtxConcat(m, modelToFill, modelToFill);
+    
+    guMtxTransApply(modelToFill, modelToFill, trans.Position.x, trans.Position.y, trans.Position.z);
+}
+
 void Renderer::CalculateModelMatrix(Mtx& modelToFill, f32 posx, f32 posy, f32 posz) {
     guMtxIdentity(modelToFill);
 
@@ -430,8 +448,8 @@ void Renderer::SetLightDiffuse(U8 ID, cFVec3& pos, float distattn, float brightn
     GX_SetChanCtrl(GX_COLOR0A0, GX_ENABLE, GX_SRC_REG, GX_SRC_VTX, lights, GX_DF_CLAMP, GX_AF_SPOT);
 }
 
-void Renderer::PrepareToRenderInVX0(bool pos, bool nrm, bool clr, bool tex) {
-    GX_ClearVtxDesc();
+void Renderer::PrepareToRenderInVX0(bool pos, bool nrm, bool clr, bool tex, bool clearVtxDesc) {
+    if(clearVtxDesc) GX_ClearVtxDesc();
     
     if(pos)     GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
     if(nrm)     GX_SetVtxDesc(GX_VA_NRM, GX_DIRECT); 

@@ -16,15 +16,20 @@ namespace std {
         }
     };
 }
-
 #include <world.h>
 
 #include <ogc/gx.h> //for mtx
 #include <chunk.h>
 
+#include <renderer.h>
+
 using namespace poyo;
 
 World::World() {
+#ifdef KIRBY_EASTER_EGG
+    NKirbys = 0;
+    kirbyTransforms_.reserve(MAX_KIRBY);
+#endif
     //noiseLite_.SetSeed(seed);
     noiseLite_.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
     noiseLite_.SetFrequency(0.05f);
@@ -182,22 +187,27 @@ void World::generateLandChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
     }
 
 #ifdef KIRBY_EASTER_EGG
-    // Generate a random position within the chunk
-    int x = rand() % CHUNK_SIZE;
-    int z = rand() % CHUNK_SIZE;
+    if(NKirbys < MAX_KIRBY) {
+        // Generate a random position within the chunk
+        int x = rand() % CHUNK_SIZE;
+        int z = rand() % CHUNK_SIZE;
 
-    // Calculate the global position in the world
-    int worldX = x + (chunkX * CHUNK_SIZE);
-    int worldZ = z + (chunkZ * CHUNK_SIZE);
-    // Get the terrain height at (worldX, worldZ)
-    int randY = getGroundHeight(worldX, worldZ);
+        // Calculate the global position in the world
+        int worldX = x + (chunkX * CHUNK_SIZE);
+        int worldZ = z + (chunkZ * CHUNK_SIZE);
+        // Get the terrain height at (worldX, worldZ)
+        int randY = getGroundHeight(worldX, worldZ);
 
-    // Check if we can place a kirby at this position
-    if (shouldPlaceKirby(x, randY + 1, z, chunk)) {
-        // Place the tree if possible
-        float kirbyPosX = x + chunk.worldPosition_.x;
-        float kirbyPosZ = z + chunk.worldPosition_.z;
-        kirbyPositions_.emplace_back(FVec3{kirbyPosX + 0.5f, randY + 1, kirbyPosZ + 0.5f}, FVec3{0, rand()%360, 0}, FVec3{0.005f});
+        // Check if we can place a kirby at this position
+        if (shouldPlaceKirby(x, randY + 1, z, chunk)) {
+            // Place the tree if possible
+            float kirbyPosX = x + chunk.worldPosition_.x;
+            float kirbyPosZ = z + chunk.worldPosition_.z;
+            auto& result = kirbyTransforms_.emplace_back(Transform(FVec3{kirbyPosX + 0.5f, randY + 1, kirbyPosZ + 0.5f}, FVec3{0, rand()%360, 0}, FVec3{0.005f}));
+            Renderer::CalculateModelMatrix(result.modelMatrix, result.transform);
+
+            NKirbys++;
+        }
     }
 #endif
 
@@ -216,6 +226,7 @@ Chunk& World::getOrCreateChunkForLand(S16 chunkX, S16 chunkZ) {
     return *chunks_[it->second];
 }
 
+#ifdef KIRBY_EASTER_EGG
 bool World::shouldPlaceKirby(int localX, int baseY, int localZ, Chunk& chunk) const {
     // Check if the kirby position is within the horizontal bounds of the chunk
     if (localX < 2 || localX >= CHUNK_SIZE - 2 || localZ < 2 || localZ >= CHUNK_SIZE - 2) {
@@ -246,6 +257,7 @@ bool World::shouldPlaceKirby(int localX, int baseY, int localZ, Chunk& chunk) co
     // If all checks pass, there is enough space to place the kirby
     return true;
 }
+#endif
 
 bool World::shouldPlaceTree(int localX, int baseY, int localZ, Chunk& chunk) const {
     // Check if the tree position is within the horizontal bounds of the chunk

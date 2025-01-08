@@ -527,6 +527,29 @@ struct FrameInterval {
 //     {54.0f, NumFrames, 6},
 // };
 
+#ifdef KIRBY_IN_DISPLAY_LIST
+static void* displayList = nullptr;
+static U32 displayListSize = 0;
+//static Mtx MatricesInGC[3] ATTRIBUTE_ALIGN(32);
+#endif
+
+constexpr u8 GX_PNMTX_VALUES[] = {
+    GX_PNMTX0, // 0 -> 0
+    GX_PNMTX1, // 1 -> 3
+    GX_PNMTX2, // 2 -> 6
+    GX_PNMTX3, // 3 -> 9
+    GX_PNMTX4, // 4 -> 12
+    GX_PNMTX5, // 5 -> 15
+    GX_PNMTX6, // 6 -> 18
+    GX_PNMTX7, // 7 -> 21
+    GX_PNMTX8, // 8 -> 24
+    GX_PNMTX9  // 9 -> 27
+};
+
+constexpr u8 GetGXPNMTXValue(u8 index) {
+    return GX_PNMTX_VALUES[index];
+}
+
 inline Vector<FrameInterval> intervals = {
     {0.0f, 2.0f, 0},
     {2.0f, 3.0f, 1},
@@ -538,15 +561,6 @@ inline Vector<FrameInterval> intervals = {
     {54.0f, NumFrames, 6},
 };
 
-// // Escalas de tiempo personalizadas para cada intervalo
-// if (currentFrame > 0.0f && currentFrame < 3.0f)        frameToUse = 0;
-// else if (currentFrame >= 3.0f && currentFrame < 6.0f) frameToUse = 1;
-// else if (currentFrame >= 6.0f && currentFrame < 9.0f) frameToUse = 2;
-// else if (currentFrame >= 9.0f && currentFrame < 12.0f) frameToUse = 3;
-// else if (currentFrame >= 12.0f && currentFrame < 15.0f) frameToUse = 2; 
-// else if (currentFrame >= 15.0f && currentFrame < 18.0f) frameToUse = 4;
-// else if (currentFrame >= 18.0f && currentFrame < 55.0f) frameToUse = 5; // Frame 5 mucho más largo
-// else if (currentFrame >= 55.0f && currentFrame < NumFrames) frameToUse = 6;
 static float currentFrame = 0;
 static unsigned frameToUse = 0;
 static void updateKirbyAnimation() {
@@ -561,8 +575,110 @@ static void updateKirbyAnimation() {
     currentFrame = fmod(currentFrame, 56.0f);
 }
 
-static void drawKirbyFINAL() {
+// GX_SetVtxDesc(GX_POSMTXARRAY, GX_DIRECT);
+// //GX_SetVtxAttrFmt(GX_VTXFMT0, GX_POSMTXARRAY, GX_POS_XYZ, GX_F32, 0); 
+// GX_SetArray(GX_POSMTXARRAY, modelToFill, 1 * sizeof(Mtx));
+// DCStoreRange(modelToFill, 1 * sizeof(Mtx));
+// GX_InvVtxCache();
+//         
+// GX_LoadPosMtxIdx(0, GX_PNMTX0);
+
+//works 2:
+// GX_SetVtxDesc(GX_VA_PTNMTXIDX , GX_DIRECT);
+// GX_SetArray(GX_POSMTXARRAY , modelToFill, 1 * sizeof(Mtx));
+// DCStoreRange(modelToFill, 1 * sizeof(Mtx));
+// GX_InvVtxCache();
+// GX_LoadPosMtxIdx(0, GX_PNMTX0);
+//GX_MatrixIndex1x8(0);
+
+
+
+static void ConvertToGameCubeMatrix(const glm::mat4& glmMatrix, Mtx& gameCubeMatrix) {
+    for (int row = 0; row < 3; ++row) {
+        for (int col = 0; col < 4; ++col) {
+            //gameCubeMatrix[row][col] = glmMatrix[row][col];
+            gameCubeMatrix[row][col] = glmMatrix[col][row]; 
+        }
+    }
+}
+#include <malloc.h>
+
+#ifdef KIRBY_IN_DISPLAY_LIST
+static void drawKirbyForDisplayListInside() {
+    for(size_t j = 0; j < 5; j++) {
+        bool texture =  j < 1 ? true : false;
+#ifdef OPTIMIZATION_NO_LIGHTNING_DATA
+        Renderer::PrepareToRenderInVX0(true, false, !texture, texture);
+#else
+        Renderer::PrepareToRenderInVX0(true, true, !texture, texture);
+#endif
+        GX_SetVtxDesc(GX_VA_PTNMTXIDX , GX_DIRECT);
+        GX_Begin(GX_TRIANGLES, GX_VTXFMT0, N_INDICES);
+        for (size_t i = 0; i < N_INDICES; i++) {
+            unsigned int index = IndicesKirbyFINAL[j][i];
+            const auto& vertex = VerticesKirbyFINAL[j][index];
+            
+            FVec3 finalPosition = vertex.Position;
+        
+            s8 boneID = static_cast<s8>(vertex.m_BoneIDs[0]);
+            if (boneID != -1) finalPosition = finalPosition * vertex.m_Weights[0];
+            
+            auto textureIndex = i % 6;
+            size_t faceIndex = i / 6;
+
+            GX_MatrixIndex1x8(boneID * 3);
+            GX_Position3f32(finalPosition[0], finalPosition[1], finalPosition[2]);
+#ifndef OPTIMIZATION_NO_LIGHTNING_DATA
+            GX_Normal3f32(vertex.Normal[0], vertex.Normal[1], vertex.Normal[2]);
+#endif
+            switch (j) {
+            case 0: GX_TexCoord2u8(tileTexCoordsTriangle[textureIndex][0] + (faceIndex == 4 ? frameToUse : 7),  tileTexCoordsTriangle[textureIndex][1] + 4);
+                break;
+            case 1: GX_Color4u8(255, 171, 224, 255);
+                break;
+            case 2: GX_Color4u8(255, 171, 224, 255);
+                break;
+            case 3: GX_Color4u8(204, 0, 21, 255);
+                break;
+            case 4: GX_Color4u8(204, 0, 21, 255);
+                break;
+            default: ;
+            }
+        }
+        GX_End();
+    }
+}
+
+Mtx MatricesInGC2[MAX_KIRBY][3] ATTRIBUTE_ALIGN(32);;
+
+static void drawKirbyForDisplayList(Mtx& modelToFill, u8 offset) {
+    auto& finalBonesMatrices = BoneTransformations[static_cast<uint32_t>(currentFrame) % NumFrames];
+    auto& MatricesInGC = MatricesInGC2[offset];
+    for(int i = 0; i < 3; i++) {
+        //guMtxIdentity(MatricesInGC[i]);
+        ConvertToGameCubeMatrix(finalBonesMatrices[i], MatricesInGC[i]);
+        guMtxConcat(modelToFill, MatricesInGC[i], MatricesInGC[i]);
+    }
+    //GX_ClearVtxDesc();
+
+    GX_InvVtxCache();
+    GX_SetArray(GX_POSMTXARRAY , MatricesInGC, 1 * sizeof(Mtx));
+    DCFlushRange(MatricesInGC, 3 * sizeof(Mtx));
     
+    GX_LoadPosMtxIdx(0, GX_PNMTX0);
+    GX_LoadPosMtxIdx(1, GX_PNMTX1);
+    GX_LoadPosMtxIdx(2, GX_PNMTX2);
+
+
+
+    GX_CallDispList(displayList, displayListSize);
+    
+    //free(MatricesInGC);
+}
+#endif
+
+static void drawKirbyDirect(Mtx& modelToFill) {
+    GX_LoadPosMtxImm(modelToFill, GX_PNMTX0);
     auto& finalBonesMatrices = BoneTransformations[static_cast<uint32_t>(currentFrame) % NumFrames];
     
     for(size_t j = 0; j < 5; j++) {
@@ -573,20 +689,18 @@ static void drawKirbyFINAL() {
             unsigned int index = IndicesKirbyFINAL[j][i];
             const auto& vertex = VerticesKirbyFINAL[j][index];
 
-            FVec4 position(vertex.Position[0], vertex.Position[1], vertex.Position[2], 1.0f);
+            FVec4 position = FVec4(vertex.Position, 1.0f);
             FVec4 finalPosition = position;
-        
-            FVec4 totalPosition(0.0f);
-            for (int b = 0; b < MAX_BONE_INFLUENCE; ++b) {
-                if (vertex.m_BoneIDs[b] == -1)
-                    continue;
-                const auto& boneMatrix = finalBonesMatrices[vertex.m_BoneIDs[b]];
+
+            s8 boneID = static_cast<s8>(vertex.m_BoneIDs[0]);
+            if (boneID != -1) {
+                const auto& boneMatrix = finalBonesMatrices[boneID];
                 glm::vec4 localPosition = boneMatrix * position;
-                totalPosition += localPosition * vertex.m_Weights[b];
+                finalPosition = localPosition * vertex.m_Weights[0];
             }
-            finalPosition = totalPosition;
+            
             auto result = i % 6;
-            size_t faceIndex = i / 6; 
+            size_t faceIndex = i / 6;
             GX_Position3f32(finalPosition[0], finalPosition[1], finalPosition[2]);
             //GX_Position3f32(vertex.Position[0], vertex.Position[1], vertex.Position[2]);
             GX_Normal3f32(vertex.Normal[0], vertex.Normal[1], vertex.Normal[2]);
@@ -603,11 +717,60 @@ static void drawKirbyFINAL() {
                     break;
                 default: ;
             }
-            
         }
         GX_End();
     }
 }
+
+static void drawKirby(Mtx& modelToFill, u8 offset) {
+#ifdef KIRBY_IN_DISPLAY_LIST
+    drawKirbyForDisplayList(modelToFill, offset);
+#else
+    drawKirbyDirect(modelToFill);
+#endif
+}
+
+static void initKirby() {
+#ifdef KIRBY_IN_DISPLAY_LIST
+    //The GX_TRIANGLES command takes up 3 bytes.
+    U32 VertexMemory = 0;
+    U32 entitiesToRender = N_INDICES * 5;
+    
+    VertexMemory += 3 * sizeof(f32); // 3->f32 for positions
+#ifndef OPTIMIZATION_NO_LIGHTNING_DATA
+    VertexMemory += 3 * sizeof(f32); // 3->f32 for normals
+#endif
+    VertexMemory += 2 * sizeof(u8);  // 2->u8 for texture coords
+    VertexMemory += 20;
+    
+    //Said by GX Documentation, an extra 63 bytes are needed.
+    U32 listSize = 3 + entitiesToRender * VertexMemory + 63;
+    //The list size also must be a multiple of 32, so round up to the next multiple of 32.
+    //2 Options to Round Up:
+    //listSize = round_up(listSize, 32);
+    listSize = (listSize + 31) & ~31;   //Round up to a multiple of 32
+    displayList = memalign(32, listSize);
+    //Remove this block of memory from the CPU's cache because the write gather pipe is used to write the commands
+    DCInvalidateRange(displayList, listSize);
+    
+    GX_BeginDispList(displayList, listSize);
+
+    drawKirbyForDisplayListInside();
+
+    displayListSize = GX_EndDispList();
+    assert(displayListSize != 0);
+#endif
+}
+
+#ifdef KIRBY_IN_DISPLAY_LIST
+static void freeKirby() {
+    if(displayList != nullptr) {
+        DCFlushRange(displayList, displayListSize);
+        free(displayList);
+        displayList = nullptr;
+    }
+}
+#endif
 
 static void updateKirbyPosition(kirbyInfo& info, cfloat dt, cfloat speed = 2.5f, uint8_t controller = 1) {
     if(PAD_ButtonsHeld(controller) & PAD_BUTTON_UP)     info.Position.z-= dt * speed;

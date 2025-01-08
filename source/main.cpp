@@ -86,8 +86,8 @@ void updateLightPosition(FVec3& point, float radius, float angle) {
 
 //TPL and Fonts and Inputs
 #include <main.h>
-
 #include <fat.h>
+
 //1 ms = 40,500 ticks
 int main(int argc, char **argv) {
     // size_t MemoryUsedAtbeginning = (uintptr_t)SYS_GetArena1Lo() - (uintptr_t)SYS_GetArena1Hi;
@@ -123,10 +123,10 @@ int main(int argc, char **argv) {
     
     World currentWorld;
 
-    SYS_Report("N Blocks: %llu\n", 0);
-    SYS_Report("N Blocks: %s\n", "He entrado");
+    // SYS_Report("N Blocks: %llu\n", 0);
+    // SYS_Report("N Blocks: %s\n", "He entrado");
     currentWorld.generateLand(CHUNK_RADIUS);
-    SYS_Report("N Blocks: %s\n", "He salido");
+    //SYS_Report("N Blocks: %s\n", "He salido");
     //SYS_Report("N Blocks: %llu\n", currentWorld.validBlocks_);
     //SYS_Report("Start X Z: %zd %zd\n", startX, startZ);
     
@@ -135,26 +135,28 @@ int main(int argc, char **argv) {
     Tick currentTick;
     Tick frameTick;
     U64 frameTicks = 0;
-
+    
+    //std::string helpValue = SYS_GetAbsolutePath(path);
     std::string helpValue;
-    if(fatInitDefault()) {
-        helpValue = "Working";
-    }else {
-        helpValue = "Not working :/";
-    }
-
-    FILE *file = fopen("hola2.txt", "w");
-    if (file == nullptr) {
-        helpValue = "Error opening file";
-    }
-
-    if(file != nullptr) {
-        fprintf(file, "Hello from GameCube!\n");
-        fclose(file);
-    }
+    // if(fatInitDefault()) {
+    //     helpValue = "Working";
+    // }else {
+    //     helpValue = "Not working :/";
+    // }
+    //
+    // FILE *file = fopen("hola2.txt", "w");
+    // if (file == nullptr) {
+    //     helpValue = "Error opening file";
+    // }
+    //
+    // if(file != nullptr) {
+    //     fprintf(file, "Hello from GameCube!\n");
+    //     fclose(file);
+    // }
     
 #ifdef KIRBY_EASTER_EGG
     kirbyInfo info;
+    initKirby();
 #endif
     
     while(true) {
@@ -200,17 +202,22 @@ int main(int argc, char **argv) {
 #ifdef KIRBY_EASTER_EGG
         //Renderer::ObjectView(0, 15, 0, 0, counter % 360, 0, 0.05, 0.05, 0.05);
         constexpr float kirbyScale = 0.0075f;
-        auto& kirbys = currentWorld.kirbyPositions_;
+        auto& kirbys = currentWorld.kirbyTransforms_;
         updateKirbyAnimation();
-        for(auto& kirby : kirbys) {
-            Renderer::ObjectView(kirby);
-            drawKirbyFINAL();
+        for(size_t i = 0; i < kirbys.size(); i++ ) {
+            Mtx matrixToUse;
+            guMtxIdentity(matrixToUse);
+            auto& modelMatrix = kirbys[i].modelMatrix;
+            guMtxConcat(Renderer::ViewMatrix(), modelMatrix, matrixToUse);
+            drawKirby(matrixToUse, i);
         }
+
+        
         
         // Renderer::ObjectView(info.Position.x + 0.5f, info.Position.y, info.Position.z + 0.5f,
         //                         info.Rotation.x, info.Rotation.y, info.Rotation.z,
         //                         kirbyScale, kirbyScale, kirbyScale);
-        // drawKirbyFINAL();
+        // drawKirby();
 #endif
         
         currentTick.start();
@@ -303,6 +310,10 @@ int main(int argc, char **argv) {
         // Renderizar todo a la pantalla
         Renderer::RenderGX(options.VSYNC); // Render the frame buffer to the TV
     }
+
+#ifdef KIRBY_IN_DISPLAY_LIST
+    freeKirby();
+#endif
 
     Renderer::Exit();
 

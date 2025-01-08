@@ -43,13 +43,14 @@ namespace poyo {
         static const Mtx& ViewMatrix();
 
         //Todo: make 1 only using one
+        static void CalculateModelMatrix(Mtx& modelToFill, const Transform& trans);
         static void CalculateModelMatrix(Mtx& modelToFill, f32 posx, f32 posy, f32 posz);
         static void ObjectView(const Transform& trans);
         static void ObjectView(f32 posx, f32 posy, f32 posz,
                                f32 angx = 0, f32 angy = 0, f32 angz = 0,
                                f32 scalx = 1, f32 scaly = 1, f32 scalz = 1);
         
-        static void PrepareToRenderInVX0(bool pos, bool nrm, bool clr, bool tex);
+        static void PrepareToRenderInVX0(bool pos, bool nrm, bool clr, bool tex, bool clearVtxDesc = true);
         static void PrepareToRenderInVX2(bool pos, bool nrm, bool clr, bool tex);
 
         static void RenderBegin(U16 VertexCount);

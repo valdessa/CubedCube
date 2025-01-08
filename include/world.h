@@ -3,7 +3,10 @@
 
 #include "FastNoiseLite.h"
 
-namespace poyo {
+#include <ogc/gu.h>
+
+namespace poyo
+{
     class Chunk;
     class World {
      public:
@@ -57,7 +60,14 @@ namespace poyo {
         //Kirby Stuff
         bool shouldPlaceKirby(int localX, int baseY, int localZ, Chunk& chunk) const;
      public:
-        Vector<struct Transform> kirbyPositions_;
+        U16 NKirbys;
+        struct KirbyTransformInfo {
+            struct Transform transform;
+            Mtx modelMatrix;
+
+            KirbyTransformInfo(Transform trans) : transform(std::move(trans)), modelMatrix() {}
+        };
+        Vector<KirbyTransformInfo> kirbyTransforms_;
 #endif
     };
 }
