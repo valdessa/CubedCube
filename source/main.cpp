@@ -135,6 +135,7 @@ int main(int argc, char **argv) {
     Tick currentTick;
     Tick frameTick;
     U64 frameTicks = 0;
+    U16 chunksDrawn = 0;
     
     //std::string helpValue = SYS_GetAbsolutePath(path);
     std::string helpValue;
@@ -201,7 +202,6 @@ int main(int argc, char **argv) {
 
 #ifdef KIRBY_EASTER_EGG
         //Renderer::ObjectView(0, 15, 0, 0, counter % 360, 0, 0.05, 0.05, 0.05);
-        constexpr float kirbyScale = 0.0075f;
         auto& kirbys = currentWorld.kirbyTransforms_;
         updateKirbyAnimation();
         for(size_t i = 0; i < kirbys.size(); i++ ) {
@@ -211,8 +211,10 @@ int main(int argc, char **argv) {
             guMtxConcat(Renderer::ViewMatrix(), modelMatrix, matrixToUse);
             drawKirby(matrixToUse, i);
         }
-
         
+#ifdef KIRBY_IN_DISPLAY_LIST
+        GX_SetCurrentMtx(GX_PNMTX0); //Reset to original Matrix :3
+#endif
         
         // Renderer::ObjectView(info.Position.x + 0.5f, info.Position.y, info.Position.z + 0.5f,
         //                         info.Rotation.x, info.Rotation.y, info.Rotation.z,
@@ -238,18 +240,21 @@ int main(int argc, char **argv) {
     #endif
 #endif
         
+        GX_SetChanCtrl(GX_COLOR0A0, GX_DISABLE, GX_SRC_REG, GX_SRC_REG, 0, GX_DF_NONE, GX_AF_NONE);
         if(options.chunksAround) {
-            currentWorld.renderChunksAround(currentCam.getPosition().x, currentCam.getPosition().z, waterTexCoords);
+            chunksDrawn = currentWorld.renderChunksAround(currentCam.getPosition().x, currentCam.getPosition().z, waterTexCoords);
             //currentWorld.renderChunksAround(-18, -8);
         }else {
-            currentWorld.render(waterTexCoords);
+            chunksDrawn = currentWorld.render(waterTexCoords);
         }
+        
         
 #ifndef OPTIMIZATION_NO_LIGHTNING_DATA
         if(options.lightning) Renderer::SetLightOff();
 #endif
         
         if(options.boundingBox) {
+            GX_SetChanCtrl(GX_COLOR0A0, GX_DISABLE, GX_SRC_VTX, GX_SRC_VTX, 0, GX_DF_NONE, GX_AF_NONE);
             Renderer::PrepareToRenderInVX2(true, false, true, false);
             auto& chunkitos = currentWorld.getChunks();
             for(const auto& chunkito : chunkitos) {
@@ -274,30 +279,32 @@ int main(int argc, char **argv) {
             text.render(USVec2{5,  65}, fmt::format("Delta Time  : {:.5f} s", deltaTime).c_str());
             
             //Memory Things
-            text.render(USVec2{5,  110}, fmt::format("Memory (System)   : {:.2f} KB", convertBytesToKilobytes(MemoryUsedBySystem)).c_str());
-            text.render(USVec2{5,  125}, fmt::format("Memory (Voxel)    : {:.2f} KB", convertBytesToKilobytes(MemoryUsedByVoxel)).c_str());
-            text.render(USVec2{5,  140}, fmt::format("Total Used Memory : {:.2f} KB", convertBytesToKilobytes(Memory::getTotalMemoryUsed())).c_str());
-            text.render(USVec2{5,  155}, fmt::format("Total Free Memory : {:.2f} KB", convertBytesToKilobytes(Memory::getTotalMemoryFree())).c_str());
+            text.render(USVec2{5,  95}, fmt::format("Memory (System)   : {:.2f} KB", convertBytesToKilobytes(MemoryUsedBySystem)).c_str());
+            text.render(USVec2{5,  110}, fmt::format("Memory (Voxel)    : {:.2f} KB", convertBytesToKilobytes(MemoryUsedByVoxel)).c_str());
+            text.render(USVec2{5,  125}, fmt::format("Total Used Memory : {:.2f} KB", convertBytesToKilobytes(Memory::getTotalMemoryUsed())).c_str());
+            text.render(USVec2{5,  140}, fmt::format("Total Free Memory : {:.2f} KB", convertBytesToKilobytes(Memory::getTotalMemoryFree())).c_str());
 
+            //Screen Thinks
+            text.render(USVec2{5, 170}, fmt::format("Video Mode : {}", std::array{"INTERLACE", "NON INTERLACE", "PROGRESSIVE"}[static_cast<int>(Renderer::VideoMode())]).c_str());
+            text.render(USVec2{5, 185}, fmt::format("VSYNC      : {}", options.VSYNC ? "YES" : "NOP").c_str());
+
+            
             //Camera Things
             text.render(USVec2{275,  5}, fmt::format("Camera X [{:.4f}] Y [{:.4f}] Z [{:.4f}]", camPos.x, camPos.y, camPos.z).c_str());
             text.render(USVec2{275, 20}, fmt::format("Camera Pitch [{:.4f}] Yaw [{:.4f}]", currentCam.getPitch(), currentCam.getYaw()).c_str());
 
             //Render Things
-            text.render(USVec2{275,  35}, fmt::format("Valid Blocks : {}", currentWorld.validBlocks_).c_str());
-            text.render(USVec2{275,  50}, fmt::format("Valid Faces : {}", currentWorld.validFaces_).c_str());
-            text.render(USVec2{275,  65}, fmt::format("NDraw Calls  : {}", Renderer::DrawCalls()).c_str());
+            text.render(USVec2{275,  35}, fmt::format("Valid: Blocks [{}] Faces [{}]", currentWorld.validBlocks_, currentWorld.validFaces_).c_str());
+            text.render(USVec2{275,  50}, fmt::format("NDraw Calls : {}", Renderer::DrawCalls()).c_str());
             //text.render(USVec2{275,  80}, fmt::format("NFaces Drawn : {}", Renderer::FacesDrawn()).c_str());  //todo: fix
-            text.render(USVec2{275,  80}, fmt::format("NChunks      : {}", currentWorld.NChunks()).c_str());
-
-            text.render(USVec2{450, 50}, fmt::format("Video Mode : {}", std::array{"INTERLACE", "NON INTERLACE", "PROGRESSIVE"}[static_cast<int>(Renderer::VideoMode())]).c_str());
-            text.render(USVec2{450, 65}, fmt::format("VSYNC      : {}", options.VSYNC ? "YES" : "NOP").c_str());
-            text.render(USVec2{450, 80}, fmt::format("NTrees     : {}", currentWorld.nTrees_).c_str()); //currentWorld.nTrees_
-            
-            text.render(USVec2{400,   95}, fmt::format("Draw Cycles  : {} ts", drawTicks).c_str());
-            text.render(USVec2{400,   110}, fmt::format("Frame Cycles : {} ts", frameTicks).c_str());
-            text.render(USVec2{400,  125}, fmt::format("Draw Time    : {} ms", Tick::TickToMsfloat(drawTicks)).c_str());
-            text.render(USVec2{400,  140}, fmt::format("Helper      : {}", helpValue).c_str());
+            text.render(USVec2{275,  65}, fmt::format("NChunks     : [{}]/[{}]", chunksDrawn, currentWorld.NChunks()).c_str());
+            text.render(USVec2{485, 50}, fmt::format("NTrees : {}", currentWorld.nTrees_).c_str());
+#ifdef KIRBY_EASTER_EGG
+            text.render(USVec2{485, 65}, fmt::format("NKirby : {}", currentWorld.NKirbys).c_str()); //currentWorld.nTrees_
+#endif
+            text.render(USVec2{295,  95}, fmt::format("Draw   : Cycles {} ts / Time {} ms", drawTicks, Tick::TickToMsfloat(drawTicks)).c_str());
+            text.render(USVec2{295, 110}, fmt::format("Frame  : Cycles {} ts", frameTicks).c_str());
+            text.render(USVec2{295, 125}, fmt::format("Helper : {}", helpValue).c_str());
             //text.render(USVec2{400,  95}, fmt::format("Helper      : {}", currentWorld.helperCounter).c_str());
             //text.render(USVec2{400, 110}, fmt::format("N Blocks    : {}", currentChunk.validBlocks).c_str());
         }

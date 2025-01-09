@@ -500,6 +500,7 @@ struct AnimationData {
     uint8_t numFrames;  
 };
 
+#ifndef KIRBY_IN_DISPLAY_LIST
 static U8 tileTexCoordsTriangle[6][2] = {  
     {1, 1},  // V 0 of Tri 1
     {1, 0},  // V 1 of Tri 1
@@ -508,11 +509,14 @@ static U8 tileTexCoordsTriangle[6][2] = {
     {0, 0},  // V 2 of Tri 2
     {0, 1},  // V 3 of Tri 2
 };
+#endif
+
+u8 kirbyTexCoords[24];
 
 struct FrameInterval {
     float start;
     float end;
-    unsigned frame;
+    u8 frame;
 };
 
 // Lista de intervalos
@@ -530,6 +534,8 @@ struct FrameInterval {
 #ifdef KIRBY_IN_DISPLAY_LIST
 static void* displayList = nullptr;
 static U32 displayListSize = 0;
+static u8 kirbyRowTexture = 4;
+static u8 kirbyColumnTexture = 7;
 //static Mtx MatricesInGC[3] ATTRIBUTE_ALIGN(32);
 #endif
 
@@ -562,7 +568,7 @@ inline Vector<FrameInterval> intervals = {
 };
 
 static float currentFrame = 0;
-static unsigned frameToUse = 0;
+static u8 frameToUse = 0;
 static void updateKirbyAnimation() {
     for (const auto& interval : intervals) {
         if (currentFrame >= interval.start && currentFrame < interval.end) {
@@ -573,6 +579,16 @@ static void updateKirbyAnimation() {
 
     currentFrame += Engine::getDeltaTime() * 30.0f;
     currentFrame = fmod(currentFrame, 56.0f);
+
+#ifdef KIRBY_IN_DISPLAY_LIST
+    //Kirby Face (Blink Anim)
+    kirbyTexCoords[12]  = 1 + frameToUse;   
+    kirbyTexCoords[14]  = 1 + frameToUse;   
+    kirbyTexCoords[16]  = 0 + frameToUse;   
+    kirbyTexCoords[18]  = 1 + frameToUse;   
+    kirbyTexCoords[20]  = 0 + frameToUse;   
+    kirbyTexCoords[22]  = 0 + frameToUse;   
+#endif
 }
 
 // GX_SetVtxDesc(GX_POSMTXARRAY, GX_DIRECT);
@@ -605,16 +621,26 @@ static void ConvertToGameCubeMatrix(const glm::mat4& glmMatrix, Mtx& gameCubeMat
 
 #ifdef KIRBY_IN_DISPLAY_LIST
 static void drawKirbyForDisplayListInside() {
-    for(size_t j = 0; j < 5; j++) {
-        bool texture =  j < 1 ? true : false;
+    for(u8 j = 0; j < 5; j++) {
+        bool texture =  j == 0 ? true : false;
+        if(j <= 1) {
 #ifdef OPTIMIZATION_NO_LIGHTNING_DATA
-        Renderer::PrepareToRenderInVX0(true, false, !texture, texture);
+            Renderer::PrepareToRenderInVX0(true, false, !texture, texture);
 #else
-        Renderer::PrepareToRenderInVX0(true, true, !texture, texture);
+            Renderer::PrepareToRenderInVX0(true, true, !texture, texture);
 #endif
-        GX_SetVtxDesc(GX_VA_PTNMTXIDX , GX_DIRECT);
+            GX_SetVtxDesc(GX_VA_PTNMTXIDX , GX_DIRECT);
+            if(texture) {
+                GX_SetVtxDesc(GX_VA_TEX0, GX_INDEX8);
+                //todo: this will not work with lightning!!
+                GX_SetChanCtrl(GX_COLOR0A0, GX_DISABLE, GX_SRC_REG, GX_SRC_REG, 0, GX_DF_NONE, GX_AF_NONE);
+            }else {
+                GX_SetChanCtrl(GX_COLOR0A0, GX_DISABLE, GX_SRC_VTX, GX_SRC_VTX, 0, GX_DF_NONE, GX_AF_NONE);
+            }
+        }
+        
         GX_Begin(GX_TRIANGLES, GX_VTXFMT0, N_INDICES);
-        for (size_t i = 0; i < N_INDICES; i++) {
+        for (u8 i = 0; i < N_INDICES; i++) {
             unsigned int index = IndicesKirbyFINAL[j][i];
             const auto& vertex = VerticesKirbyFINAL[j][index];
             
@@ -623,8 +649,8 @@ static void drawKirbyForDisplayListInside() {
             s8 boneID = static_cast<s8>(vertex.m_BoneIDs[0]);
             if (boneID != -1) finalPosition = finalPosition * vertex.m_Weights[0];
             
-            auto textureIndex = i % 6;
-            size_t faceIndex = i / 6;
+            u8 textureIndex = i % 6;
+            u8 faceIndex = i / 6;
 
             GX_MatrixIndex1x8(boneID * 3);
             GX_Position3f32(finalPosition[0], finalPosition[1], finalPosition[2]);
@@ -632,7 +658,10 @@ static void drawKirbyForDisplayListInside() {
             GX_Normal3f32(vertex.Normal[0], vertex.Normal[1], vertex.Normal[2]);
 #endif
             switch (j) {
-            case 0: GX_TexCoord2u8(tileTexCoordsTriangle[textureIndex][0] + (faceIndex == 4 ? frameToUse : 7),  tileTexCoordsTriangle[textureIndex][1] + 4);
+            case 0: //GX_TexCoord2u8(tileTexCoordsTriangle[textureIndex][0] + (faceIndex == 4 ? frameToUse : 7),  tileTexCoordsTriangle[textureIndex][1] + 4);
+                // if(faceIndex == 4) GX_TexCoord1x8(textureIndex + 6);
+                // else GX_TexCoord1x8(textureIndex);
+                    GX_TexCoord1x8(textureIndex + (faceIndex == 4) * 6);
                 break;
             case 1: GX_Color4u8(255, 171, 224, 255);
                 break;
@@ -661,31 +690,46 @@ static void drawKirbyForDisplayList(Mtx& modelToFill, u8 offset) {
     }
     //GX_ClearVtxDesc();
 
-    GX_InvVtxCache();
+    
     GX_SetArray(GX_POSMTXARRAY , MatricesInGC, 1 * sizeof(Mtx));
     DCFlushRange(MatricesInGC, 3 * sizeof(Mtx));
+    GX_InvVtxCache();
+    
+    GX_SetArray(GX_VA_TEX0, kirbyTexCoords, 2 * sizeof(u8));
+    DCFlushRange(kirbyTexCoords, 24 * sizeof(u8));
+    GX_InvVtxCache();
     
     GX_LoadPosMtxIdx(0, GX_PNMTX0);
     GX_LoadPosMtxIdx(1, GX_PNMTX1);
     GX_LoadPosMtxIdx(2, GX_PNMTX2);
 
-
-
     GX_CallDispList(displayList, displayListSize);
     
     //free(MatricesInGC);
 }
-#endif
+#else
 
 static void drawKirbyDirect(Mtx& modelToFill) {
     GX_LoadPosMtxImm(modelToFill, GX_PNMTX0);
     auto& finalBonesMatrices = BoneTransformations[static_cast<uint32_t>(currentFrame) % NumFrames];
     
-    for(size_t j = 0; j < 5; j++) {
-        bool texture =  j < 1 ? true : false;
-        Renderer::PrepareToRenderInVX0(true, true, !texture, texture);
+    for(u8 j = 0; j < 5; j++) {
+        bool texture =  j == 0 ? true : false;
+        if(j <= 1) {
+#ifdef OPTIMIZATION_NO_LIGHTNING_DATA
+            Renderer::PrepareToRenderInVX0(true, false, !texture, texture);
+#else
+            Renderer::PrepareToRenderInVX0(true, true, !texture, texture);
+#endif
+            if(texture) {
+                //todo: this will not work with lightning!!
+                GX_SetChanCtrl(GX_COLOR0A0, GX_DISABLE, GX_SRC_REG, GX_SRC_REG, 0, GX_DF_NONE, GX_AF_NONE);
+            }else {
+                GX_SetChanCtrl(GX_COLOR0A0, GX_DISABLE, GX_SRC_VTX, GX_SRC_VTX, 0, GX_DF_NONE, GX_AF_NONE);
+            }
+        }
         GX_Begin(GX_TRIANGLES, GX_VTXFMT0, N_INDICES);
-        for (size_t i = 0; i < N_INDICES; i++) {
+        for (u8 i = 0; i < N_INDICES; i++) {
             unsigned int index = IndicesKirbyFINAL[j][i];
             const auto& vertex = VerticesKirbyFINAL[j][index];
 
@@ -703,7 +747,9 @@ static void drawKirbyDirect(Mtx& modelToFill) {
             size_t faceIndex = i / 6;
             GX_Position3f32(finalPosition[0], finalPosition[1], finalPosition[2]);
             //GX_Position3f32(vertex.Position[0], vertex.Position[1], vertex.Position[2]);
+#ifndef OPTIMIZATION_NO_LIGHTNING_DATA
             GX_Normal3f32(vertex.Normal[0], vertex.Normal[1], vertex.Normal[2]);
+#endif
             switch (j) {
                 case 0: GX_TexCoord2u8(tileTexCoordsTriangle[result][0] + (faceIndex == 4 ? frameToUse : 7),  tileTexCoordsTriangle[result][1] + 4);
                     break;
@@ -721,6 +767,7 @@ static void drawKirbyDirect(Mtx& modelToFill) {
         GX_End();
     }
 }
+#endif
 
 static void drawKirby(Mtx& modelToFill, u8 offset) {
 #ifdef KIRBY_IN_DISPLAY_LIST
@@ -732,6 +779,21 @@ static void drawKirby(Mtx& modelToFill, u8 offset) {
 
 static void initKirby() {
 #ifdef KIRBY_IN_DISPLAY_LIST
+    //Kirby Body 
+    kirbyTexCoords[0]  = 1 + kirbyColumnTexture;   kirbyTexCoords[1]  = 1 + kirbyRowTexture;
+    kirbyTexCoords[2]  = 1 + kirbyColumnTexture;   kirbyTexCoords[3]  = 0 + kirbyRowTexture;
+    kirbyTexCoords[4]  = 0 + kirbyColumnTexture;   kirbyTexCoords[5]  = 0 + kirbyRowTexture;
+    kirbyTexCoords[6]  = 1 + kirbyColumnTexture;   kirbyTexCoords[7]  = 1 + kirbyRowTexture;
+    kirbyTexCoords[8]  = 0 + kirbyColumnTexture;   kirbyTexCoords[9]  = 0 + kirbyRowTexture;
+    kirbyTexCoords[10] = 0 + kirbyColumnTexture;   kirbyTexCoords[11] = 1 + kirbyRowTexture;
+    //Kirby Face (Blink Anim)
+    kirbyTexCoords[12]  = 1 + frameToUse;   kirbyTexCoords[13]  = 1 + kirbyRowTexture;
+    kirbyTexCoords[14]  = 1 + frameToUse;   kirbyTexCoords[15]  = 0 + kirbyRowTexture;
+    kirbyTexCoords[16]  = 0 + frameToUse;   kirbyTexCoords[17]  = 0 + kirbyRowTexture;
+    kirbyTexCoords[18]  = 1 + frameToUse;   kirbyTexCoords[19]  = 1 + kirbyRowTexture;
+    kirbyTexCoords[20]  = 0 + frameToUse;   kirbyTexCoords[21]  = 0 + kirbyRowTexture;
+    kirbyTexCoords[22]  = 0 + frameToUse;   kirbyTexCoords[23]  = 1 + kirbyRowTexture;
+    
     //The GX_TRIANGLES command takes up 3 bytes.
     U32 VertexMemory = 0;
     U32 entitiesToRender = N_INDICES * 5;

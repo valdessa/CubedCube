@@ -37,8 +37,8 @@ namespace poyo
         void occludeChunkBlocks();
         void occludeChunkBlocksFaces() const;
         
-        void renderChunksAround(int playerX, int playerZ, U8* waterTexCoords);
-        void render(U8* waterTexCoords) const;
+        U16 renderChunksAround(int playerX, int playerZ, U8* waterTexCoords);
+        U16 render(U8* waterTexCoords) const;
         
         U64 validBlocks_ = 0;
         U64 validFaces_ = 0;

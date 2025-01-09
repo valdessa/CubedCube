@@ -103,6 +103,10 @@ constexpr poyo::U8 CHUNK_RADIUS = 6;
     #endif
 #endif
 
+#ifndef KIRBY_EASTER_EGG
+    #undef KIRBY_IN_DISPLAY_LIST
+#endif
+
 namespace poyo {
     struct ChunkPosition{
         S16 x, z;

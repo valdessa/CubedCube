@@ -526,7 +526,6 @@ void Renderer::RenderFace(const CubeFace& face, S8 x, S8 y, S8 z) {
         GX_Color4u8(255, 255, 255, 255);
         GX_TexCoord2u16(UV[0] + tileTexCoords[j][0], UV[1] + tileTexCoords[j][1]);
 #endif
-
 // #ifdef OPTIMIZATION_MAPS
 //         GX_TexCoord2u16(UV[0] + tileTexCoords[j][0], UV[1] + tileTexCoords[j][1]);
 // #else
@@ -713,8 +712,6 @@ void Renderer::RenderGX(bool VSYNC) {
     
     SetDepth(GX_TRUE, DEPTH_MODE::LEQUAL, GX_TRUE);
     GX_SetColorUpdate(GX_TRUE);
-
-
     
     GX_CopyDisp      (frameBuffers[currentFrameBuffer], GX_TRUE);
     

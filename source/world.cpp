@@ -366,7 +366,7 @@ void World::occludeChunkBlocksFaces() const {
     }
 }
 
-void World::renderChunksAround(int playerX, int playerZ, U8* waterTexCoords) {
+u16 World::renderChunksAround(int playerX, int playerZ, U8* waterTexCoords) {
     int chunkX = playerX / CHUNK_SIZE; 
     int chunkZ = playerZ / CHUNK_SIZE; 
 
@@ -397,9 +397,10 @@ void World::renderChunksAround(int playerX, int playerZ, U8* waterTexCoords) {
     }
     
     //SYS_Report("N Chunks: %d\n", counter);
+    return static_cast<u16>(chunksToRender.size());
 }
 
-void World::render(U8* waterTexCoords) const {
+u16 World::render(U8* waterTexCoords) const {
     for(auto& chunkito : chunks_) {
         chunkito->render();
     }
@@ -415,4 +416,6 @@ void World::render(U8* waterTexCoords) const {
         if(!chunkito->displayListTransparent) continue;
         chunkito->renderTranslucents();
     }
+
+    return static_cast<u16>(chunks_.size());
 }
