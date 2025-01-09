@@ -37,6 +37,7 @@ static Mtx      viewMatrix;
 static  guVector camPos, camUp, camLook;
 
 static U8 LastDepthMode = GX_LEQUAL;
+static bool antialiased = false;
 
 //Light Things:
 static int lights = 0;
@@ -88,12 +89,14 @@ int Renderer::InitializeGX() {
     //todo: fix this
     //GX_SetPixelFmt(GX_PF_RGB565_Z16, GX_ZC_LINEAR);  // Set 16 bit RGB565
     if (videoMode->aa) {
+        antialiased = true;
         GX_SetPixelFmt(GX_PF_RGB565_Z16, GX_ZC_LINEAR);  // Set 16 bit RGB565
     }
     else {
+        antialiased = false;
         GX_SetPixelFmt(GX_PF_RGB8_Z24  , GX_ZC_LINEAR);  // Set 24 bit Z24
     }
-
+    
     // Other GX setup
     f32 yscale    = GX_GetYScaleFactor(videoMode->efbHeight, videoMode->xfbHeight);
     u32 xfbHeight = GX_SetDispCopyYScale(yscale);
@@ -131,7 +134,9 @@ int Renderer::InitializeGX() {
     GX_SetScissor( 0, 0, videoMode->fbWidth, videoMode->efbHeight );
 
     VIDEO_SetBlack(false);  // Enable video output
-    
+
+    gDisplayWidth = videoMode->fbWidth;
+    gDisplayHeight = videoMode->efbHeight;
     return 0;
 }
 
@@ -249,8 +254,20 @@ U32 Renderer::FacesDrawn() {
     return nFacesRendered;
 }
 
+bool Renderer::isAntialiased() {
+    return antialiased;
+}
+
+int Renderer::ScreenWidth() {
+    return gDisplayWidth;
+}
+
+int Renderer::ScreenHeight() {
+    return gDisplayHeight;
+}
+
 VIDEO_MODE Renderer::VideoMode() {
-    switch (videoMode->viTVMode) {
+    switch (VIDEO_GetVideoScanMode()) {
         case 0: return VIDEO_MODE::INTERLACE;
         case 1: return VIDEO_MODE::NON_INTERLACE;
         case 2: return VIDEO_MODE::PROGRESSIVE;
@@ -398,6 +415,14 @@ void Renderer::SetDepth(bool enable, DEPTH_MODE mode, bool update) {
         default: ;
     }
     GX_SetZMode(enable, LastDepthMode, update);
+}
+
+void Renderer::EnableFog() {
+    GX_SetFog(GX_FOG_LIN, 20.0f, 30.0f, 0.1f, 1000.0f, GXColor{192, 216, 255, 0});
+}
+
+void Renderer::DisableFog() {
+    GX_SetFog(GX_FOG_NONE, 0.0f, 0.0f, 0.0f, 0.0f, { 0, 0, 0, 0 });
 }
 
 void Renderer::SetAlphaTest(bool enable) {

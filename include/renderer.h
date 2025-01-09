@@ -27,6 +27,9 @@ namespace poyo {
         static void SetCullFace(CULL_MODE mode);
         static void SetBlend(BLEND_MODE mode);
         static void SetDepth(bool enable, DEPTH_MODE mode, bool update);
+
+        static void EnableFog();
+        static void DisableFog();
         
         static void SetAlphaTest(bool enable);
 
@@ -39,6 +42,9 @@ namespace poyo {
         static void ResetDrawCalls();
         static U32 DrawCalls();
         static U32 FacesDrawn();
+        static bool isAntialiased();
+        static int ScreenWidth();
+        static int ScreenHeight();
         static VIDEO_MODE VideoMode();
         static const Mtx& ViewMatrix();
 
