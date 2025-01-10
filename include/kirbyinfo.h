@@ -491,8 +491,9 @@ static const FMat4 BoneTransformations[56][MAX_BONES] = {
 };
 
 struct kirbyInfo {
-    FVec3 Position = FVec3(0, 15, 0);
-    FVec3 Rotation = FVec3{0, -90, 0};
+    Transform trans;
+    kirbyInfo() :  trans( FVec3(0, 15, 0), FVec3{0, -90, 0}, FVec3( 0.005f)){
+    }
 };
 
 struct AnimationData {
@@ -536,6 +537,7 @@ static void* displayList = nullptr;
 static U32 displayListSize = 0;
 static u8 kirbyRowTexture = 4;
 static u8 kirbyColumnTexture = 7;
+Mtx MatricesInGC2[MAX_KIRBY + 1][3] ATTRIBUTE_ALIGN(32);;
 //static Mtx MatricesInGC[3] ATTRIBUTE_ALIGN(32);
 #endif
 
@@ -677,9 +679,6 @@ static void drawKirbyForDisplayListInside() {
         GX_End();
     }
 }
-
-Mtx MatricesInGC2[MAX_KIRBY][3] ATTRIBUTE_ALIGN(32);;
-
 static void drawKirbyForDisplayList(Mtx& modelToFill, u8 offset) {
     auto& finalBonesMatrices = BoneTransformations[static_cast<uint32_t>(currentFrame) % NumFrames];
     auto& MatricesInGC = MatricesInGC2[offset];
@@ -835,26 +834,26 @@ static void freeKirby() {
 #endif
 
 static void updateKirbyPosition(kirbyInfo& info, cfloat dt, cfloat speed = 2.5f, uint8_t controller = 1) {
-    if(PAD_ButtonsHeld(controller) & PAD_BUTTON_UP)     info.Position.z-= dt * speed;
-    if(PAD_ButtonsHeld(controller) & PAD_BUTTON_DOWN)   info.Position.z+= dt * speed;
-    if(PAD_ButtonsHeld(controller) & PAD_BUTTON_RIGHT)  info.Position.x+= dt * speed;
-    if(PAD_ButtonsHeld(controller) & PAD_BUTTON_LEFT)   info.Position.x-= dt * speed;
+    if(PAD_ButtonsHeld(controller) & PAD_BUTTON_UP)     info.trans.Position.z-= dt * speed;
+    if(PAD_ButtonsHeld(controller) & PAD_BUTTON_DOWN)   info.trans.Position.z+= dt * speed;
+    if(PAD_ButtonsHeld(controller) & PAD_BUTTON_RIGHT)  info.trans.Position.x+= dt * speed;
+    if(PAD_ButtonsHeld(controller) & PAD_BUTTON_LEFT)   info.trans.Position.x-= dt * speed;
 
-    if(PAD_ButtonsHeld(controller) & PAD_BUTTON_A)      info.Position.y+= dt * speed;
-    if(PAD_ButtonsHeld(controller) & PAD_BUTTON_B)      info.Position.y-= dt * speed;
+    if(PAD_ButtonsHeld(controller) & PAD_BUTTON_A)      info.trans.Position.y+= dt * speed;
+    if(PAD_ButtonsHeld(controller) & PAD_BUTTON_B)      info.trans.Position.y-= dt * speed;
 
     float joystickLeftX = static_cast<float>(PAD_SubStickX(controller)) / 128.0f; // Normalize between -1 and 1
     float joystickLeftY = static_cast<float>(PAD_SubStickY(controller)) / 128.0f; // Normalize between -1 and 1
     
-    if (joystickLeftY > 0.1f)  info.Rotation.z += dt * speed * 1.5f;
-    if (joystickLeftY < -0.1f) info.Rotation.z -= dt * speed * 1.5f;
-    if (joystickLeftX > 0.1f)  info.Rotation.x -= dt * speed * 1.5f;
-    if (joystickLeftX < -0.1f) info.Rotation.x += dt * speed * 1.5f;
+    if (joystickLeftY > 0.1f)  info.trans.Rotation.z += dt * speed * 1.5f;
+    if (joystickLeftY < -0.1f) info.trans.Rotation.z -= dt * speed * 1.5f;
+    if (joystickLeftX > 0.1f)  info.trans.Rotation.x -= dt * speed * 1.5f;
+    if (joystickLeftX < -0.1f) info.trans.Rotation.x += dt * speed * 1.5f;
 
-    if(PAD_ButtonsHeld(controller) & PAD_TRIGGER_L) info.Rotation.y-= dt * speed * 1.5f;
-    if(PAD_ButtonsHeld(controller) & PAD_TRIGGER_R) info.Rotation.y+= dt * speed * 1.5f;
+    if(PAD_ButtonsHeld(controller) & PAD_TRIGGER_L) info.trans.Rotation.y-= dt * speed * 1.5f;
+    if(PAD_ButtonsHeld(controller) & PAD_TRIGGER_R) info.trans.Rotation.y+= dt * speed * 1.5f;
     
-    if(PAD_ButtonsDown(controller) & PAD_BUTTON_START) info.Rotation = FVec3(0, -90, 0);
+    if(PAD_ButtonsDown(controller) & PAD_BUTTON_START) info.trans.Rotation = FVec3(0, -90, 0);
 }
 
 #endif

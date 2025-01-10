@@ -20,7 +20,7 @@
 
 inline int CHUNK_LOAD_RADIUS = 2;
 
-constexpr poyo::U8 CHUNK_RADIUS = 6;
+constexpr poyo::U8 CHUNK_RADIUS = 8;
 
 /***** OCCLUSION CULLING OPTIMIZATIONS *****/                                              
 //0 -> NO OCCLUSION CULLING :(                          
@@ -77,9 +77,11 @@ constexpr poyo::U8 CHUNK_RADIUS = 6;
 //todo puesto optimizado 3138 vs 2378
 
 #define SEPARATED_SOLIDS_TRANSPARENTS
+#define OPTIMIZATION_FRUSTUM_CULLING
 
 #define KIRBY_EASTER_EGG
 #define KIRBY_IN_DISPLAY_LIST
+//#define KIRBY_CONTROLLED
 #define MAX_KIRBY 64
 
 /*  
@@ -105,6 +107,7 @@ constexpr poyo::U8 CHUNK_RADIUS = 6;
 
 #ifndef KIRBY_EASTER_EGG
     #undef KIRBY_IN_DISPLAY_LIST
+    #undef KIRBY_CONTROLLED
 #endif
 
 namespace poyo {

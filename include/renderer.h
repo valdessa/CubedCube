@@ -16,7 +16,7 @@ namespace poyo {
 
         static void Exit();
 
-        static void Set3DMode(class Camera& cam);
+        static void Set3DMode(const class Camera& cam);
         static void Set2DMode();
         
         static void SetTextureCoordScaling(U8 unit, U16 scaleX, U16 scaleY);
@@ -51,6 +51,7 @@ namespace poyo {
         //Todo: make 1 only using one
         static void CalculateModelMatrix(Mtx& modelToFill, const Transform& trans);
         static void CalculateModelMatrix(Mtx& modelToFill, f32 posx, f32 posy, f32 posz);
+        static void ObjectView(); //Only Camera View is Applied!!
         static void ObjectView(const Transform& trans);
         static void ObjectView(f32 posx, f32 posy, f32 posz,
                                f32 angx = 0, f32 angy = 0, f32 angz = 0,

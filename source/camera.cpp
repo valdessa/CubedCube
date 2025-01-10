@@ -20,8 +20,9 @@ Camera::Camera(cFVec3& position, cfloat& pitch, cfloat& yaw, cfloat speed) :
     up_ = glm::vec3(0, 1, 0);
 
     near_ = 0.1f;
-    far_ = 1000.0f;
-    fov_ = 45.0f;
+    far_ = 300.0f;
+    fov_ = 60.0f;
+    aspectRatio_ = static_cast<float>(Renderer::ScreenWidth()) / static_cast<float>(Renderer::ScreenHeight());
     
     sensitivity_ = 1.0f;
 }

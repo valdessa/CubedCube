@@ -22,6 +22,7 @@ GRRLIB (GX Version)
 #include <utilities.h>
 
 #include <engine.h>
+#include <bounding_region.h>
 #include <camera.h>
 #include <renderer.h>
 #include <memory.h>
@@ -39,6 +40,15 @@ using namespace poyo;
 
 #define TILE_SIZE 16
 
+enum class RenderChunkMode {
+    DEFAULT,
+    CHUNKS_AROUND,
+#ifdef OPTIMIZATION_FRUSTUM_CULLING
+    CHUNKS_IN_FRUSTUM,
+#endif
+    COUNT
+};
+
 struct Options {
     bool boundingBox = false;
 #ifndef OPTIMIZATION_NO_LIGHTNING_DATA
@@ -47,7 +57,7 @@ struct Options {
     bool debugUI = true;
     bool VSYNC = true;
     bool helper = false;
-    bool chunksAround = false;
+    RenderChunkMode chunksAround = RenderChunkMode::DEFAULT;
     int ChunkLoadRadius = CHUNK_LOAD_RADIUS;
 };
 
@@ -87,6 +97,26 @@ void updateLightPosition(FVec3& point, float radius, float angle) {
 //TPL and Fonts and Inputs
 #include <main.h>
 #include <fat.h>
+
+#ifdef OPTIMIZATION_FRUSTUM_CULLING
+static Frustum frustum;
+
+float far_ = 75.0f;
+
+void updateFrustum(Camera& cam) {
+    far_ = CHUNK_LOAD_RADIUS * CHUNK_SIZE;
+    const float halfVSide = far_ * tanf(glm::radians(cam.fov_) * .5f);
+    const float halfHSide = halfVSide * cam.aspectRatio_;
+    const glm::vec3 frontMultFar = far_ * cam.forward_;
+
+    frustum.nearFace = { cam.getPosition() + cam.near_ * cam.forward_, cam.forward_ };
+    frustum.farFace = { cam.getPosition() + frontMultFar, -cam.forward_ };
+    frustum.rightFace = { cam.getPosition(), glm::cross(frontMultFar - cam.right_ * halfHSide, cam.up_) };
+    frustum.leftFace = { cam.getPosition(), glm::cross(cam.up_, frontMultFar + cam.right_ * halfHSide) };
+    frustum.topFace = { cam.getPosition(), glm::cross(cam.right_, frontMultFar - cam.up_ * halfVSide) };
+    frustum.bottomFace = { cam.getPosition(), glm::cross(frontMultFar + cam.up_ * halfVSide, cam.right_) };
+}
+#endif
 
 //1 ms = 40,500 ticks
 int main(int argc, char **argv) {
@@ -174,12 +204,11 @@ int main(int argc, char **argv) {
         
         Renderer::Set2DMode();
         if(updateInput(options, currentCam)) break;
-
-#ifdef KIRBY_EASTER_EGG
-        updateKirbyPosition(info, deltaTime, 15.0, 1);
-#endif
         
         currentCam.updateCamera(deltaTime); //deltaTime
+#ifdef OPTIMIZATION_FRUSTUM_CULLING
+        updateFrustum(currentCam);
+#endif
         //-----
         Renderer::Set3DMode(currentCam); // Configura el modo 3D //Projection
 
@@ -211,15 +240,16 @@ int main(int argc, char **argv) {
             guMtxConcat(Renderer::ViewMatrix(), modelMatrix, matrixToUse);
             drawKirby(matrixToUse, i);
         }
-        
-#ifdef KIRBY_IN_DISPLAY_LIST
-        GX_SetCurrentMtx(GX_PNMTX0); //Reset to original Matrix :3
-#endif
-        
-        // Renderer::ObjectView(info.Position.x + 0.5f, info.Position.y, info.Position.z + 0.5f,
-        //                         info.Rotation.x, info.Rotation.y, info.Rotation.z,
-        //                         kirbyScale, kirbyScale, kirbyScale);
-        // drawKirby();
+    #ifdef KIRBY_CONTROLLED
+        updateKirbyPosition(info, deltaTime, 15.0, 1);
+        Mtx matrixToUse;
+        Renderer::CalculateModelMatrix(matrixToUse, info.trans);
+        guMtxConcat(Renderer::ViewMatrix(), matrixToUse, matrixToUse);
+        drawKirby(matrixToUse, MAX_KIRBY);
+    #endif
+    #ifdef KIRBY_IN_DISPLAY_LIST
+            GX_SetCurrentMtx(GX_PNMTX0); //Reset to original Matrix :3
+    #endif
 #endif
         
         currentTick.start();
@@ -241,26 +271,36 @@ int main(int argc, char **argv) {
 #endif
         
         GX_SetChanCtrl(GX_COLOR0A0, GX_DISABLE, GX_SRC_REG, GX_SRC_REG, 0, GX_DF_NONE, GX_AF_NONE);
-
-    	if(options.chunksAround) {
-            chunksDrawn = currentWorld.renderChunksAround(currentCam.getPosition().x, currentCam.getPosition().z, waterTexCoords);
-            //currentWorld.renderChunksAround(-18, -8);
-        }else {
-            chunksDrawn = currentWorld.render(waterTexCoords);
+        switch (options.chunksAround) {
+            case RenderChunkMode::DEFAULT:
+                chunksDrawn = currentWorld.render(waterTexCoords);
+                break;
+            case RenderChunkMode::CHUNKS_AROUND:
+                chunksDrawn = currentWorld.renderChunksAround(currentCam.getPosition().x, currentCam.getPosition().z, waterTexCoords);
+                //currentWorld.renderChunksAround(-18, -8);
+                break;
+#ifdef OPTIMIZATION_FRUSTUM_CULLING
+            case RenderChunkMode::CHUNKS_IN_FRUSTUM:   
+                chunksDrawn = currentWorld.renderChunksInFrustum(frustum, waterTexCoords);
+                break;
+#endif
+            case RenderChunkMode::COUNT:
+                break;
         }
-        
-        
+
 #ifndef OPTIMIZATION_NO_LIGHTNING_DATA
         if(options.lightning) Renderer::SetLightOff();
 #endif
         
         if(options.boundingBox) {
             GX_SetChanCtrl(GX_COLOR0A0, GX_DISABLE, GX_SRC_VTX, GX_SRC_VTX, 0, GX_DF_NONE, GX_AF_NONE);
-            Renderer::PrepareToRenderInVX2(true, false, true, false);
-            auto& chunkitos = currentWorld.getChunks();
-            for(const auto& chunkito : chunkitos) {
-                Renderer::RenderBoundingBox(chunkito->worldPosition_.x, 0, chunkito->worldPosition_.z, CHUNK_SIZE, CHUNK_HEIGHT, UCVec3{0, 255, 255}, true);
-            }
+            // Renderer::PrepareToRenderInVX2(true, false, true, false);
+            // auto& chunkitos = currentWorld.getChunks();
+            // for(const auto& chunkito : chunkitos) {
+            //     Renderer::RenderBoundingBox(chunkito->worldPosition_.x, 0, chunkito->worldPosition_.z, CHUNK_SIZE, CHUNK_HEIGHT, UCVec3{0, 255, 255}, true);
+            // }
+            Renderer::PrepareToRenderInVX0(true, false, true, false);
+            currentWorld.renderChunksBoundings();
         }
         
         //std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -285,11 +325,17 @@ int main(int argc, char **argv) {
             text.render(USVec2{5,  125}, fmt::format("Total Used Memory : {:.2f} KB", convertBytesToKilobytes(Memory::getTotalMemoryUsed())).c_str());
             text.render(USVec2{5,  140}, fmt::format("Total Free Memory : {:.2f} KB", convertBytesToKilobytes(Memory::getTotalMemoryFree())).c_str());
 
-            //Screen Thinks
+            //Screen Things
             text.render(USVec2{5, 170}, fmt::format("Video Mode : {}", std::array{"INTERLACE", "NON INTERLACE", "PROGRESSIVE", "ERROR"}[static_cast<int>(Renderer::VideoMode())]).c_str());
             text.render(USVec2{5, 185}, fmt::format("VSYNC      : {}", options.VSYNC ? "YES" : "NOP").c_str());
         	text.render(USVec2{5, 200}, fmt::format("Resolution  : {}/{}", Renderer::ScreenWidth(), Renderer::ScreenHeight()).c_str());
-
+            String ChunkRenderMode = "DEFAULT";
+            switch (options.chunksAround) {
+                case RenderChunkMode::CHUNKS_AROUND:        ChunkRenderMode = "AROUND THE CAMERA"; break;
+            #ifdef OPTIMIZATION_FRUSTUM_CULLING
+                case RenderChunkMode::CHUNKS_IN_FRUSTUM:    ChunkRenderMode = "FRUSTUM CULLED";    break;
+            #endif
+            }
             
             //Camera Things
             text.render(USVec2{275,  5}, fmt::format("Camera X [{:.4f}] Y [{:.4f}] Z [{:.4f}]", camPos.x, camPos.y, camPos.z).c_str());
@@ -306,7 +352,8 @@ int main(int argc, char **argv) {
 #endif
             text.render(USVec2{295,  95}, fmt::format("Draw   : Cycles {} ts / Time {} ms", drawTicks, Tick::TickToMsfloat(drawTicks)).c_str());
             text.render(USVec2{295, 110}, fmt::format("Frame  : Cycles {} ts", frameTicks).c_str());
-            text.render(USVec2{295, 125}, fmt::format("Helper : {}", helpValue).c_str());
+            text.render(USVec2{295, 125}, fmt::format("MODE   : {}", ChunkRenderMode).c_str());
+            text.render(USVec2{295, 140}, fmt::format("Helper : {}", far_).c_str());
             //text.render(USVec2{400,  95}, fmt::format("Helper      : {}", currentWorld.helperCounter).c_str());
             //text.render(USVec2{400, 110}, fmt::format("N Blocks    : {}", currentChunk.validBlocks).c_str());
         }

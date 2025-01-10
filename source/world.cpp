@@ -19,6 +19,7 @@ namespace std {
 #include <world.h>
 
 #include <ogc/gx.h> //for mtx
+#include <bounding_region.h>
 #include <chunk.h>
 
 #include <renderer.h>
@@ -86,6 +87,7 @@ void World::generateLandChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
     chunk.offsetPosition_.z = chunkZ;
     chunk.worldPosition_.x = static_cast<S16>(chunkX * CHUNK_SIZE);
     chunk.worldPosition_.z = static_cast<S16>(chunkZ * CHUNK_SIZE);
+    chunk.updateBoundingRegion();
     
     for (int x = 0; x < CHUNK_SIZE; ++x) {
         for (int z = 0; z < CHUNK_SIZE; ++z) {
@@ -370,7 +372,7 @@ u16 World::renderChunksAround(int playerX, int playerZ, U8* waterTexCoords) {
     int chunkX = playerX / CHUNK_SIZE; 
     int chunkZ = playerZ / CHUNK_SIZE; 
 
-    std::vector<Chunk*> chunksToRender;
+    Vector<Chunk*> chunksToRender;
     
     for (int x = -CHUNK_LOAD_RADIUS; x <= CHUNK_LOAD_RADIUS; ++x) {
         for (int z = -CHUNK_LOAD_RADIUS; z <= CHUNK_LOAD_RADIUS; ++z) {
@@ -400,6 +402,33 @@ u16 World::renderChunksAround(int playerX, int playerZ, U8* waterTexCoords) {
     return static_cast<u16>(chunksToRender.size());
 }
 
+U16 World::renderChunksInFrustum(Frustum& frustum, U8* waterTexCoords) {
+    Vector<Chunk*> chunksToRender;
+    for(auto& c : chunks_) {
+        Transform chunkTrans(FVec3(c->worldPosition_.x, 0, c->worldPosition_.z), FVec3(0.0f), FVec3(1.0f));
+        if(c->region_.isOnFrustum(frustum, chunkTrans)) {
+            chunksToRender.push_back(c.get());
+        }
+    }
+
+    for(auto& c : chunksToRender) {
+        c->render();
+    }
+
+    GX_SetVtxDesc(GX_VA_TEX0, GX_INDEX8);
+    GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_TEX0, GX_TEX_ST, GX_U8, 0);
+        
+    GX_SetArray(GX_VA_TEX0, waterTexCoords, 2 * sizeof(u8));
+    DCStoreRange(waterTexCoords, 8 * sizeof(u8));
+    GX_InvVtxCache();
+
+    for(auto& c : chunksToRender) {
+        c->renderTranslucents();
+    }
+    
+    return static_cast<u16>(chunksToRender.size());
+}
+
 u16 World::render(U8* waterTexCoords) const {
     for(auto& chunkito : chunks_) {
         chunkito->render();
@@ -418,4 +447,16 @@ u16 World::render(U8* waterTexCoords) const {
     }
 
     return static_cast<u16>(chunks_.size());
+}
+
+void World::renderChunksBoundings() const {
+    Renderer::ObjectView();
+    for(const auto& chunkito : chunks_) {
+        if(chunkito->isBeingRendered) {
+            chunkito->region_.draw(cUCVec3(0, 255, 255));
+        }else {
+            chunkito->region_.draw(cUCVec3(255, 255, 0));
+        }
+        chunkito->isBeingRendered = false;
+    }
 }

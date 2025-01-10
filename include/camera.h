@@ -25,11 +25,12 @@ namespace poyo {
 		cfloat& getPitch() const;
 		cfloat& getYaw() const;
 		
-	 private:
+	// private:
 		FVec3 position_;
 		FVec3 forward_;
 		FVec3 right_;
 		FVec3 up_;
+		float aspectRatio_;
 
 		FVec3 worldUp_;
 

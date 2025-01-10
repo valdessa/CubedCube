@@ -5,8 +5,7 @@
 
 #include <ogc/gu.h>
 
-namespace poyo
-{
+namespace poyo {
     class Chunk;
     class World {
      public:
@@ -38,7 +37,10 @@ namespace poyo
         void occludeChunkBlocksFaces() const;
         
         U16 renderChunksAround(int playerX, int playerZ, U8* waterTexCoords);
+        U16 renderChunksInFrustum(struct Frustum& frustum, U8* waterTexCoords);
         U16 render(U8* waterTexCoords) const;
+
+        void renderChunksBoundings() const;
         
         U64 validBlocks_ = 0;
         U64 validFaces_ = 0;

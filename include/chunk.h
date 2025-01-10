@@ -2,6 +2,7 @@
 #define INCLUDE_CHUNK_H_ 1
 
 namespace poyo {
+    struct BoundingRegion;
     class Chunk {
      public:
         Chunk(class World* world);
@@ -14,6 +15,7 @@ namespace poyo {
         U32 occludeBlocksFaces();
 
         void updateVisibilityCount();
+        void updateBoundingRegion();
 
         void render();
         void renderTranslucents();
@@ -50,7 +52,8 @@ namespace poyo {
         Mtx resultMatrix;
         
         Vector<Pair<CubeFace, USVec3>> faces_;
-        
+        BoundingRegion region_;
+        bool isBeingRendered = false;
      private:
         World* world_;
             

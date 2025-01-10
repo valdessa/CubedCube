@@ -10,6 +10,10 @@ static TPLFile bloquitosTPL;
 static GXTexObj blocksTexture;
 
 static void loadResources() {
+#ifdef OPTIMIZATION_FRUSTUM_CULLING
+    CHUNK_LOAD_RADIUS = CHUNK_RADIUS;
+#endif
+    
     TPL_OpenTPLFromMemory(&bloquitosTPL, (void*)bloquitos_tpl, bloquitos_tpl_size);
     TPL_GetTexture(&bloquitosTPL, blocksTextureID, &blocksTexture);
     GX_InitTexObjWrapMode(&blocksTexture, GX_CLAMP, GX_CLAMP);
@@ -34,7 +38,7 @@ static u8 CalculateFrameRate(void) {
     return FPS;
 }
 
-static bool updateInput(Options& options, Camera& cam) {
+inline bool updateInput(Options& options, Camera& cam) {
     PAD_ScanPads(); // Scan the GameCube controllers
 
     // If [START/PAUSE] was pressed on the first GameCube controller, break out of the loop
@@ -52,7 +56,11 @@ static bool updateInput(Options& options, Camera& cam) {
             CHUNK_LOAD_RADIUS = 1;
         }
     }
-    if(PAD_ButtonsDown(0) & PAD_BUTTON_A) options.chunksAround = !options.chunksAround;
+    if(PAD_ButtonsDown(0) & PAD_BUTTON_A) {
+        int nextMode = (static_cast<int>(options.chunksAround) + 1) % static_cast<int>(RenderChunkMode::COUNT);
+        options.chunksAround = static_cast<RenderChunkMode>(nextMode);
+        //options.chunksAround = !options.chunksAround;
+    }
     if(PAD_ButtonsDown(0) & PAD_TRIGGER_R) cam.setSpeed(CameraSpeed * 5.0f);
     if(PAD_ButtonsUp(0) & PAD_TRIGGER_R) cam.setSpeed(CameraSpeed);
 

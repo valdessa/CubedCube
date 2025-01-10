@@ -9,6 +9,8 @@
 #include <malloc.h> 
 #include <string.h>
 
+#include "camera.h"
+
 using namespace poyo;
 
 extern U16 vertices[8][3];
@@ -182,11 +184,11 @@ void Renderer::Exit() {
     }
 }
 
-void Renderer::Set3DMode(Camera& cam) {
+void Renderer::Set3DMode(const Camera& cam) {
     Mtx44 projectionMtx;
     //
     guLookAt(viewMatrix, &camPos, &camUp, &camLook);
-    guPerspective(projectionMtx, 60, (float)gDisplayWidth / (float)gDisplayHeight, 0.1f, 300.0f);
+    guPerspective(projectionMtx, cam.fov_, cam.aspectRatio_, cam.near_, cam.far_);
     GX_LoadProjectionMtx(projectionMtx, GX_PERSPECTIVE);
     
     SetDepth(GX_TRUE, DEPTH_MODE::LEQUAL, GX_TRUE);
@@ -301,6 +303,10 @@ void Renderer::CalculateModelMatrix(Mtx& modelToFill, f32 posx, f32 posy, f32 po
     guMtxIdentity(modelToFill);
 
     guMtxTransApply(modelToFill, modelToFill, posx, posy, posz);
+}
+
+void Renderer::ObjectView() {
+    GX_LoadPosMtxImm(viewMatrix, GX_PNMTX0);
 }
 
 void Renderer::ObjectView(const Transform& trans) {

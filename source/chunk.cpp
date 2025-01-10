@@ -1,6 +1,7 @@
 #include <common.h>
 
 #include <ogc/gx.h>
+#include <bounding_region.h>
 #include <chunk.h>
 
 //#include <grrlib.h>
@@ -16,14 +17,15 @@
 using namespace poyo;
 
 #ifdef OPTIMIZATION_VECTOR
-Chunk::Chunk(World* world) : cubitos_(CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE), world_(world) {
+Chunk::Chunk(World* world) : cubitos_(CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE), region_(), world_(world)
+{
     worldPosition_= {0, 0};
     offsetPosition_ = {0, 0};
     validBlocks_ = 0;
     validFaces_ = 0;
 }
 #else
-Chunk::Chunk(World* world) : cubitos_(CHUNK_SIZE, Vector<Vector<Cubito>>(CHUNK_HEIGHT, Vector<Cubito>(CHUNK_SIZE))), world_(world) {
+Chunk::Chunk(World* world) : cubitos_(CHUNK_SIZE, Vector<Vector<Cubito>>(CHUNK_HEIGHT, Vector<Cubito>(CHUNK_SIZE))), region_(), world_(world) {
     worldPosition_= {0, 0};
     offsetPosition_ = {0, 0};
     validBlocks_ = 0;
@@ -286,8 +288,14 @@ void Chunk::updateVisibilityCount() {
     }
 }
 
-void Chunk::render() {
+void Chunk::updateBoundingRegion() {
+    FVec3 begin = FVec3(worldPosition_.x, 0, worldPosition_.z);
+    FVec3 end = FVec3(worldPosition_.x + CHUNK_SIZE, CHUNK_HEIGHT, worldPosition_.z + CHUNK_SIZE);
+    region_.setMinMax(begin, end);
+}
 
+void Chunk::render() {
+    isBeingRendered = true;
 #if !defined(OPTIMIZATION_DISPLAY_LIST)
     #ifdef OPTIMIZATION_OCCLUSION
         #if OPTIMIZATION_OCCLUSION == 0
