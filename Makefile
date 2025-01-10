@@ -16,6 +16,7 @@ include $(DEVKITPPC)/gamecube_rules
 # SOURCES is a list of directories containing source code
 # INCLUDES is a list of directories containing extra header files
 #---------------------------------------------------------------------------------
+
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	bin
 SOURCES		:=	source
@@ -29,11 +30,85 @@ INCLUDES	:=  include deps/glm deps/ deps/fmt
 
 #CFLAGS = -g -O0 -DDEBUG -Wall -Wextra -Wpedantic $(MACHDEP) $(INCLUDE) #debug
 #CFLAGS = -O3 -flto -DNDEBUG -s $(MACHDEP) $(INCLUDE)
-CFLAGS	= -g -O2 -Wall -Wno-unused-value $(MACHDEP) $(INCLUDE)
+CFLAGS	= -g -O2 -Wall -Wno-unused-value -Wno-switch -Wno-unused-function $(MACHDEP) $(INCLUDE)
 
 CXXFLAGS	=	$(CFLAGS) #CXXFLAGS	= -std=c++20 $(CFLAGS)  # Agrega -std=c++20 para C++20
 
 LDFLAGS	=	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map
+
+
+USE_MAKEFILE_DEFINES = 0
+
+ifeq ($(USE_MAKEFILE_DEFINES), 1)
+	CPPFLAGS := -DUSE_MAKEFILE_DEFINES
+	CHUNK_RADIUS = 1
+    OPTIMIZATION_OCCLUSION = 4
+    OPTIMIZATION_BATCHING = Y
+    OPTIMIZATION_DISPLAY_LIST = Y
+    OPTIMIZATION_STRUCTS = 2
+    OPTIMIZATION_MODEL_MATRIX = Y
+    OPTIMIZATION_VERTEX_MEMORY = Y
+    OPTIMIZATION_NO_LIGHTNING_DATA = N
+    CHUNK_RENDER_MODE = 0
+    
+    ifdef CHUNK_RADIUS
+    	CPPFLAGS += -DCHUNK_RADIUS=$(CHUNK_RADIUS)
+    	TARGET 	 := $(addprefix RAD_, $(CHUNK_RADIUS))
+    endif
+    
+    ifdef OPTIMIZATION_OCCLUSION
+    	CPPFLAGS += -DOPTIMIZATION_OCCLUSION=$(OPTIMIZATION_OCCLUSION) 
+    	TARGET 	 := $(TARGET)-$(addprefix OCC_, $(OPTIMIZATION_OCCLUSION))
+    endif
+    
+    ifeq ($(OPTIMIZATION_BATCHING), Y)
+    	CPPFLAGS += -DOPTIMIZATION_BATCHING
+    	TARGET := $(TARGET)-$(addprefix BAT_,Y)
+    else
+    	TARGET := $(TARGET)-$(addprefix BAT_,N)
+    endif
+    
+    ifeq ($(OPTIMIZATION_DISPLAY_LIST), Y)
+    	CPPFLAGS += -DOPTIMIZATION_DISPLAY_LIST
+    	TARGET := $(TARGET)-$(addprefix LI_,Y)
+    else
+    	TARGET := $(TARGET)-$(addprefix LI_,N)
+    endif
+    
+    ifdef OPTIMIZATION_STRUCTS
+    	CPPFLAGS += -DOPTIMIZATION_STRUCTS=$(OPTIMIZATION_STRUCTS) 
+    	TARGET 	 := $(TARGET)-$(addprefix STRUC_, $(OPTIMIZATION_STRUCTS))
+    endif
+    
+    ifeq ($(OPTIMIZATION_MODEL_MATRIX), Y)
+    	CPPFLAGS += -DOPTIMIZATION_MODEL_MATRIX
+    	TARGET := $(TARGET)-$(addprefix M_,Y)
+    else
+    	TARGET := $(TARGET)-$(addprefix M_,N)
+    endif
+    
+    ifeq ($(OPTIMIZATION_VERTEX_MEMORY), Y)
+    	CPPFLAGS += -DOPTIMIZATION_VERTEX_MEMORY
+    	TARGET := $(TARGET)-$(addprefix VTX_,Y)
+    else
+    	TARGET := $(TARGET)-$(addprefix VTX_,N)
+    endif
+    
+    ifeq ($(OPTIMIZATION_NO_LIGHTNING_DATA), Y)
+    	CPPFLAGS += -DOPTIMIZATION_NO_LIGHTNING_DATA
+    	TARGET := $(TARGET)-$(addprefix NLD_,Y)
+    else
+    	TARGET := $(TARGET)-$(addprefix NLD_,N)
+    endif
+    
+    ifdef CHUNK_RENDER_MODE
+    	CPPFLAGS += -DCHUNK_RENDER_MODE=$(CHUNK_RENDER_MODE) 
+    	TARGET 	 := $(TARGET)-$(addprefix RM_, $(CHUNK_RENDER_MODE))
+    endif
+endif
+       
+#$(info $(CPPFLAGS))
+$(info $(TARGET))
 
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with the project

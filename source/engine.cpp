@@ -2,6 +2,7 @@
 #include <gctypes.h>
 
 #include <engine.h>
+#include <sstream>
 
 #include <ogc/lwp_watchdog.h>
 
@@ -39,4 +40,37 @@ u64 Engine::getCurrentTime() {
 
 u64 Engine::getLastTime() {
     return get().lastTime_;
+}
+
+#include <common.h>
+#include <string.h>
+
+
+std::string getOptimizationString(bool flag, const std::string& on_string, const std::string& off_string) {
+    return flag ? on_string : off_string;
+}
+
+#define STRINGIZE(x) (#x)
+#define EXPAND_IF_DEFINED(y) (!*STRINGIZE(y))
+#define IS_MACRO_DEFINED_NOT_TO_ITSELF(y) strcmp(#y, STRINGIZE(y))
+
+
+String Engine::generateOptimizationsString() {
+    std::ostringstream oss;
+
+    oss << CHUNK_RADIUS_STRING << "-";
+    oss << OCCLUSION_STRING << "-";
+    
+    oss << getOptimizationString(IS_MACRO_DEFINED_NOT_TO_ITSELF(OPTIMIZATION_BATCHING), "BA_Y", "BA_N") << "-";
+    oss << getOptimizationString(IS_MACRO_DEFINED_NOT_TO_ITSELF(OPTIMIZATION_DISPLAY_LIST), "LI_Y", "LI_N") << "-";
+
+    oss << STRUCT_STRING << "-";
+
+    oss << getOptimizationString(IS_MACRO_DEFINED_NOT_TO_ITSELF(OPTIMIZATION_MODEL_MATRIX), "M_Y", "M_N") << "-";
+    oss << getOptimizationString(IS_MACRO_DEFINED_NOT_TO_ITSELF(OPTIMIZATION_VERTEX_MEMORY), "VTX_Y", "VTX_N") << "-";
+    oss << getOptimizationString(IS_MACRO_DEFINED_NOT_TO_ITSELF(OPTIMIZATION_NO_LIGHTNING_DATA), "NLD_Y", "NLD_N") << "-";
+
+    oss << CHUNK_RENDER_STRING;
+    
+    return oss.str();
 }

@@ -130,3 +130,51 @@ static void setCubitoStatic(Cubito& cubito, const CubePosition& pos, BLOCK_TYPE 
         fillCubitoStatic(cubito, 5, DIR_Z_BACK,  block);  // Right
     }
 }
+
+#define XSTR(x) STR(x)
+#define STR(x) #x
+
+#ifdef USE_MAKEFILE_DEFINES
+#if USE_MAKEFILE_DEFINES == 1
+    #pragma message "USING THE DEFINES FROM MAKEFILE!! BE CAREFUL"
+    #ifdef CHUNK_RADIUS
+        #pragma message("CHUNK_RADIUS is set to: " XSTR(CHUNK_RADIUS))
+    #endif
+
+    #ifdef OPTIMIZATION_OCCLUSION
+        #pragma message("OPTIMIZATION_OCCLUSION is set to: " XSTR(OPTIMIZATION_OCCLUSION))
+    #endif
+
+    #ifdef OPTIMIZATION_BATCHING
+        #pragma message("OPTIMIZATION_BATCHING is set to: " XSTR(OPTIMIZATION_BATCHING))
+    #endif
+
+    #ifdef OPTIMIZATION_DISPLAY_LIST
+        #pragma message("OPTIMIZATION_DISPLAY_LIST is set to: " XSTR(OPTIMIZATION_DISPLAY_LIST))
+    #endif
+
+    #ifdef OPTIMIZATION_STRUCTS
+    #pragma message("OPTIMIZATION_STRUCTS is set to: " XSTR(OPTIMIZATION_STRUCTS))
+    #endif
+
+    #ifdef OPTIMIZATION_MODEL_MATRIX
+        #pragma message("OPTIMIZATION_MODEL_MATRIX is set to: " XSTR(OPTIMIZATION_MODEL_MATRIX))
+    #endif
+
+    #ifdef OPTIMIZATION_VERTEX_MEMORY
+        #pragma message("OPTIMIZATION_VERTEX_MEMORY is set to: " XSTR(OPTIMIZATION_VERTEX_MEMORY))
+    #endif
+
+    #ifdef OPTIMIZATION_NO_LIGHTNING_DATA
+        #pragma message("OPTIMIZATION_NO_LIGHTNING_DATA is set to: " XSTR(OPTIMIZATION_NO_LIGHTNING_DATA))
+    #endif
+
+    #ifdef CHUNK_RENDER_MODE
+        #pragma message("CHUNK_RENDER_MODE is set to: " XSTR(CHUNK_RENDER_MODE))
+    #endif
+
+
+#endif
+#endif
+
+

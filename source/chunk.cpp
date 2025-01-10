@@ -88,9 +88,8 @@ static inline int round_up(int number, int multiple) {
 
 void Chunk::createDisplayList() {
 #ifdef OPTIMIZATION_OCCLUSION
-    U32 entitiesToRender = 0;
-
 #if OPTIMIZATION_OCCLUSION == 3 || OPTIMIZATION_OCCLUSION == 0
+    U32 entitiesToRender = 0;
     //***** OPAQUES *****//
     Vector<Cubito> cubesOpaque;
 
@@ -133,6 +132,7 @@ void Chunk::createDisplayList() {
         ListCreationDone(displayListTransparentSize);
     }
 #elif OPTIMIZATION_OCCLUSION == 4
+    U32 entitiesToRender = 0;
     //***** OPAQUES *****//
     Vector<Pair<CubeFace, USVec3>> facesOpaque;
 

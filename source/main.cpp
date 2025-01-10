@@ -59,6 +59,10 @@ struct Options {
     bool helper = false;
     RenderChunkMode chunkDrawMode = RenderChunkMode::DEFAULT;
     int ChunkLoadRadius = CHUNK_LOAD_RADIUS;
+#ifdef ENABLE_AUTOMATIC_CAMERA
+    bool isInterpolating = false; // Flag to track if interpolation is running
+    float t = 0.0f; // Interpolation factor
+#endif
 };
 
 float CameraSpeed = 15.0f;
@@ -173,7 +177,7 @@ private:
 
 public:
     MeasurementSystem(uint32_t numFrames, String& helpValue)
-        : initialMeasurement(), framesToMeasure(numFrames), currentFrame(0), frameMeasurements(numFrames) {
+        : initialMeasurement(), frameMeasurements(numFrames), framesToMeasure(numFrames), currentFrame(0) {
         
         if(fatInitDefault()) {
             helpValue = "Working";
@@ -208,6 +212,7 @@ public:
     // Volcar datos a un archivo .txt
     void dumpToFile(const std::string& filename) {
         shouldStart = false;
+        currentFrame = 0;
         std::ofstream file(filename);
         if (!file.is_open()) {
             exit(-2);
@@ -251,6 +256,7 @@ public:
 
     void dumpToCSV(const std::string& filename) {
         shouldStart = false;
+        currentFrame = 0;
         std::ofstream file(filename);
         if (!file.is_open()) {
             exit(-2);
@@ -334,7 +340,8 @@ public:
         float median = calculateMedian(data);
         
         // Escribir estadísticas al final del archivo CSV
-        file << "Statistics: " + name + " ,,,,,,,,,"
+        file << "Statistics: " + name + " ,,,,,,,,"
+             << name << ","
              << "MAX: " << max << ","
              << "MIN: " << min << ","
              << "MEAN: " << mean << ","
@@ -343,6 +350,23 @@ public:
     
 };
 #endif
+
+#ifdef ENABLE_AUTOMATIC_CAMERA
+void moveCameraToTarget(Camera& camera, Options& opt, float deltaTime, cFVec3& startPos, cFVec3& endPos, float startPitch, float endPitch, float startYaw, float endYaw, float duration) {
+    if (opt.isInterpolating) {
+        opt.t += deltaTime / duration;  // deltaTime is the time passed per frame
+
+        if (opt.t >= 1.0f) {
+            opt.t = 1.0f; // Ensure t doesn't go beyond 1
+            opt.isInterpolating = false; // Stop interpolation once it reaches the end
+        }
+
+        // Interpolate position and rotation
+        camera.interpolate(startPos, endPos, startPitch, endPitch, startYaw, endYaw, opt.t);
+    }
+}
+#endif
+
 
 //1 ms = 40,500 ticks
 int main(int argc, char **argv) {
@@ -395,21 +419,6 @@ int main(int argc, char **argv) {
     
     //std::string helpValue = SYS_GetAbsolutePath(path);
     std::string helpValue = std::to_string(Renderer::isAntialiased());
-    // if(fatInitDefault()) {
-    //     helpValue = "Working";
-    // }else {
-    //     helpValue = "Not working :/";
-    // }
-    //
-    // FILE *file = fopen("hola2.txt", "w");
-    // if (file == nullptr) {
-    //     helpValue = "Error opening file";
-    // }
-    //
-    // if(file != nullptr) {
-    //     fprintf(file, "Hello from GameCube!\n");
-    //     fclose(file);
-    // }
 
 #ifdef KIRBY_EASTER_EGG
     kirbyInfo info;
@@ -417,8 +426,28 @@ int main(int argc, char **argv) {
 #endif
 
 #ifdef ENABLE_MEASUREMENTS
-    MeasurementSystem measurement_system(64, helpValue);
+    MeasurementSystem measurement_system(MEASUREMENTS_FRAMES, helpValue);
 #endif
+#ifdef ENABLE_AUTOMATIC_CAMERA
+    auto beginPos = currentWorld.getChunks().front()->worldPosition_;
+    auto endPos = currentWorld.getChunks().back()->worldPosition_;
+    FVec3 CameraInitialPos(beginPos.x - CHUNK_SIZE/2, CHUNK_HEIGHT, beginPos.z - CHUNK_SIZE/2);
+    FVec3 CameraFinalPos(endPos.x + CHUNK_SIZE * 1.5, CHUNK_HEIGHT, endPos.z + CHUNK_SIZE * 1.5);
+    currentCam.setPosition(CameraInitialPos);
+    float cameraInitialYaw = 45;
+    float cameraFinalYaw = -135;
+    currentCam.yaw_ = cameraInitialYaw;
+    //currentCam.yaw_ = 45.0f;
+
+
+    //final yaw = -135
+#endif
+
+#ifdef CHUNK_RENDER_MODE
+    options.chunkDrawMode = static_cast<RenderChunkMode>(CHUNK_RENDER_MODE);
+#endif
+    
+    auto fileName = Engine::generateOptimizationsString();
     
     while(true) {
         frameTick.start();
@@ -450,6 +479,16 @@ int main(int argc, char **argv) {
             measurement_system.setInitialMeasurement(m);
             helpValue = "Recording...";
         }
+#endif
+
+#ifdef ENABLE_AUTOMATIC_CAMERA
+        if(PAD_ButtonsDown(1) & PAD_BUTTON_START) {
+            currentCam.setPosition(CameraInitialPos);
+            options.isInterpolating = true;
+            options.t = 0.0f; // Reset t to start from the beginning
+        }
+        moveCameraToTarget(currentCam, options, deltaTime, CameraInitialPos, CameraFinalPos,
+            currentCam.pitch_, currentCam.pitch_, cameraInitialYaw, cameraFinalYaw, ENABLE_AUTOMATIC_CAMERA);
 #endif
         
         currentCam.updateCamera(deltaTime); //deltaTime
@@ -511,9 +550,9 @@ int main(int argc, char **argv) {
         GX_SetTevOp(GX_TEVSTAGE0, GX_MODULATE);
 #else
     #ifndef OPTIMIZATION_NO_LIGHTNING_DATA
-        Renderer::PrepareToRenderInVX2(true, false, true, true);
-    #else
         Renderer::PrepareToRenderInVX2(true, true, true, true);
+    #else
+        Renderer::PrepareToRenderInVX2(true, false, true, true);
     #endif
 #endif
         
@@ -576,6 +615,9 @@ int main(int argc, char **argv) {
             text.render(USVec2{5, 170}, fmt::format("Video Mode : {}", std::array{"INTERLACE", "NON INTERLACE", "PROGRESSIVE", "ERROR"}[static_cast<int>(Renderer::VideoMode())]).c_str());
             text.render(USVec2{5, 185}, fmt::format("VSYNC      : {}", options.VSYNC ? "YES" : "NOP").c_str());
         	text.render(USVec2{5, 200}, fmt::format("Resolution  : {}/{}", Renderer::ScreenWidth(), Renderer::ScreenHeight()).c_str());
+#ifdef ENABLE_MEASUREMENTS
+            text.render(USVec2{5, 215}, fmt::format("File  : {}", fileName).c_str());
+#endif
             String ChunkRenderMode = "DEFAULT";
             switch (options.chunkDrawMode) {
                 case RenderChunkMode::CHUNKS_AROUND:        ChunkRenderMode = "AROUND THE CAMERA"; break;
@@ -616,9 +658,9 @@ int main(int argc, char **argv) {
             measurement_system.recordFrame(frame);
             if (measurement_system.isMeasurementComplete()) {
                 if constexpr (MEASUREMENTS_FILE_FORMAT == FileFormat::TXT) {
-                    measurement_system.dumpToFile(fmt::format("{}.txt", ENABLE_MEASUREMENTS));
+                    measurement_system.dumpToFile(fmt::format("{}.txt", fileName));
                 }else if constexpr (MEASUREMENTS_FILE_FORMAT == FileFormat::CSV) {
-                    measurement_system.dumpToCSV(fmt::format("{}.csv", ENABLE_MEASUREMENTS));
+                    measurement_system.dumpToCSV(fmt::format("{}.csv", fileName));
                 }
                 helpValue = "Recording Done!";
             }

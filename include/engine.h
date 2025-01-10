@@ -17,6 +17,8 @@ namespace poyo {
         static cfloat getDeltaTime();
         static u64 getCurrentTime();
         static u64 getLastTime();
+
+        static String generateOptimizationsString();
         
      private:
         Engine();

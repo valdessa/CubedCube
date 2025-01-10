@@ -20,8 +20,6 @@
 
 inline int CHUNK_LOAD_RADIUS = 2;
 
-constexpr poyo::U8 CHUNK_RADIUS = 1;
-
 /***** OCCLUSION CULLING OPTIMIZATIONS *****/                                              
 //0 -> NO OCCLUSION CULLING :(                         20.135/120.594
 //1 -> OCCLUSION CULLING ONLY BLOCKS   (GAME LOOP)     3.985/23.694
@@ -34,17 +32,32 @@ constexpr poyo::U8 CHUNK_RADIUS = 1;
 
 #define OPTIMIZATION_VECTOR
 #define OPTIMIZATION_MAPS
-#define OPTIMIZATION_OCCLUSION 0
-#define OPTIMIZATION_BATCHING       
-//#define OPTIMIZATION_DISPLAY_LIST
-#define OPTIMIZATION_STRUCTS 2
-#define OPTIMIZATION_MODEL_MATRIX
-#define OPTIMIZATION_NO_LIGHTNING_DATA //me ahorro 2 megas 
-#define OPTIMIZATION_VERTEX_MEMORY //2415 vs 4572
-#define SEPARATED_SOLIDS_TRANSPARENTS
-#define OPTIMIZATION_FRUSTUM_CULLING
 
-#define KIRBY_EASTER_EGG
+#if USE_MAKEFILE_DEFINES == 0
+     #define CHUNK_RADIUS 8
+     #define OPTIMIZATION_OCCLUSION 4
+     #define OPTIMIZATION_BATCHING       
+     #define OPTIMIZATION_DISPLAY_LIST
+     #define OPTIMIZATION_STRUCTS 2
+     #define OPTIMIZATION_MODEL_MATRIX
+     #define OPTIMIZATION_VERTEX_MEMORY 
+     #define OPTIMIZATION_NO_LIGHTNING_DATA //me ahorro 2 megas
+     #define CHUNK_RENDER_MODE 0
+#endif
+
+
+#define OPTIMIZATION_FRUSTUM_CULLING
+///-----
+#define TO_STRING(x) #x
+#define TOSTRING(x) TO_STRING(x)
+///-----
+///
+#define CHUNK_RADIUS_STRING "RAD_" TOSTRING(CHUNK_RADIUS)
+#define OCCLUSION_STRING "OCC_" TOSTRING(OPTIMIZATION_OCCLUSION)
+#define STRUCT_STRING "STRUC_" TOSTRING(OPTIMIZATION_STRUCTS)
+#define CHUNK_RENDER_STRING "RM_" TOSTRING(CHUNK_RENDER_MODE)
+
+//#define KIRBY_EASTER_EGG
 #define KIRBY_IN_DISPLAY_LIST
 //#define KIRBY_CONTROLLED
 #define MAX_KIRBY 64
@@ -54,7 +67,17 @@ enum class FileFormat {
     CSV
 };
 
-#define ENABLE_MEASUREMENTS "Measurements0"
+#ifdef LOOOL1
+//#error "LO HICSTE BIEN"
+#endif
+
+#ifdef LOOOL2
+  //  #error "LA CAGASTE"
+#endif
+
+#define ENABLE_AUTOMATIC_CAMERA 2 //seconds
+#define ENABLE_MEASUREMENTS
+#define MEASUREMENTS_FRAMES 128
 constexpr FileFormat MEASUREMENTS_FILE_FORMAT = FileFormat::CSV;
 /*  
 =============================================================== BENCHMARKING ==================================================================|

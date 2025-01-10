@@ -24,6 +24,8 @@ namespace poyo {
 		cFVec3& getPosition() const;
 		cfloat& getPitch() const;
 		cfloat& getYaw() const;
+
+		void interpolate(const cFVec3& startPos, const cFVec3& endPos, const cfloat& startPitch, const cfloat& endPitch, const cfloat& startYaw, const cfloat& endYaw, float t);
 		
 	// private:
 		FVec3 position_;

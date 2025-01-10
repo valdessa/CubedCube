@@ -110,4 +110,14 @@ cfloat& Camera::getYaw() const {
     return yaw_;
 }
 
+void Camera::interpolate(cFVec3& startPos, cFVec3& endPos, cfloat& startPitch, cfloat& endPitch, cfloat& startYaw,
+    cfloat& endYaw, float t) {
+    // Interpolate position using glm::mix (linear interpolation)
+    position_ = glm::mix(startPos, endPos, t);
+
+    // Interpolate pitch and yaw using glm::mix (if they are simple scalar values)
+    pitch_ = glm::mix(startPitch, endPitch, t);
+    yaw_ = glm::mix(startYaw, endYaw, t);
+}
+
 

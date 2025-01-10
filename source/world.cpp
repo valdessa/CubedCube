@@ -70,16 +70,16 @@ void World::generateLand(S16 radius) {
 #endif
 }
 
-static void placeWater(Chunk& chunk, const CubePosition& pos) {
-    // bool CanBePlaced = true;
-    //
-    // auto positionToCheck = CubePosition(pos.x, pos.y - 1, pos.z);
-    // if(World::isValidPosition(positionToCheck)) {
-    //     if(chunk.getCubito(positionToCheck).type == BLOCK_WATER) CanBePlaced = false;
-    // }
-    //
-    // if(CanBePlaced) chunk.setCubito(pos, BLOCK_WATER);
-}
+// static void placeWater(Chunk& chunk, const CubePosition& pos) {
+//     // bool CanBePlaced = true;
+//     //
+//     // auto positionToCheck = CubePosition(pos.x, pos.y - 1, pos.z);
+//     // if(World::isValidPosition(positionToCheck)) {
+//     //     if(chunk.getCubito(positionToCheck).type == BLOCK_WATER) CanBePlaced = false;
+//     // }
+//     //
+//     // if(CanBePlaced) chunk.setCubito(pos, BLOCK_WATER);
+// }
 
 void World::generateLandChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
     // Set the chunk's offset and world position
