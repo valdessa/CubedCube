@@ -20,7 +20,7 @@
 
 inline int CHUNK_LOAD_RADIUS = 2;
 
-constexpr poyo::U8 CHUNK_RADIUS = 8;
+constexpr poyo::U8 CHUNK_RADIUS = 1;
 
 /***** OCCLUSION CULLING OPTIMIZATIONS *****/                                              
 //0 -> NO OCCLUSION CULLING :(                         20.135/120.594
@@ -34,9 +34,9 @@ constexpr poyo::U8 CHUNK_RADIUS = 8;
 
 #define OPTIMIZATION_VECTOR
 #define OPTIMIZATION_MAPS
-#define OPTIMIZATION_OCCLUSION 4
+#define OPTIMIZATION_OCCLUSION 0
 #define OPTIMIZATION_BATCHING       
-#define OPTIMIZATION_DISPLAY_LIST
+//#define OPTIMIZATION_DISPLAY_LIST
 #define OPTIMIZATION_STRUCTS 2
 #define OPTIMIZATION_MODEL_MATRIX
 #define OPTIMIZATION_NO_LIGHTNING_DATA //me ahorro 2 megas 
@@ -49,8 +49,13 @@ constexpr poyo::U8 CHUNK_RADIUS = 8;
 //#define KIRBY_CONTROLLED
 #define MAX_KIRBY 64
 
-//#define ENABLE_MEASUREMENTS
+enum class FileFormat {
+    TXT,
+    CSV
+};
 
+#define ENABLE_MEASUREMENTS "Measurements0"
+constexpr FileFormat MEASUREMENTS_FILE_FORMAT = FileFormat::CSV;
 /*  
 =============================================================== BENCHMARKING ==================================================================|
                                                                                                                                                |

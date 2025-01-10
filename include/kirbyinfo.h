@@ -853,7 +853,7 @@ static void updateKirbyPosition(kirbyInfo& info, cfloat dt, cfloat speed = 2.5f,
     if(PAD_ButtonsHeld(controller) & PAD_TRIGGER_L) info.trans.Rotation.y-= dt * speed * 1.5f;
     if(PAD_ButtonsHeld(controller) & PAD_TRIGGER_R) info.trans.Rotation.y+= dt * speed * 1.5f;
     
-    if(PAD_ButtonsDown(controller) & PAD_BUTTON_START) info.trans.Rotation = FVec3(0, -90, 0);
+    if(PAD_ButtonsDown(controller) & PAD_TRIGGER_Z) info.trans.Rotation = FVec3(0, -90, 0);
 }
 
 #endif

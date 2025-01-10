@@ -118,6 +118,232 @@ void updateFrustum(Camera& cam) {
 }
 #endif
 
+#ifdef ENABLE_MEASUREMENTS
+//Only Once
+struct Measurements {
+    size_t MemoryUsedBySystem;
+    size_t MemoryUsedByVoxel;
+    size_t TotalMemoryUsed;
+    size_t TotalMemoryFree;
+    RenderChunkMode chunkDrawMode;
+    U32 NTotalChunks;
+    U32 NValidBlocks;
+    U32 NValidFaces;
+};
+//Once per frame
+struct MeasurementsByFrame {
+    float frameTimeInMs;
+    float DrawTimeInMs;
+    U32 NChunksDrawn;
+    U32 NDrawCalls;
+    u32 NFacesDrawn;
+};
+
+#include <algorithm>  // Para std::sort
+#include <numeric>    // Para std::accumulate
+
+// Función para calcular la media
+template <typename T>
+T calculateMean(const std::vector<T>& values) {
+    if (values.empty()) return 0;
+    T sum = std::accumulate(values.begin(), values.end(), T(0));
+    return sum / values.size();
+}
+
+// Función para calcular la mediana
+template <typename T>
+T calculateMedian(std::vector<T> values) {
+    if (values.empty()) return 0;
+    std::sort(values.begin(), values.end());
+    size_t size = values.size();
+    if (size % 2 == 0) {
+        return (values[size / 2 - 1] + values[size / 2]) / 2;
+    } else {
+        return values[size / 2];
+    }
+}
+
+class MeasurementSystem {
+private:
+    Measurements initialMeasurement;
+    Vector<MeasurementsByFrame> frameMeasurements;
+    uint32_t framesToMeasure;
+    uint32_t currentFrame;
+    bool shouldStart = false;
+
+public:
+    MeasurementSystem(uint32_t numFrames, String& helpValue)
+        : initialMeasurement(), framesToMeasure(numFrames), currentFrame(0), frameMeasurements(numFrames) {
+        
+        if(fatInitDefault()) {
+            helpValue = "Working";
+        }else {
+            helpValue = "Not working :/";
+        }
+    }
+
+    void setInitialMeasurement(const Measurements& measure) {
+        initialMeasurement = measure;
+        shouldStart = true;
+    }
+
+    bool shouldRecordFrame() const {
+        return shouldStart;
+    }
+    
+    // Registrar datos por frame
+    void recordFrame(MeasurementsByFrame& frameMeasurement) {
+        if (currentFrame < framesToMeasure) {
+            frameMeasurements[currentFrame++] = std::move(frameMeasurement);
+            //frameMeasurements.push_back(frameMeasurement);
+            
+        }
+    }
+
+    // Verificar si ya se completó la medición
+    bool isMeasurementComplete() const {
+        return currentFrame >= framesToMeasure;
+    }
+
+    // Volcar datos a un archivo .txt
+    void dumpToFile(const std::string& filename) {
+        shouldStart = false;
+        std::ofstream file(filename);
+        if (!file.is_open()) {
+            exit(-2);
+            //std::cerr << "Error al abrir el archivo " << filename << "\n";
+            return;
+        }
+
+        // Escribir mediciones iniciales
+        file << "Initial Measurements:\n";
+        file << "Memory Used By System: " << convertBytesToKilobytes(initialMeasurement.MemoryUsedBySystem) << " MB\n";
+        file << "Memory Used By Voxel: " << convertBytesToKilobytes(initialMeasurement.MemoryUsedByVoxel) << " MB\n";
+        file << "Total Memory Used: " << convertBytesToKilobytes(initialMeasurement.TotalMemoryUsed) << " MB\n";
+        file << "Total Memory Free: " << convertBytesToKilobytes(initialMeasurement.TotalMemoryFree) << " MB\n";
+        String ChunkRenderMode = "DEFAULT";
+        switch (initialMeasurement.chunkDrawMode) {
+            case RenderChunkMode::CHUNKS_AROUND:        ChunkRenderMode = "AROUND THE CAMERA"; break;
+        #ifdef OPTIMIZATION_FRUSTUM_CULLING
+            case RenderChunkMode::CHUNKS_IN_FRUSTUM:    ChunkRenderMode = "FRUSTUM CULLED";    break;
+        #endif
+        }
+        file << "Chunk Draw Mode: " << ChunkRenderMode << "\n";
+        file << "Total Chunks: " << initialMeasurement.NTotalChunks << "\n";
+        file << "Valid Blocks: " << initialMeasurement.NValidBlocks << "\n";
+        file << "Valid Faces: " << initialMeasurement.NValidFaces << "\n\n";
+
+        // Escribir mediciones por frame
+        file << "Frame Measurements:\n";
+        for (size_t i = 0; i < frameMeasurements.size(); ++i) {
+            const auto& frame = frameMeasurements[i];
+            file << "Frame " << i + 1 << ":\n";
+            file << "  Frame Time: " << frame.frameTimeInMs << " ms\n";
+            file << "  Draw Time: " << frame.DrawTimeInMs << " ms\n";
+            file << "  Chunks Drawn: " << frame.NChunksDrawn << "\n";
+            file << "  Draw Calls: " << frame.NDrawCalls << "\n";
+            file << "  Faces Drawn: " << frame.NFacesDrawn << "\n";
+        }
+
+        file.close();
+        //std::cout << "Mediciones volcadas en " << filename << "\n";
+    }
+
+    void dumpToCSV(const std::string& filename) {
+        shouldStart = false;
+        std::ofstream file(filename);
+        if (!file.is_open()) {
+            exit(-2);
+            //std::cerr << "Error al abrir el archivo " << filename << "\n";
+            return;
+        }
+
+        // Escribir encabezados
+        file << "Type,MemoryUsedBySystem,MemoryUsedByVoxel,TotalMemoryUsed,TotalMemoryFree,ChunkDrawMode,NTotalChunks,NValidBlocks,NValidFaces,FrameTimeInMs,DrawTimeInMs,NChunksDrawn,NDrawCalls,NFacesDrawn\n";
+
+        String ChunkRenderMode = "DEFAULT";
+        switch (initialMeasurement.chunkDrawMode) {
+            case RenderChunkMode::CHUNKS_AROUND:        ChunkRenderMode = "AROUND THE CAMERA"; break;
+        #ifdef OPTIMIZATION_FRUSTUM_CULLING
+            case RenderChunkMode::CHUNKS_IN_FRUSTUM:    ChunkRenderMode = "FRUSTUM CULLED";    break;
+        #endif
+        }
+        
+        // Escribir medición inicial
+        file << "Initial,"
+             << initialMeasurement.MemoryUsedBySystem << ","
+             << initialMeasurement.MemoryUsedByVoxel << ","
+             << initialMeasurement.TotalMemoryUsed << ","
+             << initialMeasurement.TotalMemoryFree << ","
+             << ChunkRenderMode << ","
+             << initialMeasurement.NTotalChunks << ","
+             << initialMeasurement.NValidBlocks << ","
+             << initialMeasurement.NValidFaces << ",,,,\n";
+
+        // Variables para estadísticas por frame
+        std::vector<float> frameTimes;
+        std::vector<float> drawTimes;
+        std::vector<U32> chunksDrawn;
+        std::vector<U32> drawCalls;
+        std::vector<u32> facesDrawn;
+        
+
+        // Escribir mediciones por frame
+        for (size_t i = 0; i < frameMeasurements.size(); ++i) {
+            const auto& frame = frameMeasurements[i];
+
+            frameTimes.push_back(frame.frameTimeInMs);
+            drawTimes.push_back(frame.DrawTimeInMs);
+            chunksDrawn.push_back(frame.NChunksDrawn);
+            drawCalls.push_back(frame.NDrawCalls);
+            facesDrawn.push_back(frame.NFacesDrawn);
+            
+            file << "Frame " << i + 1 << ",,,,,,,,,"
+                 << frame.frameTimeInMs << ","
+                 << frame.DrawTimeInMs << ","
+                 << frame.NChunksDrawn << ","
+                 << frame.NDrawCalls << ","
+                 << frame.NFacesDrawn << "\n";
+        }
+
+        // Calcular estadísticas
+        // float maxFrameTime = *std::max_element(frameTimes.begin(), frameTimes.end());
+        // float minFrameTime = *std::min_element(frameTimes.begin(), frameTimes.end());
+        // float meanFrameTime = calculateMean(frameTimes);
+        // float medianFrameTime = calculateMedian(frameTimes);
+        //
+        // // Escribir estadísticas al final del archivo CSV
+        // file << "Statistics,,,,,,,,,"
+        //      << "MAX: " << maxFrameTime << ","
+        //      << "MIN: " << minFrameTime << ","
+        //      << "MEAN: " << meanFrameTime << ","
+        //      << "MEDIAN: "<< medianFrameTime << "\n";
+        calculateStatistics(file, "frameTimes", frameTimes);
+        calculateStatistics(file, "drawTimes", drawTimes);
+        calculateStatistics(file, "chunksDrawn", chunksDrawn);
+        calculateStatistics(file, "drawCalls", drawCalls);
+        calculateStatistics(file, "facesDrawn", facesDrawn);
+
+        file.close();
+    }
+    template <typename T>
+    void calculateStatistics(std::ofstream& file, cString& name, Vector<T>& data) {
+        float max = *std::max_element(data.begin(), data.end());
+        float min = *std::min_element(data.begin(), data.end());
+        float mean = calculateMean(data);
+        float median = calculateMedian(data);
+        
+        // Escribir estadísticas al final del archivo CSV
+        file << "Statistics: " + name + " ,,,,,,,,,"
+             << "MAX: " << max << ","
+             << "MIN: " << min << ","
+             << "MEAN: " << mean << ","
+             << "MEDIAN: "<< median << "\n";
+    }
+    
+};
+#endif
+
 //1 ms = 40,500 ticks
 int main(int argc, char **argv) {
     // size_t MemoryUsedAtbeginning = (uintptr_t)SYS_GetArena1Lo() - (uintptr_t)SYS_GetArena1Hi;
@@ -189,6 +415,10 @@ int main(int argc, char **argv) {
     kirbyInfo info;
     initKirby();
 #endif
+
+#ifdef ENABLE_MEASUREMENTS
+    MeasurementSystem measurement_system(64, helpValue);
+#endif
     
     while(true) {
         frameTick.start();
@@ -204,6 +434,23 @@ int main(int argc, char **argv) {
         
         Renderer::Set2DMode();
         if(updateInput(options, currentCam)) break;
+
+#ifdef ENABLE_MEASUREMENTS
+        if(PAD_ButtonsDown(1) & PAD_BUTTON_START) {
+            Measurements m;
+            m.MemoryUsedBySystem = MemoryUsedBySystem;
+            m.MemoryUsedByVoxel = MemoryUsedByVoxel;
+            m.TotalMemoryUsed = Memory::getTotalMemoryUsed();
+            m.TotalMemoryFree = Memory::getTotalMemoryFree();
+            m.chunkDrawMode = options.chunkDrawMode;
+            m.NTotalChunks = currentWorld.NChunks();
+            m.NValidBlocks = currentWorld.validBlocks_;
+            m.NValidFaces = currentWorld.validFaces_;
+            
+            measurement_system.setInitialMeasurement(m);
+            helpValue = "Recording...";
+        }
+#endif
         
         currentCam.updateCamera(deltaTime); //deltaTime
 #ifdef OPTIMIZATION_FRUSTUM_CULLING
@@ -353,16 +600,37 @@ int main(int argc, char **argv) {
             text.render(USVec2{295,  95}, fmt::format("Draw   : Cycles {} ts / Time {} ms", drawTicks, Tick::TickToMsfloat(drawTicks)).c_str());
             text.render(USVec2{295, 110}, fmt::format("Frame  : Cycles {} ts", frameTicks).c_str());
             text.render(USVec2{295, 125}, fmt::format("MODE   : {}", ChunkRenderMode).c_str());
-            text.render(USVec2{295, 140}, fmt::format("Helper : {}", far_).c_str());
+            text.render(USVec2{295, 140}, fmt::format("Helper : {}", helpValue).c_str());
             //text.render(USVec2{400,  95}, fmt::format("Helper      : {}", currentWorld.helperCounter).c_str());
             //text.render(USVec2{400, 110}, fmt::format("N Blocks    : {}", currentChunk.validBlocks).c_str());
         }
+
+#ifdef ENABLE_MEASUREMENTS
+        if(measurement_system.shouldRecordFrame()) {
+            MeasurementsByFrame frame;
+            frame.frameTimeInMs = deltaTime * 1000.0f; //s to ms
+            frame.DrawTimeInMs  = Tick::TickToMsfloat(drawTicks);
+            frame.NChunksDrawn  = chunksDrawn;
+            frame.NDrawCalls    = Renderer::DrawCalls();
+            frame.NFacesDrawn   = Renderer::FacesDrawn();
+            measurement_system.recordFrame(frame);
+            if (measurement_system.isMeasurementComplete()) {
+                if constexpr (MEASUREMENTS_FILE_FORMAT == FileFormat::TXT) {
+                    measurement_system.dumpToFile(fmt::format("{}.txt", ENABLE_MEASUREMENTS));
+                }else if constexpr (MEASUREMENTS_FILE_FORMAT == FileFormat::CSV) {
+                    measurement_system.dumpToCSV(fmt::format("{}.csv", ENABLE_MEASUREMENTS));
+                }
+                helpValue = "Recording Done!";
+            }
+        }
+
+#endif
         
         //GRRLIB_PrintfTTF(50, 50, myFont, "MINECRAFT", 16, 0x000000FF);
 
         frameTicks = frameTick.stopAndGetTick();
         frameTick.reset();
-        
+
         // Renderizar todo a la pantalla
         Renderer::RenderGX(options.VSYNC); // Render the frame buffer to the TV
     }
