@@ -57,8 +57,8 @@ inline bool updateInput(Options& options, Camera& cam) {
         }
     }
     if(PAD_ButtonsDown(0) & PAD_BUTTON_A) {
-        int nextMode = (static_cast<int>(options.chunksAround) + 1) % static_cast<int>(RenderChunkMode::COUNT);
-        options.chunksAround = static_cast<RenderChunkMode>(nextMode);
+        int nextMode = (static_cast<int>(options.chunkDrawMode) + 1) % static_cast<int>(RenderChunkMode::COUNT);
+        options.chunkDrawMode = static_cast<RenderChunkMode>(nextMode);
         //options.chunksAround = !options.chunksAround;
     }
     if(PAD_ButtonsDown(0) & PAD_TRIGGER_R) cam.setSpeed(CameraSpeed * 5.0f);

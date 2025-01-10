@@ -90,7 +90,7 @@ void Chunk::createDisplayList() {
 #ifdef OPTIMIZATION_OCCLUSION
     U32 entitiesToRender = 0;
 
-#if OPTIMIZATION_OCCLUSION == 3
+#if OPTIMIZATION_OCCLUSION == 3 || OPTIMIZATION_OCCLUSION == 0
     //***** OPAQUES *****//
     Vector<Cubito> cubesOpaque;
 
@@ -413,6 +413,10 @@ void Chunk::render() {
     Renderer::CallDisplayList(displayList, displayListSize);
 #else
 
+#endif
+
+#ifdef OPTIMIZATION_DISPLAY_LIST
+    Renderer::AddToFacesDrawn(validFaces_);
 #endif
 }
 

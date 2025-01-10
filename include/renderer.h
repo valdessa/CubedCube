@@ -42,6 +42,7 @@ namespace poyo {
         static void ResetDrawCalls();
         static U32 DrawCalls();
         static U32 FacesDrawn();
+        static void AddToFacesDrawn(U32 facesDrawn);
         static bool isAntialiased();
         static int ScreenWidth();
         static int ScreenHeight();

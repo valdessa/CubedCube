@@ -57,7 +57,7 @@ struct Options {
     bool debugUI = true;
     bool VSYNC = true;
     bool helper = false;
-    RenderChunkMode chunksAround = RenderChunkMode::DEFAULT;
+    RenderChunkMode chunkDrawMode = RenderChunkMode::DEFAULT;
     int ChunkLoadRadius = CHUNK_LOAD_RADIUS;
 };
 
@@ -271,7 +271,7 @@ int main(int argc, char **argv) {
 #endif
         
         GX_SetChanCtrl(GX_COLOR0A0, GX_DISABLE, GX_SRC_REG, GX_SRC_REG, 0, GX_DF_NONE, GX_AF_NONE);
-        switch (options.chunksAround) {
+        switch (options.chunkDrawMode) {
             case RenderChunkMode::DEFAULT:
                 chunksDrawn = currentWorld.render(waterTexCoords);
                 break;
@@ -330,7 +330,7 @@ int main(int argc, char **argv) {
             text.render(USVec2{5, 185}, fmt::format("VSYNC      : {}", options.VSYNC ? "YES" : "NOP").c_str());
         	text.render(USVec2{5, 200}, fmt::format("Resolution  : {}/{}", Renderer::ScreenWidth(), Renderer::ScreenHeight()).c_str());
             String ChunkRenderMode = "DEFAULT";
-            switch (options.chunksAround) {
+            switch (options.chunkDrawMode) {
                 case RenderChunkMode::CHUNKS_AROUND:        ChunkRenderMode = "AROUND THE CAMERA"; break;
             #ifdef OPTIMIZATION_FRUSTUM_CULLING
                 case RenderChunkMode::CHUNKS_IN_FRUSTUM:    ChunkRenderMode = "FRUSTUM CULLED";    break;
@@ -343,12 +343,12 @@ int main(int argc, char **argv) {
 
             //Render Things
             text.render(USVec2{275,  35}, fmt::format("Valid: Blocks [{}] Faces [{}]", currentWorld.validBlocks_, currentWorld.validFaces_).c_str());
-            text.render(USVec2{275,  50}, fmt::format("NDraw Calls : {}", Renderer::DrawCalls()).c_str());
+            text.render(USVec2{275,  50}, fmt::format("Calls : {} Draws / {} Faces", Renderer::DrawCalls(), Renderer::FacesDrawn()).c_str());
             //text.render(USVec2{275,  80}, fmt::format("NFaces Drawn : {}", Renderer::FacesDrawn()).c_str());  //todo: fix
             text.render(USVec2{275,  65}, fmt::format("NChunks     : [{}]/[{}]", chunksDrawn, currentWorld.NChunks()).c_str());
-            text.render(USVec2{485, 50}, fmt::format("NTrees : {}", currentWorld.nTrees_).c_str());
+            text.render(USVec2{485, 65}, fmt::format("NTrees : {}", currentWorld.nTrees_).c_str());
 #ifdef KIRBY_EASTER_EGG
-            text.render(USVec2{485, 65}, fmt::format("NKirby : {}", currentWorld.NKirbys).c_str()); //currentWorld.nTrees_
+            text.render(USVec2{485, 80}, fmt::format("NKirby : {}", currentWorld.NKirbys).c_str()); //currentWorld.nTrees_
 #endif
             text.render(USVec2{295,  95}, fmt::format("Draw   : Cycles {} ts / Time {} ms", drawTicks, Tick::TickToMsfloat(drawTicks)).c_str());
             text.render(USVec2{295, 110}, fmt::format("Frame  : Cycles {} ts", frameTicks).c_str());

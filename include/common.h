@@ -23,11 +23,11 @@ inline int CHUNK_LOAD_RADIUS = 2;
 constexpr poyo::U8 CHUNK_RADIUS = 8;
 
 /***** OCCLUSION CULLING OPTIMIZATIONS *****/                                              
-//0 -> NO OCCLUSION CULLING :(                          
-//1 -> OCCLUSION CULLING ONLY BLOCKS   (GAME LOOP)      
-//2 -> OCCLUSION CULLING BLOCK + FACES (GAME LOOP)     
-//3 -> OCCLUSION CULLING ONLY BLOCKS   (PRECALCULATED)  
-//4 -> OCCLUSION CULLING BLOCKS FACES  (PRECALCULATED) 
+//0 -> NO OCCLUSION CULLING :(                         20.135/120.594
+//1 -> OCCLUSION CULLING ONLY BLOCKS   (GAME LOOP)     3.985/23.694
+//2 -> OCCLUSION CULLING BLOCK + FACES (GAME LOOP)     23.694/23.694 ->9/5582   only for batching!!
+//3 -> OCCLUSION CULLING ONLY BLOCKS   (PRECALCULATED)  3.985/23.694
+//4 -> OCCLUSION CULLING BLOCKS FACES  (PRECALCULATED)  3.985/23.694 ->9/5582   only for batching!!
 
 //measures with ticks and ms
 //full frame + only draw part
@@ -40,42 +40,7 @@ constexpr poyo::U8 CHUNK_RADIUS = 8;
 #define OPTIMIZATION_STRUCTS 2
 #define OPTIMIZATION_MODEL_MATRIX
 #define OPTIMIZATION_NO_LIGHTNING_DATA //me ahorro 2 megas 
-
-//1 CHUNK
-//0 : 6873
-//1 : 6081
-//2 : 5865
-
-//4 CHUNK
-//0 : 19439
-//1 : 12311
-//2 : 10367
-
-//5 CHUNK
-//0 : crash
-//1 : 15759
-//2 : 12854
-
-//6 CHUNK
-//0 : crash
-//1 : 20060
-//2 : 16004
-
-//7 CHUNK
-//0 : crash
-//1 : crash
-//2 : 19513
-
-//8 CHUNK
-//0 : crash
-//1 : crash
-//2 : 23510
-
 #define OPTIMIZATION_VERTEX_MEMORY //2415 vs 4572
-//2600 vs 1888
-//todo puesto:  3675 vs 2640
-//todo puesto optimizado 3138 vs 2378
-
 #define SEPARATED_SOLIDS_TRANSPARENTS
 #define OPTIMIZATION_FRUSTUM_CULLING
 
@@ -83,6 +48,8 @@ constexpr poyo::U8 CHUNK_RADIUS = 8;
 #define KIRBY_IN_DISPLAY_LIST
 //#define KIRBY_CONTROLLED
 #define MAX_KIRBY 64
+
+//#define ENABLE_MEASUREMENTS
 
 /*  
 =============================================================== BENCHMARKING ==================================================================|
@@ -97,7 +64,11 @@ constexpr poyo::U8 CHUNK_RADIUS = 8;
                                                                                                                                                |
 ===============================================================================================================================================|
 */
-
+#ifndef OPTIMIZATION_BATCHING
+    #if OPTIMIZATION_OCCLUSION == 2 || OPTIMIZATION_OCCLUSION == 4
+    #error "THE SELECTED OPTIMIZATION OCCLUSSION OPTION CANNOT BE USED WITHOUT BATCHING"
+    #endif
+#endif
 
 #ifdef OPTIMIZATION_DISPLAY_LIST
     #if OPTIMIZATION_OCCLUSION == 1 || OPTIMIZATION_OCCLUSION == 2

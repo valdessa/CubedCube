@@ -256,6 +256,10 @@ U32 Renderer::FacesDrawn() {
     return nFacesRendered;
 }
 
+void Renderer::AddToFacesDrawn(U32 facesDrawn) {
+    nFacesRendered += facesDrawn;
+}
+
 bool Renderer::isAntialiased() {
     return antialiased;
 }
