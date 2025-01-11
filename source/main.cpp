@@ -215,7 +215,6 @@ public:
     // Volcar datos a un archivo .txt
     void dumpToFile(const std::string& filename) {
         shouldStart = false;
-        currentFrame = 0;
         std::ofstream file(filename);
         if (!file.is_open()) {
             exit(-2);
@@ -259,7 +258,6 @@ public:
 
     void dumpToCSV(const std::string& filename) {
         shouldStart = false;
-        currentFrame = 0;
         std::ofstream file(filename);
         if (!file.is_open()) {
             exit(-2);
