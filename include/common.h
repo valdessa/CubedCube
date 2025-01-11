@@ -77,7 +77,7 @@ enum class FileFormat {
 
 #define ENABLE_AUTOMATIC_CAMERA 2 //seconds
 #define ENABLE_MEASUREMENTS
-#define MEASUREMENTS_FRAMES 128
+#define MEASUREMENTS_FRAMES 256
 constexpr FileFormat MEASUREMENTS_FILE_FORMAT = FileFormat::CSV;
 /*  
 =============================================================== BENCHMARKING ==================================================================|

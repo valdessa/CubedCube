@@ -186,9 +186,12 @@ public:
         }
     }
 
+    U32 getCurrentFrame() const {return currentFrame; }
+
     void setInitialMeasurement(const Measurements& measure) {
         initialMeasurement = measure;
         shouldStart = true;
+        currentFrame = 0;
     }
 
     bool shouldRecordFrame() const {
@@ -352,6 +355,21 @@ public:
 #endif
 
 #ifdef ENABLE_AUTOMATIC_CAMERA
+void moveCameraToTargetByFrame(Camera& camera, Options& opt, U32 currentFrame, cFVec3& startPos, cFVec3& endPos, float startPitch, float endPitch, float startYaw, float endYaw, U32 MaxFrame) {
+    if (opt.isInterpolating) {
+        // Compute the interpolation factor t
+        float t = static_cast<float>(currentFrame) / static_cast<float>(MaxFrame);
+        opt.t = glm::clamp(t, 0.0f, 1.0f); // Ensure t stays in range [0, 1]
+
+        if (opt.t >= 1.0f) {
+            opt.t = 1.0f; // Ensure t doesn't go beyond 1
+            opt.isInterpolating = false; // Stop interpolation once it reaches the end
+        }
+
+        // Interpolate position and rotation
+        camera.interpolate(startPos, endPos, startPitch, endPitch, startYaw, endYaw, opt.t);
+    }
+}
 void moveCameraToTarget(Camera& camera, Options& opt, float deltaTime, cFVec3& startPos, cFVec3& endPos, float startPitch, float endPitch, float startYaw, float endYaw, float duration) {
     if (opt.isInterpolating) {
         opt.t += deltaTime / duration;  // deltaTime is the time passed per frame
@@ -487,8 +505,13 @@ int main(int argc, char **argv) {
             options.isInterpolating = true;
             options.t = 0.0f; // Reset t to start from the beginning
         }
+    #ifdef ENABLE_MEASUREMENTS
+        moveCameraToTargetByFrame(currentCam, options, measurement_system.getCurrentFrame(), CameraInitialPos, CameraFinalPos,
+            currentCam.pitch_, currentCam.pitch_, cameraInitialYaw, cameraFinalYaw, MEASUREMENTS_FRAMES);
+    #else
         moveCameraToTarget(currentCam, options, deltaTime, CameraInitialPos, CameraFinalPos,
             currentCam.pitch_, currentCam.pitch_, cameraInitialYaw, cameraFinalYaw, ENABLE_AUTOMATIC_CAMERA);
+    #endif
 #endif
         
         currentCam.updateCamera(deltaTime); //deltaTime

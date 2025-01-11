@@ -41,14 +41,14 @@ USE_MAKEFILE_DEFINES = 0
 
 ifeq ($(USE_MAKEFILE_DEFINES), 1)
 	CPPFLAGS := -DUSE_MAKEFILE_DEFINES
-	CHUNK_RADIUS = 1
+	CHUNK_RADIUS = 8
     OPTIMIZATION_OCCLUSION = 4
     OPTIMIZATION_BATCHING = Y
     OPTIMIZATION_DISPLAY_LIST = Y
     OPTIMIZATION_STRUCTS = 2
     OPTIMIZATION_MODEL_MATRIX = Y
     OPTIMIZATION_VERTEX_MEMORY = Y
-    OPTIMIZATION_NO_LIGHTNING_DATA = N
+    OPTIMIZATION_NO_LIGHTNING_DATA = Y
     CHUNK_RENDER_MODE = 0
     
     ifdef CHUNK_RADIUS
@@ -194,6 +194,11 @@ $(BUILD):
 clean:
 	@echo clean ...
 	@rm -fr $(BUILD) $(OUTPUT).elf $(OUTPUT).dol
+
+#---------------------------------------------------------------------------------
+clean_build:
+	@echo clean ...
+	@rm -fr $(BUILD) $(OUTPUT).elf
 
 #---------------------------------------------------------------------------------
 run:
