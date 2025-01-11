@@ -558,6 +558,21 @@ int main(int argc, char **argv) {
             GX_SetCurrentMtx(GX_PNMTX0); //Reset to original Matrix :3
     #endif
 #endif
+
+        //Chunks to Draw:
+        Vector<Chunk*> chunksToRender;
+        switch (options.chunkDrawMode) {
+        case RenderChunkMode::CHUNKS_AROUND:
+            currentWorld.calculateChunksAround(currentCam.getPosition().x, currentCam.getPosition().z, chunksToRender);
+            break;
+#ifdef OPTIMIZATION_FRUSTUM_CULLING
+        case RenderChunkMode::CHUNKS_IN_FRUSTUM:   
+            currentWorld.calculateChunksInFrustum(frustum, chunksToRender);
+            break;
+#endif
+        }
+
+        //---
         
         currentTick.start();
         updateWaterTextureCoordinates(deltaTime, 6);
@@ -583,16 +598,18 @@ int main(int argc, char **argv) {
                 chunksDrawn = currentWorld.render(waterTexCoords);
                 break;
             case RenderChunkMode::CHUNKS_AROUND:
-                chunksDrawn = currentWorld.renderChunksAround(currentCam.getPosition().x, currentCam.getPosition().z, waterTexCoords);
+                //OLD METHOD:
+                //chunksDrawn = currentWorld.renderChunksAround(currentCam.getPosition().x, currentCam.getPosition().z, waterTexCoords);
                 //currentWorld.renderChunksAround(-18, -8);
+                chunksDrawn = currentWorld.render(chunksToRender, waterTexCoords);
                 break;
 #ifdef OPTIMIZATION_FRUSTUM_CULLING
-            case RenderChunkMode::CHUNKS_IN_FRUSTUM:   
-                chunksDrawn = currentWorld.renderChunksInFrustum(frustum, waterTexCoords);
+            case RenderChunkMode::CHUNKS_IN_FRUSTUM:
+                //OLD METHOD:
+                //chunksDrawn = currentWorld.renderChunksInFrustum(frustum, waterTexCoords);
+                chunksDrawn = currentWorld.render(chunksToRender, waterTexCoords);
                 break;
 #endif
-            case RenderChunkMode::COUNT:
-                break;
         }
 
 #ifndef OPTIMIZATION_NO_LIGHTNING_DATA

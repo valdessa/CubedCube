@@ -368,6 +368,28 @@ void World::occludeChunkBlocksFaces() const {
     }
 }
 
+void World::calculateChunksAround(int playerX, int playerZ, Vector<Chunk*>& chunksToRender) {
+    int chunkX = playerX / CHUNK_SIZE; 
+    int chunkZ = playerZ / CHUNK_SIZE; 
+    
+    for (int x = -CHUNK_LOAD_RADIUS; x <= CHUNK_LOAD_RADIUS; ++x) {
+        for (int z = -CHUNK_LOAD_RADIUS; z <= CHUNK_LOAD_RADIUS; ++z) {
+            if(auto currentChunk = getChunk(chunkX + x, chunkZ + z)) {
+                chunksToRender.push_back(currentChunk);
+            }
+        }
+    }
+}
+
+void World::calculateChunksInFrustum(const Frustum& frustum, Vector<Chunk*>& chunksToRender) const {
+    for(auto& c : chunks_) {
+        Transform chunkTrans(FVec3(c->worldPosition_.x, 0, c->worldPosition_.z), FVec3(0.0f), FVec3(1.0f));
+        if(c->region_.isOnFrustum(frustum, chunkTrans)) {
+            chunksToRender.push_back(c.get());
+        }
+    }
+}
+
 u16 World::renderChunksAround(int playerX, int playerZ, U8* waterTexCoords) {
     int chunkX = playerX / CHUNK_SIZE; 
     int chunkZ = playerZ / CHUNK_SIZE; 
@@ -402,7 +424,7 @@ u16 World::renderChunksAround(int playerX, int playerZ, U8* waterTexCoords) {
     return static_cast<u16>(chunksToRender.size());
 }
 
-U16 World::renderChunksInFrustum(Frustum& frustum, U8* waterTexCoords) {
+U16 World::renderChunksInFrustum(const Frustum& frustum, U8* waterTexCoords) const {
     Vector<Chunk*> chunksToRender;
     for(auto& c : chunks_) {
         Transform chunkTrans(FVec3(c->worldPosition_.x, 0, c->worldPosition_.z), FVec3(0.0f), FVec3(1.0f));
@@ -447,6 +469,25 @@ u16 World::render(U8* waterTexCoords) const {
     }
 
     return static_cast<u16>(chunks_.size());
+}
+
+U16 World::render(const Vector<Chunk*>& chunksToRender, U8* waterTexCoords) const {
+    for(auto& c : chunksToRender) {
+        c->render();
+    }
+
+    GX_SetVtxDesc(GX_VA_TEX0, GX_INDEX8);
+    GX_SetVtxAttrFmt(GX_VTXFMT2, GX_VA_TEX0, GX_TEX_ST, GX_U8, 0);
+        
+    GX_SetArray(GX_VA_TEX0, waterTexCoords, 2 * sizeof(u8));
+    DCStoreRange(waterTexCoords, 8 * sizeof(u8));
+    GX_InvVtxCache();
+
+    for(auto& c : chunksToRender) {
+        c->renderTranslucents();
+    }
+    
+    return static_cast<u16>(chunksToRender.size());
 }
 
 void World::renderChunksBoundings() const {

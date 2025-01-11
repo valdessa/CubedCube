@@ -7,6 +7,7 @@
 
 namespace poyo {
     class Chunk;
+    struct Frustum;
     class World {
      public:
         World();
@@ -35,10 +36,15 @@ namespace poyo {
         
         void occludeChunkBlocks();
         void occludeChunkBlocksFaces() const;
+
+        void calculateChunksAround(int playerX, int playerZ, Vector<Chunk*>& chunksToRender);
+        void calculateChunksInFrustum(const Frustum& frustum, Vector<Chunk*>& chunksToRender) const;
         
         U16 renderChunksAround(int playerX, int playerZ, U8* waterTexCoords);
-        U16 renderChunksInFrustum(struct Frustum& frustum, U8* waterTexCoords);
+        U16 renderChunksInFrustum(const Frustum& frustum, U8* waterTexCoords) const;
         U16 render(U8* waterTexCoords) const;
+
+        U16 render(const Vector<Chunk*>& chunksToRender, U8* waterTexCoords) const; //for chunks around and in frustum
 
         void renderChunksBoundings() const;
         
