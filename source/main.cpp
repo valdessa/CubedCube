@@ -168,15 +168,14 @@ T calculateMedian(std::vector<T> values) {
 }
 
 class MeasurementSystem {
-private:
     Measurements initialMeasurement;
     Vector<MeasurementsByFrame> frameMeasurements;
-    uint32_t framesToMeasure;
-    uint32_t currentFrame;
+    U32 framesToMeasure;
+    U32 currentFrame;
     bool shouldStart = false;
 
 public:
-    MeasurementSystem(uint32_t numFrames, String& helpValue)
+    MeasurementSystem(U32 numFrames, String& helpValue)
         : initialMeasurement(), frameMeasurements(numFrames), framesToMeasure(numFrames), currentFrame(0) {
         
         if(fatInitDefault()) {
@@ -198,22 +197,21 @@ public:
         return shouldStart;
     }
     
-    // Registrar datos por frame
+    // Log data per frame
     void recordFrame(MeasurementsByFrame& frameMeasurement) {
         if (currentFrame < framesToMeasure) {
             frameMeasurements[currentFrame++] = std::move(frameMeasurement);
             //frameMeasurements.push_back(frameMeasurement);
-            
         }
     }
 
-    // Verificar si ya se completó la medición
+    // Check if the measurement is already complete
     bool isMeasurementComplete() const {
         return currentFrame >= framesToMeasure;
     }
 
-    // Volcar datos a un archivo .txt
-    void dumpToFile(const std::string& filename) {
+    // Dump data to a .txt file
+    void dumpToFile(cString& filename) {
         shouldStart = false;
         std::ofstream file(filename);
         if (!file.is_open()) {
@@ -256,46 +254,26 @@ public:
         //std::cout << "Mediciones volcadas en " << filename << "\n";
     }
 
-    void dumpToCSV(const std::string& filename) {
+    // Dump data to a .csv file
+    void dumpToCSV(cString& filename) {
         shouldStart = false;
         std::ofstream file(filename);
         if (!file.is_open()) {
             exit(-2);
-            //std::cerr << "Error al abrir el archivo " << filename << "\n";
+            //std::cerr << "Error opening the file " << filename << "\n";
             return;
         }
 
-        // Escribir encabezados
-        file << "Type,MemoryUsedBySystem,MemoryUsedByVoxel,TotalMemoryUsed,TotalMemoryFree,ChunkDrawMode,NTotalChunks,NValidBlocks,NValidFaces,FrameTimeInMs,DrawTimeInMs,NChunksDrawn,NDrawCalls,NFacesDrawn\n";
-
-        String ChunkRenderMode = "DEFAULT";
-        switch (initialMeasurement.chunkDrawMode) {
-            case RenderChunkMode::CHUNKS_AROUND:        ChunkRenderMode = "AROUND THE CAMERA"; break;
-        #ifdef OPTIMIZATION_FRUSTUM_CULLING
-            case RenderChunkMode::CHUNKS_IN_FRUSTUM:    ChunkRenderMode = "FRUSTUM CULLED";    break;
-        #endif
-        }
-        
-        // Escribir medición inicial
-        file << "Initial,"
-             << initialMeasurement.MemoryUsedBySystem << ","
-             << initialMeasurement.MemoryUsedByVoxel << ","
-             << initialMeasurement.TotalMemoryUsed << ","
-             << initialMeasurement.TotalMemoryFree << ","
-             << ChunkRenderMode << ","
-             << initialMeasurement.NTotalChunks << ","
-             << initialMeasurement.NValidBlocks << ","
-             << initialMeasurement.NValidFaces << ",,,,\n";
+        file << "FRAME,FRAME TIME (ms),DRAW TIME (ms),CHUNKS DRAWN,DRAW CALLS,FACES DRAWN\n";
 
         // Variables para estadísticas por frame
-        std::vector<float> frameTimes;
-        std::vector<float> drawTimes;
-        std::vector<U32> chunksDrawn;
-        std::vector<U32> drawCalls;
-        std::vector<u32> facesDrawn;
-        
+        Vector<float> frameTimes;
+        Vector<float> drawTimes;
+        Vector<U32> chunksDrawn;
+        Vector<U32> drawCalls;
+        Vector<U32> facesDrawn;
 
-        // Escribir mediciones por frame
+        // Write measurements per frame
         for (size_t i = 0; i < frameMeasurements.size(); ++i) {
             const auto& frame = frameMeasurements[i];
 
@@ -305,7 +283,7 @@ public:
             drawCalls.push_back(frame.NDrawCalls);
             facesDrawn.push_back(frame.NFacesDrawn);
             
-            file << "Frame " << i + 1 << ",,,,,,,,,"
+            file << "Frame " << i + 1 << ","
                  << frame.frameTimeInMs << ","
                  << frame.DrawTimeInMs << ","
                  << frame.NChunksDrawn << ","
@@ -313,40 +291,58 @@ public:
                  << frame.NFacesDrawn << "\n";
         }
 
-        // Calcular estadísticas
-        // float maxFrameTime = *std::max_element(frameTimes.begin(), frameTimes.end());
-        // float minFrameTime = *std::min_element(frameTimes.begin(), frameTimes.end());
-        // float meanFrameTime = calculateMean(frameTimes);
-        // float medianFrameTime = calculateMedian(frameTimes);
-        //
-        // // Escribir estadísticas al final del archivo CSV
-        // file << "Statistics,,,,,,,,,"
-        //      << "MAX: " << maxFrameTime << ","
-        //      << "MIN: " << minFrameTime << ","
-        //      << "MEAN: " << meanFrameTime << ","
-        //      << "MEDIAN: "<< medianFrameTime << "\n";
-        calculateStatistics(file, "frameTimes", frameTimes);
-        calculateStatistics(file, "drawTimes", drawTimes);
-        calculateStatistics(file, "chunksDrawn", chunksDrawn);
-        calculateStatistics(file, "drawCalls", drawCalls);
-        calculateStatistics(file, "facesDrawn", facesDrawn);
+        file << "\n\n";
+        
+        file << "*-*-*-*-*,*-*-*-*-*,*-*-*-*-*,STATISTICS OF:, [" << filename << "],*-*-*-*-*,*-*-*-*-*,*-*-*-*-*\n";
+        file << ",TYPE, MAX, MIN, MEAN, MEDIAN\n";
+        
+        // Write statistics at the end of the CSV file
+        calculateStatistics(file, "Frame Times", frameTimes);
+        calculateStatistics(file, "Draw Times", drawTimes);
+        calculateStatistics(file, "Chunks Drawn", chunksDrawn);
+        calculateStatistics(file, "Draw Calls", drawCalls);
+        calculateStatistics(file, "Faces Drawn", facesDrawn);
+
+        file << "\n";
+        
+        // Write headers
+        file << "MEM USED [SYS](KB),MEM USED [VOXEL](KB),TOTAL MEM USED(KB),TOTAL MEM FREE(KB),CHUNK DRAW MODE,TOTAL CHUNKS,VALID BLOCKS,VALID FACES\n";
+
+        String ChunkRenderMode = "DEFAULT";
+        switch (initialMeasurement.chunkDrawMode) {
+            case RenderChunkMode::CHUNKS_AROUND:        ChunkRenderMode = "AROUND THE CAMERA"; break;
+        #ifdef OPTIMIZATION_FRUSTUM_CULLING
+            case RenderChunkMode::CHUNKS_IN_FRUSTUM:    ChunkRenderMode = "FRUSTUM CULLED";    break;
+        #endif
+        }
+        
+        // Write initial measurement
+        file << convertBytesToKilobytes(initialMeasurement.MemoryUsedBySystem) << ","
+             << convertBytesToKilobytes(initialMeasurement.MemoryUsedByVoxel) << ","
+             << convertBytesToKilobytes(initialMeasurement.TotalMemoryUsed) << ","
+             << convertBytesToKilobytes(initialMeasurement.TotalMemoryFree) << ","
+             << ChunkRenderMode << ","
+             << initialMeasurement.NTotalChunks << ","
+             << initialMeasurement.NValidBlocks << ","
+             << initialMeasurement.NValidFaces << "\n";
 
         file.close();
     }
+    
     template <typename T>
     void calculateStatistics(std::ofstream& file, cString& name, Vector<T>& data) {
-        float max = *std::max_element(data.begin(), data.end());
-        float min = *std::min_element(data.begin(), data.end());
-        float mean = calculateMean(data);
-        float median = calculateMedian(data);
+        T max = *std::max_element(data.begin(), data.end());
+        T min = *std::min_element(data.begin(), data.end());
+        T mean = calculateMean(data);
+        T median = calculateMedian(data);
         
-        // Escribir estadísticas al final del archivo CSV
-        file << "Statistics: " + name + " ,,,,,,,,"
+        // Write statistics at the end of the CSV file
+        file << ","
              << name << ","
-             << "MAX: " << max << ","
-             << "MIN: " << min << ","
-             << "MEAN: " << mean << ","
-             << "MEDIAN: "<< median << "\n";
+             << max << ","
+             << min << ","
+             << mean << ","
+             << median << "\n";
     }
     
 };
