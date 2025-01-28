@@ -244,28 +244,27 @@ U32 Chunk::occludeBlocksFaces() {
                 faces_.emplace_back(cubito.face[1], USVec3(cubito.x, cubito.y, cubito.z));   // DIR_DIAG_XY_BACK
             }else {
                 if (!isSolid(cubito.x + 1, cubito.y, cubito.z, offsetPosition_)) {
-                    //if(!isSameType(cubito.x, cubito.y, cubito.z, DIR_X_FRONT,BLOCK_WATER))
                     if(cubito.type != BLOCK_WATER)
-                    faces_.emplace_back(cubito.face[DIR_X_FRONT], USVec3(cubito.x, cubito.y, cubito.z));  // Frente
+                    faces_.emplace_back(cubito.face[DIR_X_FRONT], USVec3(cubito.x, cubito.y, cubito.z));  // Front
                 }
                 if (!isSolid(cubito.x - 1, cubito.y, cubito.z, offsetPosition_)) {
                     if(cubito.type != BLOCK_WATER)
-                    faces_.emplace_back(cubito.face[DIR_X_BACK], USVec3(cubito.x, cubito.y, cubito.z));   // Detrás
+                    faces_.emplace_back(cubito.face[DIR_X_BACK], USVec3(cubito.x, cubito.y, cubito.z));   // Back
                 }
                 if (!isSolid(cubito.x, cubito.y + 1, cubito.z, offsetPosition_)) {
-                    faces_.emplace_back(cubito.face[DIR_Y_FRONT], USVec3(cubito.x, cubito.y, cubito.z)); // Arriba
+                    faces_.emplace_back(cubito.face[DIR_Y_FRONT], USVec3(cubito.x, cubito.y, cubito.z));  // Top
                 }
                 if (!isSolid(cubito.x, cubito.y - 1, cubito.z, offsetPosition_)) {
                     if(cubito.type != BLOCK_WATER)
-                    faces_.emplace_back(cubito.face[DIR_Y_BACK], USVec3(cubito.x, cubito.y, cubito.z));  // Abajo
+                    faces_.emplace_back(cubito.face[DIR_Y_BACK], USVec3(cubito.x, cubito.y, cubito.z));   // Bottom
                 }
                 if (!isSolid(cubito.x, cubito.y, cubito.z + 1, offsetPosition_)) {
                     if(cubito.type != BLOCK_WATER)
-                    faces_.emplace_back(cubito.face[DIR_Z_FRONT], USVec3(cubito.x, cubito.y, cubito.z)); // Izquierda
+                    faces_.emplace_back(cubito.face[DIR_Z_FRONT], USVec3(cubito.x, cubito.y, cubito.z));  // Left
                 }
                 if (!isSolid(cubito.x, cubito.y, cubito.z - 1, offsetPosition_)) {
                     if(cubito.type != BLOCK_WATER)
-                    faces_.emplace_back(cubito.face[DIR_Z_BACK], USVec3(cubito.x, cubito.y, cubito.z)); // Derecha
+                    faces_.emplace_back(cubito.face[DIR_Z_BACK], USVec3(cubito.x, cubito.y, cubito.z));   // Right
                 }
             }
         }

@@ -399,7 +399,6 @@ u16 World::renderChunksAround(int playerX, int playerZ, U8* waterTexCoords) {
     for (int x = -CHUNK_LOAD_RADIUS; x <= CHUNK_LOAD_RADIUS; ++x) {
         for (int z = -CHUNK_LOAD_RADIUS; z <= CHUNK_LOAD_RADIUS; ++z) {
             if(auto currentChunk = getChunk(chunkX + x, chunkZ + z)) {
-                //currentChunk->render();
                 chunksToRender.push_back(currentChunk);
             }
         }

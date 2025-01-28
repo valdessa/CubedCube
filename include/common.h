@@ -3,10 +3,8 @@
 
 #include <typedefs.h>
 
-#define CHUNK_SIZE   16   // Ancho de cada chunk (X, Z)
-#define CHUNK_HEIGHT 16  // Altura de cada chunk (Y)
-
-#define MIN_HEIGHT  2
+#define CHUNK_SIZE   16  // Width  of each chunk (X, Z)
+#define CHUNK_HEIGHT 16  // Height of each chunk (Y)
 
 #define WATER_LEVEL 3       
 #define DIRT_LEVEL  2         
@@ -41,7 +39,7 @@ inline int CHUNK_LOAD_RADIUS = 2;
      #define OPTIMIZATION_STRUCTS 2
      #define OPTIMIZATION_MODEL_MATRIX
      #define OPTIMIZATION_VERTEX_MEMORY 
-     #define OPTIMIZATION_NO_LIGHTNING_DATA //me ahorro 2 megas
+     #define OPTIMIZATION_NO_LIGHTNING_DATA 
      #define CHUNK_RENDER_MODE 0
 #endif
 
@@ -196,10 +194,14 @@ namespace poyo {
         U8 tile;        
     };
     struct Cubito {     //Size = 38 bytes
-        S16 x, y, z;
         CubeFace face[6];
-        U8 type = BLOCK_AIR;
-        bool visible = false;
+        S16 x, y, z;
+        U8 type;
+        bool visible;
+
+        Cubito() : face{}, x(0), y(0), z(0), type(BLOCK_AIR), visible(false) {
+            
+        }
     };
 #elif OPTIMIZATION_STRUCTS == 1
     struct CubeFace {   //Size = 2 bytes
@@ -221,12 +223,12 @@ namespace poyo {
         }
     };
 #elif OPTIMIZATION_STRUCTS == 2
-    struct CubeFace {   //Size = 2 bytes
+    struct CubeFace {   //Size = 1 bytes
         U8 direction : 3;   // 3 bits for direction (0-7)
         U8 tile : 5;        // 5 bits for tile (0-31)
     };
     
-    struct Cubito {     //Size = 16 bytes
+    struct Cubito {     //Size = 10 bytes
         CubeFace face[6];   // 6 CubeFace (6 bytes total, packed)
         S8 x, y, z;         // 3 bytes (total 24 bits)
         U8 type : 7;        // 7 bits for the block type (0-127)

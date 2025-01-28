@@ -135,16 +135,11 @@ bool BoundingRegion::isOnOrForwardPlane(const Plane& plane) const {
 
 bool BoundingRegion::isOnFrustum(const Frustum& camFrustum, const Transform& transform) const {
     //Get global scale thanks to our transform
-    //auto& currentTrans = transform.transform();
     cFMat4 currentTrans = glm::translate(FMat4(1.0f), transform.Position);
-    //cFVec3 globalCenter{ currentTrans * FVec4(center_, 1.f) };
 
     auto globalCenter = center_;
 
     // Scaled orientation
-    // const glm::vec3 right = transform.getRightVector() * extents.x;
-    // const glm::vec3 up = transform.getUpVector() * extents.y;
-    // const glm::vec3 forward = transform.getForwardVector() * extents.z;
     cFVec3 right = cFVec3(currentTrans[0] * extents_.x);
     cFVec3 up = cFVec3(currentTrans[1] * extents_.y);
     cFVec3 forward = cFVec3(-currentTrans[2] * extents_.z);
