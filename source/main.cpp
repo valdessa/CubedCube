@@ -158,6 +158,7 @@ int main(int argc, char **argv) {
 #ifdef KIRBY_EASTER_EGG
     kirbyInfo info;
     initKirby();
+    Transform kirbyTransform(info.Position, info.Rotation, FVec3(0.0075f));
 #endif
     
     while(true) {
@@ -208,6 +209,11 @@ int main(int argc, char **argv) {
             Mtx matrixToUse;
             guMtxIdentity(matrixToUse);
             auto& modelMatrix = kirbys[i].modelMatrix;
+            if (i == 0) {
+                kirbyTransform.Position = info.Position;
+                kirbyTransform.Rotation = info.Rotation;
+                Renderer::CalculateModelMatrix(modelMatrix, kirbyTransform);
+            }
             guMtxConcat(Renderer::ViewMatrix(), modelMatrix, matrixToUse);
             drawKirby(matrixToUse, i);
         }
@@ -219,7 +225,7 @@ int main(int argc, char **argv) {
         // Renderer::ObjectView(info.Position.x + 0.5f, info.Position.y, info.Position.z + 0.5f,
         //                         info.Rotation.x, info.Rotation.y, info.Rotation.z,
         //                         kirbyScale, kirbyScale, kirbyScale);
-        // drawKirby();
+        //drawKirby();
 #endif
         
         currentTick.start();
@@ -291,7 +297,8 @@ int main(int argc, char **argv) {
             
             //Camera Things
             text.render(USVec2{275,  5}, fmt::format("Camera X [{:.4f}] Y [{:.4f}] Z [{:.4f}]", camPos.x, camPos.y, camPos.z).c_str());
-            text.render(USVec2{275, 20}, fmt::format("Camera Pitch [{:.4f}] Yaw [{:.4f}]", currentCam.getPitch(), currentCam.getYaw()).c_str());
+            //text.render(USVec2{275, 20}, fmt::format("Camera Pitch [{:.4f}] Yaw [{:.4f}]", currentCam.getPitch(), currentCam.getYaw()).c_str());
+            text.render(USVec2{275,  20}, fmt::format("Camera X [{:.4f}] Y [{:.4f}] Z [{:.4f}]", info.Position.x, info.Position.y, info.Position.z).c_str());
 
             //Render Things
             text.render(USVec2{275,  35}, fmt::format("Valid: Blocks [{}] Faces [{}]", currentWorld.validBlocks_, currentWorld.validFaces_).c_str());
