@@ -38,7 +38,7 @@ namespace poyo {
         void occludeChunkBlocksFaces() const;
 
         void calculateChunksAround(int playerX, int playerZ, Vector<Chunk*>& chunksToRender);
-        void calculateChunksInFrustum(const Frustum& frustum, Vector<Chunk*>& chunksToRender) const;
+        void calculateChunksInFrustum(const Frustum& frustum, Vector<Chunk*>& chunksToRender);
         
         U16 renderChunksAround(int playerX, int playerZ, U8* waterTexCoords);
         U16 renderChunksInFrustum(const Frustum& frustum, U8* waterTexCoords) const;
@@ -72,6 +72,8 @@ namespace poyo {
         struct KirbyTransformInfo {
             struct Transform transform;
             Mtx modelMatrix;
+            bool visible = true;
+            size_t CHUNK_ID = 0;
 
             KirbyTransformInfo(Transform trans) : transform(std::move(trans)), modelMatrix() {}
         };

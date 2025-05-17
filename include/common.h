@@ -40,7 +40,7 @@ inline int CHUNK_LOAD_RADIUS = 2;
      #define OPTIMIZATION_MODEL_MATRIX
      #define OPTIMIZATION_VERTEX_MEMORY 
      #define OPTIMIZATION_NO_LIGHTNING_DATA 
-     #define CHUNK_RENDER_MODE 0
+     #define CHUNK_RENDER_MODE 2
 #endif
 
 
@@ -55,9 +55,9 @@ inline int CHUNK_LOAD_RADIUS = 2;
 #define STRUCT_STRING "STRUC_" TOSTRING(OPTIMIZATION_STRUCTS)
 #define CHUNK_RENDER_STRING "RM_" TOSTRING(CHUNK_RENDER_MODE)
 
-//#define KIRBY_EASTER_EGG
+#define KIRBY_EASTER_EGG
 #define KIRBY_IN_DISPLAY_LIST
-//#define KIRBY_CONTROLLED
+#define KIRBY_CONTROLLED
 #define MAX_KIRBY 64
 
 enum class FileFormat {
@@ -73,8 +73,8 @@ enum class FileFormat {
   //  #error "LA CAGASTE"
 #endif
 
-#define ENABLE_AUTOMATIC_CAMERA 2 //seconds
-#define ENABLE_MEASUREMENTS
+//#define ENABLE_AUTOMATIC_CAMERA 2 //seconds
+//#define ENABLE_MEASUREMENTS
 #define MEASUREMENTS_FRAMES 256
 constexpr FileFormat MEASUREMENTS_FILE_FORMAT = FileFormat::CSV;
 /*  

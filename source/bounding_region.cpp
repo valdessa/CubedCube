@@ -165,3 +165,36 @@ bool BoundingRegion::isOnFrustum(const Frustum& camFrustum, const Transform& tra
             globalAABB.isOnOrForwardPlane(camFrustum.nearFace) &&
             globalAABB.isOnOrForwardPlane(camFrustum.farFace));
 }
+
+bool BoundingRegion::isOnFrustumStatic(const Frustum& camFrustum, const Transform& transform, BoundingRegion& region) {
+    //Get global scale thanks to our transform
+    cFMat4 currentTrans = glm::translate(FMat4(1.0f), transform.Position);
+
+    auto globalCenter = region.center_;
+
+    // Scaled orientation
+    cFVec3 right = cFVec3(currentTrans[0] * region.extents_.x);
+    cFVec3 up = cFVec3(currentTrans[1] * region.extents_.y);
+    cFVec3 forward = cFVec3(-currentTrans[2] * region.extents_.z);
+
+    cfloat newIi = std::abs(glm::dot(glm::vec3{ 1.f, 0.f, 0.f }, right)) +
+        std::abs(glm::dot(glm::vec3{ 1.f, 0.f, 0.f }, up)) +
+        std::abs(glm::dot(glm::vec3{ 1.f, 0.f, 0.f }, forward));
+
+    cfloat newIj = std::abs(glm::dot(glm::vec3{ 0.f, 1.f, 0.f }, right)) +
+        std::abs(glm::dot(glm::vec3{ 0.f, 1.f, 0.f }, up)) +
+        std::abs(glm::dot(glm::vec3{ 0.f, 1.f, 0.f }, forward));
+
+    cfloat newIk = std::abs(glm::dot(glm::vec3{ 0.f, 0.f, 1.f }, right)) +
+        std::abs(glm::dot(glm::vec3{ 0.f, 0.f, 1.f }, up)) +
+        std::abs(glm::dot(glm::vec3{ 0.f, 0.f, 1.f }, forward));
+
+    const BoundingRegion globalAABB(globalCenter, newIi, newIj, newIk);
+
+    return (globalAABB.isOnOrForwardPlane(camFrustum.leftFace) &&
+            globalAABB.isOnOrForwardPlane(camFrustum.rightFace) &&
+            globalAABB.isOnOrForwardPlane(camFrustum.topFace) &&
+            globalAABB.isOnOrForwardPlane(camFrustum.bottomFace) &&
+            globalAABB.isOnOrForwardPlane(camFrustum.nearFace) &&
+            globalAABB.isOnOrForwardPlane(camFrustum.farFace));
+}

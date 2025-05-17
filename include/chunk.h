@@ -40,6 +40,7 @@ namespace poyo {
         void* displayListTransparent = nullptr;
         U32 displayListSize = 0;
         U32 displayListTransparentSize = 0;
+        size_t ID = 0;
 #ifdef OPTIMIZATION_VECTOR
         Vector<Cubito> cubitos_;
 #else

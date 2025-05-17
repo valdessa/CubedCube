@@ -80,8 +80,9 @@ void World::generateLand(S16 radius) {
 //     //
 //     // if(CanBePlaced) chunk.setCubito(pos, BLOCK_WATER);
 // }
-
+static size_t NEXT_ID = 0;
 void World::generateLandChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
+    chunk.ID = NEXT_ID++;
     // Set the chunk's offset and world position
     chunk.offsetPosition_.x = chunkX;
     chunk.offsetPosition_.z = chunkZ;
@@ -206,6 +207,7 @@ void World::generateLandChunk(Chunk& chunk, S16 chunkX, S16 chunkZ) {
             float kirbyPosX = x + chunk.worldPosition_.x;
             float kirbyPosZ = z + chunk.worldPosition_.z;
             auto& result = kirbyTransforms_.emplace_back(Transform(FVec3{kirbyPosX + 0.5f, randY + 1, kirbyPosZ + 0.5f}, FVec3{0, rand()%360, 0}, FVec3{0.005f}));
+            result.CHUNK_ID = chunk.ID;
             Renderer::CalculateModelMatrix(result.modelMatrix, result.transform);
 
             NKirbys++;
@@ -381,11 +383,19 @@ void World::calculateChunksAround(int playerX, int playerZ, Vector<Chunk*>& chun
     }
 }
 
-void World::calculateChunksInFrustum(const Frustum& frustum, Vector<Chunk*>& chunksToRender) const {
+void World::calculateChunksInFrustum(const Frustum& frustum, Vector<Chunk*>& chunksToRender) {
     for(auto& c : chunks_) {
         Transform chunkTrans(FVec3(c->worldPosition_.x, 0, c->worldPosition_.z), FVec3(0.0f), FVec3(1.0f));
         if(c->region_.isOnFrustum(frustum, chunkTrans)) {
             chunksToRender.push_back(c.get());
+        }
+    }
+    for (auto& c : kirbyTransforms_) {
+        auto& currentRegion = chunks_.at(c.CHUNK_ID)->region_;
+        if (BoundingRegion::isOnFrustumStatic(frustum, c.transform, currentRegion)) {
+            c.visible = true;
+        }else {
+            c.visible = false;
         }
     }
 }

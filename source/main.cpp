@@ -435,6 +435,7 @@ int main(int argc, char **argv) {
 #ifdef KIRBY_EASTER_EGG
     kirbyInfo info;
     initKirby();
+
 #endif
 
 #ifdef ENABLE_MEASUREMENTS
@@ -536,7 +537,9 @@ int main(int argc, char **argv) {
         //GX_SetChanCtrl(GX_COLOR0A0, GX_DISABLE, GX_SRC_REG, GX_SRC_REG, 0, GX_DF_NONE, GX_AF_NONE);
         auto& kirbys = currentWorld.kirbyTransforms_;
         updateKirbyAnimation();
+        
         for(size_t i = 0; i < kirbys.size(); i++ ) {
+            if (!kirbys[i].visible) continue;
             Mtx matrixToUse;
             guMtxIdentity(matrixToUse);
             auto& modelMatrix = kirbys[i].modelMatrix;

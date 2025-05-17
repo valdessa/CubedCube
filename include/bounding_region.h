@@ -30,6 +30,7 @@ namespace poyo {
         //Frustum 
         bool isOnOrForwardPlane(const Plane& plane) const;
         bool isOnFrustum(const Frustum& camFrustum, const Transform& transform) const;
+        static bool isOnFrustumStatic(const Frustum& camFrustum, const Transform& transform, BoundingRegion& region);
 
         // bounding box values
     private:
