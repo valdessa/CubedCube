@@ -38,6 +38,7 @@ static u8 CalculateFrameRate(void) {
     return FPS;
 }
 
+
 inline bool updateInput(Options& options, Camera& cam) {
     PAD_ScanPads(); // Scan the GameCube controllers
 

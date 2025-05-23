@@ -36,6 +36,13 @@ GRRLIB (GX Version)
 
 #include <fstream>
 
+//#define SDL_MAIN_HANDLED
+#include <SDL2/SDL.h>
+
+#include "imgui.h"
+#include "imgui_impl_sdl2.h"
+#include "imgui_impl_sdlrenderer2.h"
+
 using namespace poyo;
 
 #define TILE_SIZE 16
@@ -380,346 +387,446 @@ void moveCameraToTarget(Camera& camera, Options& opt, float deltaTime, cFVec3& s
 #endif
 
 
-//1 ms = 40,500 ticks
-int main(int argc, char **argv) {
-    // size_t MemoryUsedAtbeginning = (uintptr_t)SYS_GetArena1Lo() - (uintptr_t)SYS_GetArena1Hi;
-    // MemoryUsedAtbeginning += SYS_GetArena1Size();
-    Options options;
-    //srand(time(nullptr));
-
-    size_t MemoryUsedBySystem = Memory::getTotalMemoryUsed();
-    
-    // Initialise the Graphics & Video subsystem
-    Renderer::InitializeGX();
-
-    MemoryUsedBySystem = Memory::getTotalMemoryUsed() - MemoryUsedBySystem;
-   
-    // Initialise the GameCube controllers
-    PAD_Init();
-
-    loadResources();
-
-    // Set the background color (Green in this case)
-    Renderer::SetBackgroundColour(0x80, 0x80, 0x80, 0xFF);
-    Renderer::SetLightAmbient(0, 0, 0, 255);
-
-    Renderer::Initialize();
-    
-    TextRenderer text;
-    Camera currentCam(FVec3{0.0f, 30.0f, 50.0f}, -20, -90, CameraSpeed);
+static const int SCREEN_HEIGHT = 480;
+static const int SCREEN_WIDTH = 640;
 
 
-    auto MemoryUsedByVoxel = Memory::getTotalMemoryUsed();
-    
-    Renderer::SetAlphaTest(true);
-    
-    World currentWorld;
-
-    // SYS_Report("N Blocks: %llu\n", 0);
-    // SYS_Report("N Blocks: %s\n", "He entrado");
-    currentWorld.generateLand(CHUNK_RADIUS);
-    //SYS_Report("N Blocks: %s\n", "He salido");
-    //SYS_Report("N Blocks: %llu\n", currentWorld.validBlocks_);
-    //SYS_Report("Start X Z: %zd %zd\n", startX, startZ);
-    
-    MemoryUsedByVoxel = Memory::getTotalMemoryUsed() - MemoryUsedByVoxel;
-
-    Tick currentTick;
-    Tick frameTick;
-    U64 frameTicks = 0;
-    U16 chunksDrawn = 0;
-    
-    //std::string helpValue = SYS_GetAbsolutePath(path);
-    std::string helpValue = std::to_string(Renderer::isAntialiased());
-
-#ifdef KIRBY_EASTER_EGG
-    kirbyInfo info;
-    initKirby();
-
-#endif
-
-#ifdef ENABLE_MEASUREMENTS
-    MeasurementSystem measurement_system(MEASUREMENTS_FRAMES, helpValue);
-#endif
-#ifdef ENABLE_AUTOMATIC_CAMERA
-    auto beginPos = currentWorld.getChunks().front()->worldPosition_;
-    auto endPos = currentWorld.getChunks().back()->worldPosition_;
-    FVec3 CameraInitialPos(beginPos.x - CHUNK_SIZE/2, CHUNK_HEIGHT, beginPos.z - CHUNK_SIZE/2);
-    FVec3 CameraFinalPos(endPos.x + CHUNK_SIZE * 1.5, CHUNK_HEIGHT, endPos.z + CHUNK_SIZE * 1.5);
-    currentCam.setPosition(CameraInitialPos);
-    float cameraInitialYaw = 45;
-    float cameraFinalYaw = -135;
-    currentCam.yaw_ = cameraInitialYaw;
-    //currentCam.yaw_ = 45.0f;
+static const int CONTROLLER_COUNT = 4;
+static const float DEFAULT_DEADZONE = 1000.0f;
 
 
-    //final yaw = -135
-#endif
+static const int GCN_CONTROLLER_BUTTON_START = SDL_CONTROLLER_BUTTON_START;
+static const int GCN_CONTROLLER_BUTTON_A = SDL_CONTROLLER_BUTTON_A;
+static const int GCN_CONTROLLER_BUTTON_B = SDL_CONTROLLER_BUTTON_X;
+static const int GCN_CONTROLLER_BUTTON_L = SDL_CONTROLLER_BUTTON_LEFTSHOULDER;
+static const int GCN_CONTROLLER_BUTTON_R = SDL_CONTROLLER_BUTTON_RIGHTSHOULDER;
+static const int GCN_CONTROLLER_BUTTON_X = SDL_CONTROLLER_BUTTON_B;
+static const int GCN_CONTROLLER_BUTTON_Y = SDL_CONTROLLER_BUTTON_Y;
+static const int GCN_CONTROLLER_BUTTON_Z = SDL_CONTROLLER_BUTTON_BACK;
+static const int GCN_CONTROLLER_DPAD_UP = SDL_CONTROLLER_BUTTON_DPAD_UP;
+static const int GCN_CONTROLLER_DPAD_DOWN = SDL_CONTROLLER_BUTTON_DPAD_DOWN;
+static const int GCN_CONTROLLER_DPAD_LEFT = SDL_CONTROLLER_BUTTON_DPAD_LEFT;
+static const int GCN_CONTROLLER_DPAD_RIGHT = SDL_CONTROLLER_BUTTON_DPAD_RIGHT;
 
-#ifdef CHUNK_RENDER_MODE
-    options.chunkDrawMode = static_cast<RenderChunkMode>(CHUNK_RENDER_MODE);
-#endif
-    
-    auto fileName = Engine::generateOptimizationsString();
-    
-    while(true) {
-        frameTick.start();
-        Engine::UpdateEngine();
-        auto deltaTime = Engine::getDeltaTime();
-        Renderer::ResetDrawCalls();
-#ifndef OPTIMIZATION_NO_LIGHTNING_DATA
-        if(options.lightning) {
-            angle+=deltaTime;
-            updateLightPosition(lightPos, 20, angle);
-        }
-#endif
-        
-        Renderer::Set2DMode();
-        if(updateInput(options, currentCam)) break;
+char* CppStandard() {
+    switch (__cplusplus) {
+    case 202101L: return (char*)"C++23";
+    case 202002L: return (char*)"C++20";
+    case 201703L: return (char*)"C++17";
+    case 201402L: return (char*)"C++14";
+    case 201103L: return (char*)"C++11";
+    case 199711L: return (char*)"C++98";
+    default: return (char*)"pre-standard C++";
+    }
+}
 
-#ifdef ENABLE_MEASUREMENTS
-        if(PAD_ButtonsDown(1) & PAD_BUTTON_START) {
-            Measurements m;
-            m.MemoryUsedBySystem = MemoryUsedBySystem;
-            m.MemoryUsedByVoxel = MemoryUsedByVoxel;
-            m.TotalMemoryUsed = Memory::getTotalMemoryUsed();
-            m.TotalMemoryFree = Memory::getTotalMemoryFree();
-            m.chunkDrawMode = options.chunkDrawMode;
-            m.NTotalChunks = currentWorld.NChunks();
-            m.NValidBlocks = currentWorld.validBlocks_;
-            m.NValidFaces = currentWorld.validFaces_;
-            
-            measurement_system.setInitialMeasurement(m);
-            helpValue = "Recording...";
-        }
-#endif
+int SDL_main(int argc, char **argv) {
+    (void) argc;
+    (void) argv;
 
-#ifdef ENABLE_AUTOMATIC_CAMERA
-        if(PAD_ButtonsDown(1) & PAD_BUTTON_START) {
-            currentCam.setPosition(CameraInitialPos);
-            options.isInterpolating = true;
-            options.t = 0.0f; // Reset t to start from the beginning
-        }
-    #ifdef ENABLE_MEASUREMENTS
-        moveCameraToTargetByFrame(currentCam, options, measurement_system.getCurrentFrame(), CameraInitialPos, CameraFinalPos,
-            currentCam.pitch_, currentCam.pitch_, cameraInitialYaw, cameraFinalYaw, MEASUREMENTS_FRAMES);
-    #else
-        moveCameraToTarget(currentCam, options, deltaTime, CameraInitialPos, CameraFinalPos,
-            currentCam.pitch_, currentCam.pitch_, cameraInitialYaw, cameraFinalYaw, ENABLE_AUTOMATIC_CAMERA);
-    #endif
-#endif
-        
-        currentCam.updateCamera(deltaTime); //deltaTime
-#ifdef OPTIMIZATION_FRUSTUM_CULLING
-        updateFrustum(currentCam);
-#endif
-        //-----
-        Renderer::Set3DMode(currentCam); // Configura el modo 3D //Projection
-
-#ifndef OPTIMIZATION_NO_LIGHTNING_DATA
-        if(options.lightning) {
-            Renderer::PrepareToRenderInVX0(true, true, true, false);
-            Renderer::ObjectView(lightPos.x, lightPos.y, lightPos.z);
-            Renderer::RenderSphere(1, 20, 20, true, 0xFFFF00FF);
-        }
-#endif
-
-        Renderer::BindTexture(blocksTexture, 0);
-        Renderer::SetTextureCoordScaling(0, TILE_SIZE, TILE_SIZE);
-
-#ifndef OPTIMIZATION_NO_LIGHTNING_DATA      
-        if(options.lightning) {
-            Renderer::SetLightDiffuse(0, lightPos, 20, 1);
-        }
-#endif
-
-#ifdef KIRBY_EASTER_EGG
-        //GX_SetChanCtrl(GX_COLOR0A0, GX_DISABLE, GX_SRC_REG, GX_SRC_REG, 0, GX_DF_NONE, GX_AF_NONE);
-        auto& kirbys = currentWorld.kirbyTransforms_;
-        updateKirbyAnimation();
-        
-        for(size_t i = 0; i < kirbys.size(); i++ ) {
-            if (!kirbys[i].visible) continue;
-            Mtx matrixToUse;
-            guMtxIdentity(matrixToUse);
-            auto& modelMatrix = kirbys[i].modelMatrix;
-            guMtxConcat(Renderer::ViewMatrix(), modelMatrix, matrixToUse);
-            drawKirby(matrixToUse, i);
-        }
-    #ifdef KIRBY_CONTROLLED
-        updateKirbyPosition(info, deltaTime, 15.0, 1);
-        Mtx matrixToUse;
-        Renderer::CalculateModelMatrix(matrixToUse, info.trans);
-        guMtxConcat(Renderer::ViewMatrix(), matrixToUse, matrixToUse);
-        drawKirby(matrixToUse, MAX_KIRBY);
-    #endif
-    #ifdef KIRBY_IN_DISPLAY_LIST
-            GX_SetCurrentMtx(GX_PNMTX0); //Reset to original Matrix :3
-    #endif
-#endif
-
-        //Chunks to Draw:
-        Vector<Chunk*> chunksToRender;
-        switch (options.chunkDrawMode) {
-        case RenderChunkMode::CHUNKS_AROUND:
-            currentWorld.calculateChunksAround(currentCam.getPosition().x, currentCam.getPosition().z, chunksToRender);
-            break;
-#ifdef OPTIMIZATION_FRUSTUM_CULLING
-        case RenderChunkMode::CHUNKS_IN_FRUSTUM:   
-            currentWorld.calculateChunksInFrustum(frustum, chunksToRender);
-            break;
-#endif
-        }
-
-        //---
-        
-        currentTick.start();
-        updateWaterTextureCoordinates(deltaTime, 6);
-
-#ifdef OPTIMIZATION_VERTEX_MEMORY
-    #ifndef OPTIMIZATION_NO_LIGHTNING_DATA
-            Renderer::PrepareToRenderInVX2(true, true, false, true);
-    #else
-            Renderer::PrepareToRenderInVX2(true, false, false, true);
-    #endif
-        GX_SetTevOp(GX_TEVSTAGE0, GX_MODULATE);
-#else
-    #ifndef OPTIMIZATION_NO_LIGHTNING_DATA
-        Renderer::PrepareToRenderInVX2(true, true, true, true);
-    #else
-        Renderer::PrepareToRenderInVX2(true, false, true, true);
-    #endif
-#endif
-        
-        GX_SetChanCtrl(GX_COLOR0A0, GX_DISABLE, GX_SRC_REG, GX_SRC_REG, 0, GX_DF_NONE, GX_AF_NONE);
-        switch (options.chunkDrawMode) {
-            case RenderChunkMode::DEFAULT:
-                chunksDrawn = currentWorld.render(waterTexCoords);
-                break;
-            case RenderChunkMode::CHUNKS_AROUND:
-                //OLD METHOD:
-                //chunksDrawn = currentWorld.renderChunksAround(currentCam.getPosition().x, currentCam.getPosition().z, waterTexCoords);
-                //currentWorld.renderChunksAround(-18, -8);
-                chunksDrawn = currentWorld.render(chunksToRender, waterTexCoords);
-                break;
-#ifdef OPTIMIZATION_FRUSTUM_CULLING
-            case RenderChunkMode::CHUNKS_IN_FRUSTUM:
-                //OLD METHOD:
-                //chunksDrawn = currentWorld.renderChunksInFrustum(frustum, waterTexCoords);
-                chunksDrawn = currentWorld.render(chunksToRender, waterTexCoords);
-                break;
-#endif
-        }
-
-#ifndef OPTIMIZATION_NO_LIGHTNING_DATA
-        if(options.lightning) Renderer::SetLightOff();
-#endif
-        
-        if(options.boundingBox) {
-            GX_SetChanCtrl(GX_COLOR0A0, GX_DISABLE, GX_SRC_VTX, GX_SRC_VTX, 0, GX_DF_NONE, GX_AF_NONE);
-            // Renderer::PrepareToRenderInVX2(true, false, true, false);
-            // auto& chunkitos = currentWorld.getChunks();
-            // for(const auto& chunkito : chunkitos) {
-            //     Renderer::RenderBoundingBox(chunkito->worldPosition_.x, 0, chunkito->worldPosition_.z, CHUNK_SIZE, CHUNK_HEIGHT, UCVec3{0, 255, 255}, true);
-            // }
-            Renderer::PrepareToRenderInVX0(true, false, true, false);
-            currentWorld.renderChunksBoundings();
-        }
-        
-        //std::this_thread::sleep_for(std::chrono::seconds(1));
-        auto drawTicks = currentTick.stopAndGetTick();
-        currentTick.reset();
-        
-        auto& camPos = currentCam.getPosition();
-        // Switch to 2D Mode to display text
-        if(options.debugUI) {
-            Renderer::Set2DMode();
-            text.beginRender();
-            //Timings
-            text.render(USVec2{5,   5}, fmt::format("Ticks (CPU) : {}", gettick()).c_str());
-            text.render(USVec2{5,  20}, fmt::format("Time        : {}", gettime()).c_str());
-            text.render(USVec2{5,  35}, fmt::format("Current Time: {}", Engine::getCurrentTime()).c_str());
-            text.render(USVec2{5,  50}, fmt::format("Last Time   : {}", Engine::getLastTime()).c_str());
-            text.render(USVec2{5,  65}, fmt::format("Delta Time  : {:.5f} s", deltaTime).c_str());
-            
-            //Memory Things
-            text.render(USVec2{5,  95}, fmt::format("Memory (System)   : {:.2f} KB", convertBytesToKilobytes(MemoryUsedBySystem)).c_str());
-            text.render(USVec2{5,  110}, fmt::format("Memory (Voxel)    : {:.2f} KB", convertBytesToKilobytes(MemoryUsedByVoxel)).c_str());
-            text.render(USVec2{5,  125}, fmt::format("Total Used Memory : {:.2f} KB", convertBytesToKilobytes(Memory::getTotalMemoryUsed())).c_str());
-            text.render(USVec2{5,  140}, fmt::format("Total Free Memory : {:.2f} KB", convertBytesToKilobytes(Memory::getTotalMemoryFree())).c_str());
-
-            //Screen Things
-            text.render(USVec2{5, 170}, fmt::format("Video Mode : {}", std::array{"INTERLACE", "NON INTERLACE", "PROGRESSIVE", "ERROR"}[static_cast<int>(Renderer::VideoMode())]).c_str());
-            text.render(USVec2{5, 185}, fmt::format("VSYNC      : {}", options.VSYNC ? "YES" : "NOP").c_str());
-        	text.render(USVec2{5, 200}, fmt::format("Resolution  : {}/{}", Renderer::ScreenWidth(), Renderer::ScreenHeight()).c_str());
-#ifdef ENABLE_MEASUREMENTS
-            text.render(USVec2{5, 215}, fmt::format("File  : {}", fileName).c_str());
-#endif
-            String ChunkRenderMode = "DEFAULT";
-            switch (options.chunkDrawMode) {
-                case RenderChunkMode::CHUNKS_AROUND:        ChunkRenderMode = "AROUND THE CAMERA"; break;
-            #ifdef OPTIMIZATION_FRUSTUM_CULLING
-                case RenderChunkMode::CHUNKS_IN_FRUSTUM:    ChunkRenderMode = "FRUSTUM CULLED";    break;
-            #endif
-            }
-            
-            //Camera Things
-            text.render(USVec2{275,  5}, fmt::format("Camera X [{:.4f}] Y [{:.4f}] Z [{:.4f}]", camPos.x, camPos.y, camPos.z).c_str());
-            text.render(USVec2{275, 20}, fmt::format("Camera Pitch [{:.4f}] Yaw [{:.4f}]", currentCam.getPitch(), currentCam.getYaw()).c_str());
-
-            //Render Things
-            text.render(USVec2{275,  35}, fmt::format("Valid: Blocks [{}] Faces [{}]", currentWorld.validBlocks_, currentWorld.validFaces_).c_str());
-            text.render(USVec2{275,  50}, fmt::format("Calls : {} Draws / {} Faces", Renderer::DrawCalls(), Renderer::FacesDrawn()).c_str());
-            //text.render(USVec2{275,  80}, fmt::format("NFaces Drawn : {}", Renderer::FacesDrawn()).c_str());  //todo: fix
-            text.render(USVec2{275,  65}, fmt::format("NChunks     : [{}]/[{}]", chunksDrawn, currentWorld.NChunks()).c_str());
-            text.render(USVec2{485, 65}, fmt::format("NTrees : {}", currentWorld.nTrees_).c_str());
-#ifdef KIRBY_EASTER_EGG
-            text.render(USVec2{485, 80}, fmt::format("NKirby : {}", currentWorld.NKirbys).c_str()); //currentWorld.nTrees_
-#endif
-            text.render(USVec2{295,  95}, fmt::format("Draw   : Cycles {} ts / Time {} ms", drawTicks, Tick::TickToMsfloat(drawTicks)).c_str());
-            text.render(USVec2{295, 110}, fmt::format("Frame  : Cycles {} ts", frameTicks).c_str());
-            text.render(USVec2{295, 125}, fmt::format("MODE   : {}", ChunkRenderMode).c_str());
-            text.render(USVec2{295, 140}, fmt::format("Helper : {}", helpValue).c_str());
-            //text.render(USVec2{400,  95}, fmt::format("Helper      : {}", currentWorld.helperCounter).c_str());
-            //text.render(USVec2{400, 110}, fmt::format("N Blocks    : {}", currentChunk.validBlocks).c_str());
-        }
-
-#ifdef ENABLE_MEASUREMENTS
-        if(measurement_system.shouldRecordFrame()) {
-            MeasurementsByFrame frame;
-            frame.frameTimeInMs = deltaTime * 1000.0f; //s to ms
-            frame.DrawTimeInMs  = Tick::TickToMsfloat(drawTicks);
-            frame.NChunksDrawn  = chunksDrawn;
-            frame.NDrawCalls    = Renderer::DrawCalls();
-            frame.NFacesDrawn   = Renderer::FacesDrawn();
-            measurement_system.recordFrame(frame);
-            if (measurement_system.isMeasurementComplete()) {
-                if constexpr (MEASUREMENTS_FILE_FORMAT == FileFormat::TXT) {
-                    measurement_system.dumpToFile(fmt::format("{}.txt", fileName));
-                }else if constexpr (MEASUREMENTS_FILE_FORMAT == FileFormat::CSV) {
-                    measurement_system.dumpToCSV(fmt::format("{}.csv", fileName));
-                }
-                helpValue = "Recording Done!";
-            }
-        }
-
-#endif
-        
-        //GRRLIB_PrintfTTF(50, 50, myFont, "MINECRAFT", 16, 0x000000FF);
-
-        frameTicks = frameTick.stopAndGetTick();
-        frameTick.reset();
-
-        // Renderizar todo a la pantalla
-        Renderer::RenderGX(options.VSYNC); // Render the frame buffer to the TV
+    // Initialize SDL
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC) < 0) {
+        //std::cerr << "SDL could not initialize video and audio! SDL Error: " << SDL_GetError() << std::endl;
     }
 
-#ifdef KIRBY_IN_DISPLAY_LIST
-    freeKirby();
-#endif
+    // Prepare the SDL Window
+    SDL_Window *window = SDL_CreateWindow(
+        "SDL2",
+        SDL_WINDOWPOS_CENTERED,
+        SDL_WINDOWPOS_CENTERED,
+        SCREEN_WIDTH,
+        SCREEN_HEIGHT,
+        SDL_WINDOW_FULLSCREEN_DESKTOP
+    );
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 
-    Renderer::Exit();
+    // Prepare the SDL Renderer
+    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
+    SDL_RenderSetLogicalSize(renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-    exit(0); // Use exit() to exit a program, do not use 'return' from main()
+    // Initialize Dear ImGui
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;	// Enable Gamepad Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NoMouse;	// Disable mouse input
+    ImGui::StyleColorsDark();
+    ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
+    ImGui_ImplSDLRenderer2_Init(renderer);
+
+    while (1) {
+        // Keep ImGui outside loop functions to allow for ImGui anywhere
+        ImGui_ImplSDLRenderer2_NewFrame();
+        ImGui_ImplSDL2_NewFrame();
+        ImGui::NewFrame();
+
+        ImGui::SetNextWindowPos(ImVec2(SCREEN_WIDTH / 6.0f, SCREEN_HEIGHT / 6.0f));
+        ImGui::SetNextWindowSize(ImVec2(SCREEN_WIDTH / 3.0f * 2.0f, SCREEN_HEIGHT / 3.0f * 2.0f));
+        ImGui::Begin("Hello, GameCube!", nullptr, ImGuiWindowFlags_NoFocusOnAppearing);
+        ImGui::Text("Written using SDL2 and Dear ImGui\nfor the Nintendo GameCube");
+        ImGui::Button("kk");
+        ImGui::Separator();
+        ImGui::Text("C++ Standard: %s", CppStandard());
+        ImGui::End();
+
+        // Clear the screen to render this frame
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+        SDL_RenderClear(renderer);
+
+        
+        ImGui::Render();	// Rendering of Dear ImGui must happen last to ensure proper visibility
+        ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData());
+        SDL_RenderPresent(renderer);
+    }
+    
+    // Tear down SDL
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+
+    return 0;
 }
+
+//1 ms = 40,500 ticks
+// int main(int argc, char **argv) {
+//     // size_t MemoryUsedAtbeginning = (uintptr_t)SYS_GetArena1Lo() - (uintptr_t)SYS_GetArena1Hi;
+//     // MemoryUsedAtbeginning += SYS_GetArena1Size();
+//     Options options;
+//     //srand(time(nullptr));
+//
+//     size_t MemoryUsedBySystem = Memory::getTotalMemoryUsed();
+//     
+//     // Initialise the Graphics & Video subsystem
+//     Renderer::InitializeGX();
+//
+//     MemoryUsedBySystem = Memory::getTotalMemoryUsed() - MemoryUsedBySystem;
+//    
+//     // Initialise the GameCube controllers
+//     PAD_Init();
+//
+//     loadResources();
+//
+//     // Set the background color (Green in this case)
+//     Renderer::SetBackgroundColour(0x80, 0x80, 0x80, 0xFF);
+//     Renderer::SetLightAmbient(0, 0, 0, 255);
+//
+//     Renderer::Initialize();
+//     
+//     TextRenderer text;
+//     Camera currentCam(FVec3{0.0f, 30.0f, 50.0f}, -20, -90, CameraSpeed);
+//
+//
+//     auto MemoryUsedByVoxel = Memory::getTotalMemoryUsed();
+//     
+//     Renderer::SetAlphaTest(true);
+//     
+//     World currentWorld;
+//
+//     // SYS_Report("N Blocks: %llu\n", 0);
+//     // SYS_Report("N Blocks: %s\n", "He entrado");
+//     currentWorld.generateLand(CHUNK_RADIUS);
+//     //SYS_Report("N Blocks: %s\n", "He salido");
+//     //SYS_Report("N Blocks: %llu\n", currentWorld.validBlocks_);
+//     //SYS_Report("Start X Z: %zd %zd\n", startX, startZ);
+//     
+//     MemoryUsedByVoxel = Memory::getTotalMemoryUsed() - MemoryUsedByVoxel;
+//
+//     Tick currentTick;
+//     Tick frameTick;
+//     U64 frameTicks = 0;
+//     U16 chunksDrawn = 0;
+//     
+//     //std::string helpValue = SYS_GetAbsolutePath(path);
+//     std::string helpValue = std::to_string(Renderer::isAntialiased());
+//
+// #ifdef KIRBY_EASTER_EGG
+//     kirbyInfo info;
+//     initKirby();
+//
+// #endif
+//
+// #ifdef ENABLE_MEASUREMENTS
+//     MeasurementSystem measurement_system(MEASUREMENTS_FRAMES, helpValue);
+// #endif
+// #ifdef ENABLE_AUTOMATIC_CAMERA
+//     auto beginPos = currentWorld.getChunks().front()->worldPosition_;
+//     auto endPos = currentWorld.getChunks().back()->worldPosition_;
+//     FVec3 CameraInitialPos(beginPos.x - CHUNK_SIZE/2, CHUNK_HEIGHT, beginPos.z - CHUNK_SIZE/2);
+//     FVec3 CameraFinalPos(endPos.x + CHUNK_SIZE * 1.5, CHUNK_HEIGHT, endPos.z + CHUNK_SIZE * 1.5);
+//     currentCam.setPosition(CameraInitialPos);
+//     float cameraInitialYaw = 45;
+//     float cameraFinalYaw = -135;
+//     currentCam.yaw_ = cameraInitialYaw;
+//     //currentCam.yaw_ = 45.0f;
+//
+//
+//     //final yaw = -135
+// #endif
+//
+// #ifdef CHUNK_RENDER_MODE
+//     options.chunkDrawMode = static_cast<RenderChunkMode>(CHUNK_RENDER_MODE);
+// #endif
+//     
+//     auto fileName = Engine::generateOptimizationsString();
+//     
+//     while(true) {
+//         frameTick.start();
+//         Engine::UpdateEngine();
+//         auto deltaTime = Engine::getDeltaTime();
+//         Renderer::ResetDrawCalls();
+// #ifndef OPTIMIZATION_NO_LIGHTNING_DATA
+//         if(options.lightning) {
+//             angle+=deltaTime;
+//             updateLightPosition(lightPos, 20, angle);
+//         }
+// #endif
+//         
+//         Renderer::Set2DMode();
+//         if(updateInput(options, currentCam)) break;
+//
+// #ifdef ENABLE_MEASUREMENTS
+//         if(PAD_ButtonsDown(1) & PAD_BUTTON_START) {
+//             Measurements m;
+//             m.MemoryUsedBySystem = MemoryUsedBySystem;
+//             m.MemoryUsedByVoxel = MemoryUsedByVoxel;
+//             m.TotalMemoryUsed = Memory::getTotalMemoryUsed();
+//             m.TotalMemoryFree = Memory::getTotalMemoryFree();
+//             m.chunkDrawMode = options.chunkDrawMode;
+//             m.NTotalChunks = currentWorld.NChunks();
+//             m.NValidBlocks = currentWorld.validBlocks_;
+//             m.NValidFaces = currentWorld.validFaces_;
+//             
+//             measurement_system.setInitialMeasurement(m);
+//             helpValue = "Recording...";
+//         }
+// #endif
+//
+// #ifdef ENABLE_AUTOMATIC_CAMERA
+//         if(PAD_ButtonsDown(1) & PAD_BUTTON_START) {
+//             currentCam.setPosition(CameraInitialPos);
+//             options.isInterpolating = true;
+//             options.t = 0.0f; // Reset t to start from the beginning
+//         }
+//     #ifdef ENABLE_MEASUREMENTS
+//         moveCameraToTargetByFrame(currentCam, options, measurement_system.getCurrentFrame(), CameraInitialPos, CameraFinalPos,
+//             currentCam.pitch_, currentCam.pitch_, cameraInitialYaw, cameraFinalYaw, MEASUREMENTS_FRAMES);
+//     #else
+//         moveCameraToTarget(currentCam, options, deltaTime, CameraInitialPos, CameraFinalPos,
+//             currentCam.pitch_, currentCam.pitch_, cameraInitialYaw, cameraFinalYaw, ENABLE_AUTOMATIC_CAMERA);
+//     #endif
+// #endif
+//         
+//         currentCam.updateCamera(deltaTime); //deltaTime
+// #ifdef OPTIMIZATION_FRUSTUM_CULLING
+//         updateFrustum(currentCam);
+// #endif
+//         //-----
+//         Renderer::Set3DMode(currentCam); // Configura el modo 3D //Projection
+//
+// #ifndef OPTIMIZATION_NO_LIGHTNING_DATA
+//         if(options.lightning) {
+//             Renderer::PrepareToRenderInVX0(true, true, true, false);
+//             Renderer::ObjectView(lightPos.x, lightPos.y, lightPos.z);
+//             Renderer::RenderSphere(1, 20, 20, true, 0xFFFF00FF);
+//         }
+// #endif
+//
+//         Renderer::BindTexture(blocksTexture, 0);
+//         Renderer::SetTextureCoordScaling(0, TILE_SIZE, TILE_SIZE);
+//
+// #ifndef OPTIMIZATION_NO_LIGHTNING_DATA      
+//         if(options.lightning) {
+//             Renderer::SetLightDiffuse(0, lightPos, 20, 1);
+//         }
+// #endif
+//
+// #ifdef KIRBY_EASTER_EGG
+//         //GX_SetChanCtrl(GX_COLOR0A0, GX_DISABLE, GX_SRC_REG, GX_SRC_REG, 0, GX_DF_NONE, GX_AF_NONE);
+//         auto& kirbys = currentWorld.kirbyTransforms_;
+//         updateKirbyAnimation();
+//         
+//         for(size_t i = 0; i < kirbys.size(); i++ ) {
+//             if (!kirbys[i].visible) continue;
+//             Mtx matrixToUse;
+//             guMtxIdentity(matrixToUse);
+//             auto& modelMatrix = kirbys[i].modelMatrix;
+//             guMtxConcat(Renderer::ViewMatrix(), modelMatrix, matrixToUse);
+//             drawKirby(matrixToUse, i);
+//         }
+//     #ifdef KIRBY_CONTROLLED
+//         updateKirbyPosition(info, deltaTime, 15.0, 1);
+//         Mtx matrixToUse;
+//         Renderer::CalculateModelMatrix(matrixToUse, info.trans);
+//         guMtxConcat(Renderer::ViewMatrix(), matrixToUse, matrixToUse);
+//         drawKirby(matrixToUse, MAX_KIRBY);
+//     #endif
+//     #ifdef KIRBY_IN_DISPLAY_LIST
+//             GX_SetCurrentMtx(GX_PNMTX0); //Reset to original Matrix :3
+//     #endif
+// #endif
+//
+//         //Chunks to Draw:
+//         Vector<Chunk*> chunksToRender;
+//         switch (options.chunkDrawMode) {
+//         case RenderChunkMode::CHUNKS_AROUND:
+//             currentWorld.calculateChunksAround(currentCam.getPosition().x, currentCam.getPosition().z, chunksToRender);
+//             break;
+// #ifdef OPTIMIZATION_FRUSTUM_CULLING
+//         case RenderChunkMode::CHUNKS_IN_FRUSTUM:   
+//             currentWorld.calculateChunksInFrustum(frustum, chunksToRender);
+//             break;
+// #endif
+//         }
+//
+//         //---
+//         
+//         currentTick.start();
+//         updateWaterTextureCoordinates(deltaTime, 6);
+//
+// #ifdef OPTIMIZATION_VERTEX_MEMORY
+//     #ifndef OPTIMIZATION_NO_LIGHTNING_DATA
+//             Renderer::PrepareToRenderInVX2(true, true, false, true);
+//     #else
+//             Renderer::PrepareToRenderInVX2(true, false, false, true);
+//     #endif
+//         GX_SetTevOp(GX_TEVSTAGE0, GX_MODULATE);
+// #else
+//     #ifndef OPTIMIZATION_NO_LIGHTNING_DATA
+//         Renderer::PrepareToRenderInVX2(true, true, true, true);
+//     #else
+//         Renderer::PrepareToRenderInVX2(true, false, true, true);
+//     #endif
+// #endif
+//         
+//         GX_SetChanCtrl(GX_COLOR0A0, GX_DISABLE, GX_SRC_REG, GX_SRC_REG, 0, GX_DF_NONE, GX_AF_NONE);
+//         switch (options.chunkDrawMode) {
+//             case RenderChunkMode::DEFAULT:
+//                 chunksDrawn = currentWorld.render(waterTexCoords);
+//                 break;
+//             case RenderChunkMode::CHUNKS_AROUND:
+//                 //OLD METHOD:
+//                 //chunksDrawn = currentWorld.renderChunksAround(currentCam.getPosition().x, currentCam.getPosition().z, waterTexCoords);
+//                 //currentWorld.renderChunksAround(-18, -8);
+//                 chunksDrawn = currentWorld.render(chunksToRender, waterTexCoords);
+//                 break;
+// #ifdef OPTIMIZATION_FRUSTUM_CULLING
+//             case RenderChunkMode::CHUNKS_IN_FRUSTUM:
+//                 //OLD METHOD:
+//                 //chunksDrawn = currentWorld.renderChunksInFrustum(frustum, waterTexCoords);
+//                 chunksDrawn = currentWorld.render(chunksToRender, waterTexCoords);
+//                 break;
+// #endif
+//         }
+//
+// #ifndef OPTIMIZATION_NO_LIGHTNING_DATA
+//         if(options.lightning) Renderer::SetLightOff();
+// #endif
+//         
+//         if(options.boundingBox) {
+//             GX_SetChanCtrl(GX_COLOR0A0, GX_DISABLE, GX_SRC_VTX, GX_SRC_VTX, 0, GX_DF_NONE, GX_AF_NONE);
+//             // Renderer::PrepareToRenderInVX2(true, false, true, false);
+//             // auto& chunkitos = currentWorld.getChunks();
+//             // for(const auto& chunkito : chunkitos) {
+//             //     Renderer::RenderBoundingBox(chunkito->worldPosition_.x, 0, chunkito->worldPosition_.z, CHUNK_SIZE, CHUNK_HEIGHT, UCVec3{0, 255, 255}, true);
+//             // }
+//             Renderer::PrepareToRenderInVX0(true, false, true, false);
+//             currentWorld.renderChunksBoundings();
+//         }
+//         
+//         //std::this_thread::sleep_for(std::chrono::seconds(1));
+//         auto drawTicks = currentTick.stopAndGetTick();
+//         currentTick.reset();
+//         
+//         auto& camPos = currentCam.getPosition();
+//         // Switch to 2D Mode to display text
+//         if(options.debugUI) {
+//             Renderer::Set2DMode();
+//             text.beginRender();
+//             //Timings
+//             text.render(USVec2{5,   5}, fmt::format("Ticks (CPU) : {}", gettick()).c_str());
+//             text.render(USVec2{5,  20}, fmt::format("Time        : {}", gettime()).c_str());
+//             text.render(USVec2{5,  35}, fmt::format("Current Time: {}", Engine::getCurrentTime()).c_str());
+//             text.render(USVec2{5,  50}, fmt::format("Last Time   : {}", Engine::getLastTime()).c_str());
+//             text.render(USVec2{5,  65}, fmt::format("Delta Time  : {:.5f} s", deltaTime).c_str());
+//             
+//             //Memory Things
+//             text.render(USVec2{5,  95}, fmt::format("Memory (System)   : {:.2f} KB", convertBytesToKilobytes(MemoryUsedBySystem)).c_str());
+//             text.render(USVec2{5,  110}, fmt::format("Memory (Voxel)    : {:.2f} KB", convertBytesToKilobytes(MemoryUsedByVoxel)).c_str());
+//             text.render(USVec2{5,  125}, fmt::format("Total Used Memory : {:.2f} KB", convertBytesToKilobytes(Memory::getTotalMemoryUsed())).c_str());
+//             text.render(USVec2{5,  140}, fmt::format("Total Free Memory : {:.2f} KB", convertBytesToKilobytes(Memory::getTotalMemoryFree())).c_str());
+//
+//             //Screen Things
+//             text.render(USVec2{5, 170}, fmt::format("Video Mode : {}", std::array{"INTERLACE", "NON INTERLACE", "PROGRESSIVE", "ERROR"}[static_cast<int>(Renderer::VideoMode())]).c_str());
+//             text.render(USVec2{5, 185}, fmt::format("VSYNC      : {}", options.VSYNC ? "YES" : "NOP").c_str());
+//         	text.render(USVec2{5, 200}, fmt::format("Resolution  : {}/{}", Renderer::ScreenWidth(), Renderer::ScreenHeight()).c_str());
+// #ifdef ENABLE_MEASUREMENTS
+//             text.render(USVec2{5, 215}, fmt::format("File  : {}", fileName).c_str());
+// #endif
+//             String ChunkRenderMode = "DEFAULT";
+//             switch (options.chunkDrawMode) {
+//                 case RenderChunkMode::CHUNKS_AROUND:        ChunkRenderMode = "AROUND THE CAMERA"; break;
+//             #ifdef OPTIMIZATION_FRUSTUM_CULLING
+//                 case RenderChunkMode::CHUNKS_IN_FRUSTUM:    ChunkRenderMode = "FRUSTUM CULLED";    break;
+//             #endif
+//             }
+//             
+//             //Camera Things
+//             text.render(USVec2{275,  5}, fmt::format("Camera X [{:.4f}] Y [{:.4f}] Z [{:.4f}]", camPos.x, camPos.y, camPos.z).c_str());
+//             text.render(USVec2{275, 20}, fmt::format("Camera Pitch [{:.4f}] Yaw [{:.4f}]", currentCam.getPitch(), currentCam.getYaw()).c_str());
+//
+//             //Render Things
+//             text.render(USVec2{275,  35}, fmt::format("Valid: Blocks [{}] Faces [{}]", currentWorld.validBlocks_, currentWorld.validFaces_).c_str());
+//             text.render(USVec2{275,  50}, fmt::format("Calls : {} Draws / {} Faces", Renderer::DrawCalls(), Renderer::FacesDrawn()).c_str());
+//             //text.render(USVec2{275,  80}, fmt::format("NFaces Drawn : {}", Renderer::FacesDrawn()).c_str());  //todo: fix
+//             text.render(USVec2{275,  65}, fmt::format("NChunks     : [{}]/[{}]", chunksDrawn, currentWorld.NChunks()).c_str());
+//             text.render(USVec2{485, 65}, fmt::format("NTrees : {}", currentWorld.nTrees_).c_str());
+// #ifdef KIRBY_EASTER_EGG
+//             text.render(USVec2{485, 80}, fmt::format("NKirby : {}", currentWorld.NKirbys).c_str()); //currentWorld.nTrees_
+// #endif
+//             text.render(USVec2{295,  95}, fmt::format("Draw   : Cycles {} ts / Time {} ms", drawTicks, Tick::TickToMsfloat(drawTicks)).c_str());
+//             text.render(USVec2{295, 110}, fmt::format("Frame  : Cycles {} ts", frameTicks).c_str());
+//             text.render(USVec2{295, 125}, fmt::format("MODE   : {}", ChunkRenderMode).c_str());
+//             text.render(USVec2{295, 140}, fmt::format("Helper : {}", helpValue).c_str());
+//             //text.render(USVec2{400,  95}, fmt::format("Helper      : {}", currentWorld.helperCounter).c_str());
+//             //text.render(USVec2{400, 110}, fmt::format("N Blocks    : {}", currentChunk.validBlocks).c_str());
+//         }
+//
+// #ifdef ENABLE_MEASUREMENTS
+//         if(measurement_system.shouldRecordFrame()) {
+//             MeasurementsByFrame frame;
+//             frame.frameTimeInMs = deltaTime * 1000.0f; //s to ms
+//             frame.DrawTimeInMs  = Tick::TickToMsfloat(drawTicks);
+//             frame.NChunksDrawn  = chunksDrawn;
+//             frame.NDrawCalls    = Renderer::DrawCalls();
+//             frame.NFacesDrawn   = Renderer::FacesDrawn();
+//             measurement_system.recordFrame(frame);
+//             if (measurement_system.isMeasurementComplete()) {
+//                 if constexpr (MEASUREMENTS_FILE_FORMAT == FileFormat::TXT) {
+//                     measurement_system.dumpToFile(fmt::format("{}.txt", fileName));
+//                 }else if constexpr (MEASUREMENTS_FILE_FORMAT == FileFormat::CSV) {
+//                     measurement_system.dumpToCSV(fmt::format("{}.csv", fileName));
+//                 }
+//                 helpValue = "Recording Done!";
+//             }
+//         }
+//
+// #endif
+//         
+//         //GRRLIB_PrintfTTF(50, 50, myFont, "MINECRAFT", 16, 0x000000FF);
+//
+//         frameTicks = frameTick.stopAndGetTick();
+//         frameTick.reset();
+//
+//         // Renderizar todo a la pantalla
+//         Renderer::RenderGX(options.VSYNC); // Render the frame buffer to the TV
+//     }
+//
+// #ifdef KIRBY_IN_DISPLAY_LIST
+//     freeKirby();
+// #endif
+//
+//     Renderer::Exit();
+//
+//     exit(0); // Use exit() to exit a program, do not use 'return' from main()
+// }
 

@@ -22,7 +22,7 @@ BUILD		:=	bin
 SOURCES		:=	source
 DATA		:=	data
 TEXTURES	:=	textures 
-INCLUDES	:=  include deps/glm deps/ deps/fmt
+INCLUDES	:=  include deps/glm deps/ deps/fmt deps/imgui
 
 #---------------------------------------------------------------------------------
 # options for code generation
@@ -32,10 +32,10 @@ INCLUDES	:=  include deps/glm deps/ deps/fmt
 #CFLAGS = -O3 -flto -DNDEBUG -s $(MACHDEP) $(INCLUDE)
 CFLAGS	= -g -O2 -Wall -Wno-unused-value -Wno-switch -Wno-unused-function $(MACHDEP) $(INCLUDE)
 
-CXXFLAGS	=	$(CFLAGS) #CXXFLAGS	= -std=c++20 $(CFLAGS)  # Agrega -std=c++20 para C++20
+CXXFLAGS	=	$(CFLAGS) 
+CXXFLAGS    := -std=c++20 $(CFLAGS)  # Agrega -std=c++20 para C++20
 
 LDFLAGS	=	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map
-
 
 USE_MAKEFILE_DEFINES = 0
 
@@ -117,13 +117,18 @@ $(info $(TARGET))
 LIBS	:= -lgrrlib -lpngu `$(PREFIX)pkg-config freetype2 libpng libjpeg --libs` -lfat
 #LIBS	+= -lmodplay -laesnd
 LIBS	+= -logc -lm
-LIBS    += -lfmt  # Especifica la ruta completa
+# Especifica la ruta completa
+LIBS    += -lfmt -lImGui -lSDL2 -lSDL2main -lSDL2_image -lSDL2_ttf -lSDL2_mixer -laesnd
+LIBS    += -logc -laesnd -lasnd -lfat -lfreetype -lharfbuzz -lpng -ljpeg -ldb -lbz2 -lz 
+LIBS    += -lfreetype -lharfbuzz -lpng -ljpeg -lz -lbz2 \
+           -laesnd -logc -lm -lfat \
+           -ldb -lz -lpng -ljpeg -lfreetype -lharfbuzz -lImGui 
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
 # include and lib
 #---------------------------------------------------------------------------------
-LIBDIRS	:= $(PORTLIBS) $(CURDIR)/deps/fmt
+LIBDIRS	:= $(PORTLIBS) $(CURDIR)/deps/fmt $(CURDIR)/deps/imgui
 
 #---------------------------------------------------------------------------------
 # no real need to edit anything past this point unless you need to add additional

@@ -32,7 +32,7 @@ inline int CHUNK_LOAD_RADIUS = 2;
 #define OPTIMIZATION_MAPS
 
 #if USE_MAKEFILE_DEFINES == 0
-     #define CHUNK_RADIUS 8
+     #define CHUNK_RADIUS 3
      #define OPTIMIZATION_OCCLUSION 4
      #define OPTIMIZATION_BATCHING       
      #define OPTIMIZATION_DISPLAY_LIST

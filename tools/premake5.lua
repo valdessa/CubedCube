@@ -33,6 +33,16 @@ workspace "Cubed Cube"
 
     defines { "_CRT_SECURE_NO_WARNINGS","GLEW_STATIC", "NOMINMAX" }
 
+local devkitPro = os.getenv("DEVKITPRO2")
+
+if not devkitPro then
+    error("DEVKITPRO environment variable is not set. Please install devkitPro properly.")
+else
+    print("DEVKITPRO found at: " .. devkitPro)
+end
+
+local portlibs = devkitPro .. "/portlibs/gamecube"
+
 project "Cubed Cube"
 
 	language "C++"
@@ -61,6 +71,8 @@ project "Cubed Cube"
         "../deps/glm",
         "../deps/GRRLIB",
         "../deps/libogc",
+        "../deps/imgui",
+        portlibs .. "/include"
     }
     
     libdirs {
