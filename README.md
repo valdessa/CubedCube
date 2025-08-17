@@ -18,7 +18,7 @@ Developer: Sebastián Valdés Sánchez
 
 [![Cubed Cube Trailer](https://img.shields.io/badge/View%20Trailer-on%20YouTube-red?style=flat&logo=youtube)](https://youtu.be/XXSmN6_qYYM)
 
-🌐 **More info on my portfolio:** [Cubed Cube Project](https://tebas.dev/portfolio/cubed-cubed.html)
+🌐 **More info on my portfolio:** [Cubed Cube Project](https://tebas.dev/portfolio/cubed-cube.html)
 </div>
 
 <hr>
