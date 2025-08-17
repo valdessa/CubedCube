@@ -23,7 +23,7 @@ Developer: Sebastián Valdés Sánchez
 
 <hr>
 
-###  · 👾  FEATURES: 👨🏽‍💻
+##  · 👾  FEATURES: 👨🏽‍💻
 | |                          | Notes                                                                                         |
 |-|--------------------------|-----------------------------------------------------------------------------------------------|
 |⚙️| Built with DevKitPro     | Tools used to generate executables for the Nintendo GameCube.                                 |
@@ -33,7 +33,20 @@ Developer: Sebastián Valdés Sánchez
 |💧| Water                    | Features transparency and animated movement.                                                  |
 |🦴🏃‍♂️| Animations               | Supports rendering animations with up to 10 bones.                                            |
 
+
+
+## · 🛠️ BUILD
+
+Cubed Cube is a **Voxel Engine for the Nintendo GameCube** using the **GX API**.
+
 </div>
+
+To build the project, you need the **DevKitPro toolchain** installed on your system. Once compiled, it will generate a `.DOL` executable, which can be:
+
+- Run on a **real Nintendo GameCube** (_some unconventional methods might apply_ 🙃)
+- Run on the **Dolphin emulator** for PC.
+
+<hr>
 
 #  · 👾 HISTORY VERSIONS: 👨🏽‍💻
 
