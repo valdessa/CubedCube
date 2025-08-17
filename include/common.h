@@ -65,14 +65,6 @@ enum class FileFormat {
     CSV
 };
 
-#ifdef LOOOL1
-//#error "LO HICSTE BIEN"
-#endif
-
-#ifdef LOOOL2
-  //  #error "LA CAGASTE"
-#endif
-
 //#define ENABLE_AUTOMATIC_CAMERA 2 //seconds
 //#define ENABLE_MEASUREMENTS
 #define MEASUREMENTS_FRAMES 256
