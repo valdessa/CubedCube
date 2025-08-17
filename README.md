@@ -3,7 +3,7 @@
 <div align="center">
 Here are the interesting things about <b>Cubed<sup>3</sup></b> :D
 <br>
-An  optimized <b>3D Voxel Engine</b> for the <b>Nintendo GameCube</b>
+An  optimised <b>3D Voxel Engine</b> for the <b>Nintendo GameCube</b>
 <br>
 Developer: Sebastián Valdés Sánchez
 <br>
@@ -11,6 +11,15 @@ Developer: Sebastián Valdés Sánchez
 <hr>
 
 ![My Cool GIF](./misc/CubedCube.gif)
+
+<hr>
+
+<div align="center">
+
+[![Cubed Cube Trailer](https://img.shields.io/badge/View%20Trailer-on%20YouTube-red?style=flat&logo=youtube)](https://youtu.be/XXSmN6_qYYM)
+
+🌐 **More info on my portfolio:** [Cubed Cube Project](https://tebas.dev/portfolio/cubed-cubed.html)
+</div>
 
 <hr>
 
